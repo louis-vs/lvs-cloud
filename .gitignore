@@ -1,0 +1,35 @@
+# Environment files
+.env
+
+# Terraform files
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Docker
+.docker/
+
+# Ruby
+*.gem
+.bundle/
+vendor/bundle/
+
+# Python (if needed)
+__pycache__/
+*.pyc
+.venv/
+venv/

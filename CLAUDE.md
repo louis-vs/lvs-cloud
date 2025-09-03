@@ -11,6 +11,14 @@ Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for ho
 - **Architecture**: Container-based deployment with self-hosted container registry
 - **Domain**: Subdomains of lvs.me.uk
 - **API-first**: No manual UI configuration
+- **DevOps Practices**: Modern CI/CD with GitOps principles
+
+## DevOps Architecture
+- **CI/CD**: GitHub Actions for build and deployment
+- **GitOps**: Declarative deployments triggered by git commits
+- **Container Registry**: Self-hosted registry with automated image builds
+- **Deployment**: Pull-based deployments using webhooks or polling
+- **Infrastructure**: Everything as code, no manual server configuration
 
 ## Deliverables
 1. Hetzner Cloud account setup and API configuration

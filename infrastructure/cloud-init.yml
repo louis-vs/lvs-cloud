@@ -47,16 +47,25 @@ runcmd:
   - usermod -aG docker ubuntu
   
   # Create directory structure
-  - mkdir -p /opt/{monitoring-stack,apps}
-  - mkdir -p /var/lib/{grafana,prometheus,loki,registry}
-  - mkdir -p /etc/{traefik,prometheus,loki,grafana/provisioning/{datasources,dashboards}}
+  - mkdir -p /opt/monitoring-stack
+  - mkdir -p /opt/apps
+  - mkdir -p /var/lib/grafana
+  - mkdir -p /var/lib/prometheus
+  - mkdir -p /var/lib/loki
+  - mkdir -p /var/lib/registry
+  - mkdir -p /etc/traefik
+  - mkdir -p /etc/prometheus
+  - mkdir -p /etc/loki
+  - mkdir -p /etc/grafana/provisioning/datasources
+  - mkdir -p /etc/grafana/provisioning/dashboards
   - mkdir -p /etc/docker/registry/auth
   
   # Set permissions
   - chown -R 472:472 /var/lib/grafana
   - chown -R 65534:65534 /var/lib/prometheus  
   - chown -R 10001:10001 /var/lib/loki
-  - chown ubuntu:ubuntu /opt/{monitoring-stack,apps}
+  - chown -R ubuntu:ubuntu /opt/monitoring-stack
+  - chown -R ubuntu:ubuntu /opt/apps
   
   # Create registry auth
   - htpasswd -Bbn ${registry_user} ${registry_pass} > /etc/docker/registry/auth/htpasswd
@@ -83,15 +92,22 @@ runcmd:
   - |
     cat > /etc/loki/local-config.yaml << 'LOKIEOF'
     auth_enabled: false
+    
     server:
       http_listen_port: 3100
-    ingester:
-      lifecycler:
-        address: 127.0.0.1
-        ring:
-          kvstore:
-            store: inmemory
-          replication_factor: 1
+    
+    common:
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        instance_addr: 127.0.0.1
+        kvstore:
+          store: inmemory
+    
     schema_config:
       configs:
         - from: 2020-10-24
@@ -101,17 +117,30 @@ runcmd:
           index:
             prefix: index_
             period: 24h
+    
     storage_config:
       boltdb_shipper:
         active_index_directory: /loki/boltdb-shipper-active
         cache_location: /loki/boltdb-shipper-cache
-        shared_store: filesystem
       filesystem:
         directory: /loki/chunks
+    
     limits_config:
-      enforce_metric_name: false
       reject_old_samples: true
       reject_old_samples_max_age: 168h
+      allow_structured_metadata: false
+    
+    ruler:
+      storage:
+        type: local
+        local:
+          directory: /loki/rules
+      rule_path: /loki/rules-temp
+      alertmanager_url: http://localhost:9093
+      ring:
+        kvstore:
+          store: inmemory
+      enable_api: true
     LOKIEOF
   
   # Create Grafana datasources
@@ -139,5 +168,9 @@ runcmd:
   # Create networks
   - docker network create web 2>/dev/null || true
   - docker network create monitoring 2>/dev/null || true
+  
+  # Create Loki data directories
+  - mkdir -p /loki/{chunks,boltdb-shipper-active,boltdb-shipper-cache,rules,rules-temp}
+  - chown -R 10001:10001 /loki
   
   - echo "Server setup complete - ready for GitOps deployment" > /var/log/setup.log

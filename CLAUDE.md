@@ -20,13 +20,17 @@ Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for ho
 - **Deployment**: Pull-based deployments using webhooks or polling
 - **Infrastructure**: Everything as code, no manual server configuration
 
-## Deliverables
-1. Hetzner Cloud account setup and API configuration
-2. Terraform infrastructure definitions
-3. Container/VM running Grafana
-4. Self-hosted container registry
-5. Dummy application with uptime logging to Grafana
-6. Subdomain configuration for lvs.me.uk
+## Deliverables ✅
+1. ✅ Hetzner Cloud account setup and API configuration
+2. ✅ Terraform infrastructure definitions with cloud-init
+3. ✅ Complete monitoring stack (Grafana, Prometheus, Loki)
+4. ✅ Self-hosted container registry with authentication
+5. ✅ Ruby monitoring application with Prometheus metrics
+6. ✅ Subdomain configuration and SSL certificates
+7. ✅ GitHub Actions CI/CD pipeline
+8. ✅ GitOps deployment architecture
+9. ✅ Security hardening and credential management
+10. ✅ Comprehensive documentation and cost analysis
 
 ## Structure
 - Monorepo with projects in subfolders (no nesting)

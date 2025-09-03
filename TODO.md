@@ -19,12 +19,11 @@
 
 ## In Progress 🔄
 
-- [ ] Test GitOps deployment pipeline end-to-end
+- [ ] Document deployment process and provide cost estimates
 
 ## Pending 📋
 
 - [ ] Set up global formatter and pre-commit hooks for all file formats
-- [ ] Document deployment process and provide cost estimates
 
 ---
 *Last updated: 2025-09-03*

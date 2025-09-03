@@ -3,3 +3,14 @@ README.md
 .gitignore
 Dockerfile
 .dockerignore
+
+# Environment and secrets
+.env*
+*.key
+*.pem
+*_key
+id_*
+
+# Sensitive files
+config/secrets.yml
+config/master.key

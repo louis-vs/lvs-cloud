@@ -32,6 +32,18 @@ variable "domain" {
   default     = "lvs.me.uk"
 }
 
+variable "registry_user" {
+  description = "Docker registry username"
+  type        = string
+  default     = "admin"
+}
+
+variable "registry_pass" {
+  description = "Docker registry password"
+  type        = string
+  sensitive   = true
+}
+
 variable "server_type" {
   description = "Hetzner server type"
   type        = string
@@ -141,6 +153,8 @@ resource "hcloud_server" "main" {
   
   user_data = templatefile("${path.module}/cloud-init.yml", {
     ssh_key = trimspace(file("${path.module}/lvs-cloud.pub"))
+    registry_user = var.registry_user
+    registry_pass = var.registry_pass
   })
 }
 

@@ -59,7 +59,7 @@ runcmd:
   - chown ubuntu:ubuntu /opt/{monitoring-stack,apps}
   
   # Create registry auth
-  - htpasswd -Bbn admin registry123 > /etc/docker/registry/auth/htpasswd
+  - htpasswd -Bbn ${registry_user} ${registry_pass} > /etc/docker/registry/auth/htpasswd
   
   # Create Traefik ACME file
   - touch /etc/traefik/acme.json

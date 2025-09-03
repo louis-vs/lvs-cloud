@@ -139,30 +139,9 @@ resource "hcloud_server" "main" {
     role    = "main"
   }
   
-  user_data = <<-EOF
-    #cloud-config
-    users:
-      - name: ubuntu
-        sudo: ALL=(ALL) NOPASSWD:ALL
-        shell: /bin/bash
-        ssh_authorized_keys:
-          - ${trimspace(file("${path.module}/lvs-cloud.pub"))}
-    
-    package_update: true
-    packages:
-      - docker.io
-      - docker-compose-v2
-      - curl
-      - wget
-      - git
-      - htop
-    
-    runcmd:
-      - systemctl enable docker
-      - systemctl start docker
-      - usermod -aG docker ubuntu
-      - echo "Server setup complete" > /var/log/setup.log
-  EOF
+  user_data = templatefile("${path.module}/cloud-init.yml", {
+    ssh_key = trimspace(file("${path.module}/lvs-cloud.pub"))
+  })
 }
 
 # Outputs

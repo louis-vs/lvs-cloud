@@ -1,0 +1,88 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'infrastructure/**'
+      - 'applications/monitoring-stack/**'
+  workflow_dispatch:
+
+env:
+  TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+  TF_VAR_project_name: "lvs-cloud"
+  TF_VAR_domain: "lvs.me.uk"
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: infrastructure
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.9.0"
+
+    - name: Terraform Format
+      run: terraform fmt -check
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Validate
+      run: terraform validate -no-color
+
+    - name: Terraform Plan
+      run: terraform plan -no-color -input=false
+
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      run: terraform apply -auto-approve -input=false
+
+  deploy-stack:
+    name: 'Deploy Monitoring Stack'
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Get server IP
+      id: server-ip
+      working-directory: infrastructure
+      run: |
+        terraform init
+        echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
+      env:
+        TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+
+    - name: Deploy monitoring stack
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ steps.server-ip.outputs.server_ip }}
+        username: ubuntu
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Update monitoring stack
+          cd /opt/monitoring-stack || sudo mkdir -p /opt/monitoring-stack
+          
+          # Download latest docker-compose file
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3.raw" \
+               -o docker-compose.yml \
+               https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/docker-compose.prod.yml
+          
+          # Restart services
+          sudo docker-compose up -d --remove-orphans
+          
+          echo "✅ Monitoring stack updated successfully"

@@ -1,0 +1,143 @@
+#cloud-config
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_key}
+
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - curl
+  - wget
+  - git
+  - htop
+  - apache2-utils  # for htpasswd
+
+write_files:
+  - path: /opt/monitoring-stack/docker-compose.yml
+    owner: ubuntu:ubuntu
+    permissions: '0644'
+    content: |
+      # Placeholder - will be updated by GitHub Actions
+      version: '3.8'
+      services:
+        placeholder:
+          image: hello-world
+
+  - path: /etc/docker/daemon.json
+    owner: root:root
+    permissions: '0644'
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        },
+        "metrics-addr": "0.0.0.0:9323",
+        "experimental": true
+      }
+
+runcmd:
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker ubuntu
+  
+  # Create directory structure
+  - mkdir -p /opt/{monitoring-stack,apps}
+  - mkdir -p /var/lib/{grafana,prometheus,loki,registry}
+  - mkdir -p /etc/{traefik,prometheus,loki,grafana/provisioning/{datasources,dashboards}}
+  - mkdir -p /etc/docker/registry/auth
+  
+  # Set permissions
+  - chown -R 472:472 /var/lib/grafana
+  - chown -R 65534:65534 /var/lib/prometheus  
+  - chown -R 10001:10001 /var/lib/loki
+  - chown ubuntu:ubuntu /opt/{monitoring-stack,apps}
+  
+  # Create registry auth
+  - htpasswd -Bbn admin registry123 > /etc/docker/registry/auth/htpasswd
+  
+  # Create Traefik ACME file
+  - touch /etc/traefik/acme.json
+  - chmod 600 /etc/traefik/acme.json
+  
+  # Create basic Prometheus config
+  - |
+    cat > /etc/prometheus/prometheus.yml << 'PROMEOF'
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['node-exporter:9100']
+    PROMEOF
+  
+  # Create Loki config
+  - |
+    cat > /etc/loki/local-config.yaml << 'LOKIEOF'
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    ingester:
+      lifecycler:
+        address: 127.0.0.1
+        ring:
+          kvstore:
+            store: inmemory
+          replication_factor: 1
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: boltdb-shipper
+          object_store: filesystem
+          schema: v11
+          index:
+            prefix: index_
+            period: 24h
+    storage_config:
+      boltdb_shipper:
+        active_index_directory: /loki/boltdb-shipper-active
+        cache_location: /loki/boltdb-shipper-cache
+        shared_store: filesystem
+      filesystem:
+        directory: /loki/chunks
+    limits_config:
+      enforce_metric_name: false
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+    LOKIEOF
+  
+  # Create Grafana datasources
+  - |
+    cat > /etc/grafana/provisioning/datasources/datasources.yml << 'GRAFEOF'
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki:3100
+    GRAFEOF
+  
+  # Restart docker to apply daemon.json changes
+  - systemctl restart docker
+  
+  # Wait for docker to be ready
+  - sleep 10
+  
+  # Create networks
+  - docker network create web 2>/dev/null || true
+  - docker network create monitoring 2>/dev/null || true
+  
+  - echo "Server setup complete - ready for GitOps deployment" > /var/log/setup.log

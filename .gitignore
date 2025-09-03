@@ -42,3 +42,10 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Pre-commit
+.secrets.baseline
+
+# Editor and formatter caches
+.prettierrc.cache
+.eslintcache

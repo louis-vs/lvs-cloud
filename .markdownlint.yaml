@@ -1,0 +1,36 @@
+# Markdownlint configuration
+extends: default
+
+rules:
+  # Line length - allow longer lines for code blocks and tables
+  MD013:
+    line_length: 120
+    tables: false
+    code_blocks: false
+
+  # Allow inline HTML for badges and special formatting
+  MD033: false
+
+  # Allow bare URLs
+  MD034: false
+
+  # First line in file should be top level heading
+  MD041: false
+
+  # Trailing punctuation in heading
+  MD026:
+    punctuation: ".,;:!?"
+
+  # Multiple consecutive blank lines
+  MD012:
+    maximum: 2
+
+  # Ordered list item prefix
+  MD029:
+    style: "ordered"
+
+  # Fenced code blocks should be surrounded by blank lines
+  MD031: true
+
+  # Lists should be surrounded by blank lines
+  MD032: true

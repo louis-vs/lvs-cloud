@@ -140,17 +140,28 @@ resource "hcloud_server" "main" {
   }
   
   user_data = <<-EOF
-    #!/bin/bash
-    apt-get update
-    apt-get install -y docker.io docker-compose-v2
-    systemctl enable docker
-    systemctl start docker
-    usermod -aG docker ubuntu
+    #cloud-config
+    users:
+      - name: ubuntu
+        sudo: ALL=(ALL) NOPASSWD:ALL
+        shell: /bin/bash
+        ssh_authorized_keys:
+          - ${trimspace(file("${path.module}/lvs-cloud.pub"))}
     
-    # Install basic tools
-    apt-get install -y curl wget git htop
+    package_update: true
+    packages:
+      - docker.io
+      - docker-compose-v2
+      - curl
+      - wget
+      - git
+      - htop
     
-    echo "Server setup complete" > /var/log/setup.log
+    runcmd:
+      - systemctl enable docker
+      - systemctl start docker
+      - usermod -aG docker ubuntu
+      - echo "Server setup complete" > /var/log/setup.log
   EOF
 }
 

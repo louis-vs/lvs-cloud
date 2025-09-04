@@ -60,11 +60,32 @@ export HCLOUD_TOKEN="your-hetzner-api-token"
 export REGISTRY_PASS="your-secure-registry-password"
 ```
 
-### 2. Infrastructure Deployment
+### 2. Terraform Remote State Setup
+
+**First-time setup requires manual Object Storage bucket creation:**
+
+1. **Create Object Storage bucket** in Hetzner Cloud Console:
+   - Go to Object Storage → Create bucket
+   - Name: `lvs-cloud-terraform-state` 
+   - Location: `nbg1` (Nuremberg)
+   - Generate S3 credentials (Access Key + Secret Key)
+
+2. **Add S3 credentials to `.env`**:
+   ```bash
+   # Add these to your .env file
+   export S3_ACCESS_KEY="your-s3-access-key-here"
+   export S3_SECRET_KEY="your-s3-secret-key-here"
+   ```
+
+### 3. Infrastructure Deployment
 
 ```bash
-# Source environment
+# Source environment (includes S3 credentials)
 source .env
+
+# Set AWS credentials for Terraform S3 backend
+export AWS_ACCESS_KEY_ID="${S3_ACCESS_KEY}"
+export AWS_SECRET_ACCESS_KEY="${S3_SECRET_KEY}"
 
 # Initialize and deploy infrastructure
 cd infrastructure
@@ -72,12 +93,20 @@ terraform init
 terraform apply
 ```
 
+**Backend Configuration Explained:**
+- **Remote state** stored in Hetzner Object Storage (S3-compatible)
+- **Multi-machine access** - state shared across different environments
+- **State locking** prevents concurrent modifications
+- **Dummy region** (`us-east-1`) required but ignored
+- **Custom endpoint** points to Hetzner Object Storage
+
 **What happens:**
 - Creates Hetzner Cloud server (cx22)
 - Sets up networking and firewall
 - Runs cloud-init bootstrap
 - Installs Docker and creates directories
 - Configures monitoring service configs
+- **State saved to remote bucket** for team collaboration
 
 ### 3. DNS Configuration
 

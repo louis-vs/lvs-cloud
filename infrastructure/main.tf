@@ -1,6 +1,17 @@
 terraform {
   required_version = ">= 1.0"
-  
+
+  backend "s3" {
+    bucket                      = "lvs-cloud-terraform-state"
+    key                         = "terraform.tfstate"
+    region                      = "us-east-1"
+    endpoint                    = "https://nbg1.your-objectstorage.com"
+    skip_credentials_validation = true
+    skip_metadata_api_check     = true
+    skip_region_validation      = true
+    force_path_style           = true
+  }
+
   required_providers {
     hcloud = {
       source  = "hetznercloud/hcloud"
@@ -69,7 +80,7 @@ resource "hcloud_ssh_key" "default" {
 resource "hcloud_network" "main" {
   name     = "${var.project_name}-network"
   ip_range = "10.0.0.0/16"
-  
+
   labels = {
     project = var.project_name
   }
@@ -85,28 +96,28 @@ resource "hcloud_network_subnet" "main" {
 # Firewall
 resource "hcloud_firewall" "web" {
   name = "${var.project_name}-web"
-  
+
   rule {
     direction = "in"
     port      = "22"
     protocol  = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
-  
+
   rule {
     direction = "in"
     port      = "80"
     protocol  = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
-  
+
   rule {
     direction = "in"
     port      = "443"
     protocol  = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
-  
+
   # Grafana
   rule {
     direction = "in"
@@ -114,7 +125,7 @@ resource "hcloud_firewall" "web" {
     protocol  = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
-  
+
   # Container Registry
   rule {
     direction = "in"
@@ -122,7 +133,7 @@ resource "hcloud_firewall" "web" {
     protocol  = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
-  
+
   labels = {
     project = var.project_name
   }
@@ -134,23 +145,23 @@ resource "hcloud_server" "main" {
   image       = "ubuntu-22.04"
   server_type = var.server_type
   datacenter  = var.datacenter
-  
+
   ssh_keys = [hcloud_ssh_key.default.id]
-  
+
   firewall_ids = [hcloud_firewall.web.id]
-  
+
   network {
     network_id = hcloud_network.main.id
     ip         = "10.0.1.10"
   }
-  
+
   depends_on = [hcloud_network_subnet.main]
-  
+
   labels = {
     project = var.project_name
     role    = "main"
   }
-  
+
   user_data = templatefile("${path.module}/cloud-init.yml", {
     ssh_key = trimspace(file("${path.module}/lvs-cloud.pub"))
     registry_user = var.registry_user
@@ -169,8 +180,4 @@ output "server_ipv6" {
 
 output "network_id" {
   value = hcloud_network.main.id
-}
-
-output "estimated_monthly_cost_eur" {
-  value = "~4.90 EUR/month for cx22 server + minimal network costs"
 }

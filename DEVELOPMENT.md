@@ -95,6 +95,45 @@ resource "hcloud_server" "main" {
 }
 ```
 
+#### Remote State Backend
+
+**Configuration:** S3-compatible backend using Hetzner Object Storage
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket                      = "lvs-cloud-terraform-state"
+    key                         = "terraform.tfstate"
+    region                      = "us-east-1"                    # Dummy region (required but ignored)
+    endpoint                    = "https://nbg1.your-objectstorage.com"
+    skip_credentials_validation = true                          # Skip AWS-specific validations
+    skip_metadata_api_check     = true                          # No EC2 metadata on Hetzner
+    skip_region_validation      = true                          # Allow dummy region
+    force_path_style           = true                           # Use path-style URLs
+  }
+}
+```
+
+**Key Configuration Details:**
+
+- **`region = "us-east-1"`**: Required by Terraform but ignored (not AWS)
+- **`endpoint`**: Points to Hetzner Object Storage (Nuremberg datacenter)
+- **Skip validations**: Bypasses AWS-specific checks for S3-compatible storage  
+- **`force_path_style`**: Uses `endpoint/bucket/key` instead of `bucket.endpoint/key`
+
+**Environment Setup:**
+```bash
+# Required for S3 backend authentication
+export AWS_ACCESS_KEY_ID="${S3_ACCESS_KEY}"
+export AWS_SECRET_ACCESS_KEY="${S3_SECRET_KEY}"
+```
+
+**Benefits:**
+- ✅ **Multi-machine access** - shared state across team members
+- ✅ **State locking** - prevents concurrent modifications  
+- ✅ **Version control** - state change history in Object Storage
+- ✅ **Cost effective** - €1/month vs AWS S3 pricing
+
 ### Ruby
 
 ```ruby

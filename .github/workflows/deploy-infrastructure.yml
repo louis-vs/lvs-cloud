@@ -9,14 +9,21 @@ on:
   workflow_dispatch:
 
 env:
-  TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+  TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
   TF_VAR_project_name: 'lvs-cloud'
   TF_VAR_domain: 'lvs.me.uk'
+  TF_VAR_registry_user: ${{ secrets.REGISTRY_USERNAME }}
+  TF_VAR_registry_pass: ${{ secrets.REGISTRY_PASSWORD }}
+  # AWS credentials for S3 backend (Hetzner Object Storage)
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
 
 jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
+    outputs:
+      server_ip: ${{ steps.terraform-output.outputs.server_ip }}
 
     defaults:
       run:
@@ -47,6 +54,11 @@ jobs:
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         run: terraform apply -auto-approve -input=false
 
+      - name: Get Terraform Outputs
+        id: terraform-output
+        run: |
+          echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
+
   deploy-stack:
     name: 'Deploy Monitoring Stack'
     runs-on: ubuntu-latest
@@ -57,19 +69,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get server IP
-        id: server-ip
-        working-directory: infrastructure
-        run: |
-          terraform init
-          echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
-        env:
-          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
-
       - name: Deploy monitoring stack
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.terraform.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |

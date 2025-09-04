@@ -66,14 +66,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get server IP
+      - name: Setup Hetzner Cloud CLI
+        uses: hetznercloud/setup-hcloud@v1
+
+      - name: Get server IP from Hetzner Cloud
         id: server-ip
-        working-directory: infrastructure
         run: |
-          terraform init
-          echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
+          server_ip=$(hcloud server list -o columns=name,public_ipv4 | grep "lvs-cloud-server" | awk '{print $2}')
+          echo "server_ip=$server_ip" >> $GITHUB_OUTPUT
         env:
-          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN_RO }}
 
       - name: Deploy Ruby application
         uses: appleboy/ssh-action@v1.0.3

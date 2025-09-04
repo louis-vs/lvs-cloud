@@ -20,41 +20,41 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY_URL }}
-        username: ${{ secrets.REGISTRY_USERNAME }}
-        password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./applications/ruby-monitor
-        platforms: linux/amd64,linux/arm64
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./applications/ruby-monitor
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to Production
@@ -63,41 +63,41 @@ jobs:
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Get server IP
-      id: server-ip
-      working-directory: infrastructure
-      run: |
-        terraform init
-        echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
-      env:
-        TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
+      - name: Get server IP
+        id: server-ip
+        working-directory: infrastructure
+        run: |
+          terraform init
+          echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN }}
 
-    - name: Deploy Ruby application
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ steps.server-ip.outputs.server_ip }}
-        username: ubuntu
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          # Login to registry
-          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY_URL }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
-          
-          # Create app directory
-          sudo mkdir -p /opt/apps/ruby-monitor
-          
-          # Download docker-compose file for app
-          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-               -H "Accept: application/vnd.github.v3.raw" \
-               -o /tmp/app-compose.yml \
-               https://api.github.com/repos/${{ github.repository }}/contents/applications/ruby-monitor/docker-compose.prod.yml
-          
-          # Update and restart app
-          cd /opt/apps/ruby-monitor
-          sudo cp /tmp/app-compose.yml docker-compose.yml
-          sudo docker-compose pull
-          sudo docker-compose up -d --remove-orphans
-          
-          echo "✅ Ruby application deployed successfully"
+      - name: Deploy Ruby application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Login to registry
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY_URL }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+            # Create app directory
+            sudo mkdir -p /opt/apps/ruby-monitor
+
+            # Download docker-compose file for app
+            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o /tmp/app-compose.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/applications/ruby-monitor/docker-compose.prod.yml
+
+            # Update and restart app
+            cd /opt/apps/ruby-monitor
+            sudo cp /tmp/app-compose.yml docker-compose.yml
+            sudo docker-compose pull
+            sudo docker-compose up -d --remove-orphans
+
+            echo "✅ Ruby application deployed successfully"

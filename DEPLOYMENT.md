@@ -26,10 +26,10 @@ Complete GitOps deployment pipeline for a monitoring stack on Hetzner Cloud with
 
 | Service | URL | Purpose | Port |
 |---------|-----|---------|------|
-| **Grafana** | https://grafana.lvs.me.uk | Monitoring dashboards | 3000 |
-| **Prometheus** | https://prometheus.lvs.me.uk | Metrics collection | 9090 |
-| **Loki** | https://loki.lvs.me.uk | Log aggregation | 3100 |
-| **Registry** | https://registry.lvs.me.uk | Container registry | 5000 |
+| **Grafana** | <https://grafana.lvs.me.uk> | Monitoring dashboards | 3000 |
+| **Prometheus** | <https://prometheus.lvs.me.uk> | Metrics collection | 9090 |
+| **Loki** | <https://loki.lvs.me.uk> | Log aggregation | 3100 |
+| **Registry** | <https://registry.lvs.me.uk> | Container registry | 5000 |
 | **Traefik** | - | Reverse proxy & SSL | 80/443 |
 
 ## Prerequisites
@@ -66,11 +66,12 @@ export REGISTRY_PASS="your-secure-registry-password"
 
 1. **Create Object Storage bucket** in Hetzner Cloud Console:
    - Go to Object Storage → Create bucket
-   - Name: `lvs-cloud-terraform-state` 
+   - Name: `lvs-cloud-terraform-state`
    - Location: `nbg1` (Nuremberg)
    - Generate S3 credentials (Access Key + Secret Key)
 
 2. **Add S3 credentials to `.env`**:
+
    ```bash
    # Add these to your .env file
    export S3_ACCESS_KEY="your-s3-access-key-here"
@@ -94,6 +95,7 @@ terraform apply
 ```
 
 **Backend Configuration Explained:**
+
 - **Remote state** stored in Hetzner Object Storage (S3-compatible)
 - **Multi-machine access** - state shared across different environments
 - **State locking** prevents concurrent modifications
@@ -101,6 +103,7 @@ terraform apply
 - **Custom endpoint** points to Hetzner Object Storage
 
 **What happens:**
+
 - Creates Hetzner Cloud server (cx22)
 - Sets up networking and firewall
 - Runs cloud-init bootstrap
@@ -163,7 +166,8 @@ git push origin main
 ```
 
 **→ Triggers:** `.github/workflows/build-and-deploy-app.yml`
-**→ Actions:** 
+**→ Actions:**
+
 1. Build Docker images
 2. Push to self-hosted registry
 3. Watchtower detects changes
@@ -195,9 +199,9 @@ docker logs traefik
 
 ### Accessing Services
 
-- **Grafana**: https://grafana.lvs.me.uk (admin/admin123)
-- **Prometheus**: https://prometheus.lvs.me.uk
-- **Registry**: https://registry.lvs.me.uk (admin/your-password)
+- **Grafana**: <https://grafana.lvs.me.uk> (admin/admin123)
+- **Prometheus**: <https://prometheus.lvs.me.uk>
+- **Registry**: <https://registry.lvs.me.uk> (admin/your-password)
 
 ### Metrics & Alerts
 
@@ -221,6 +225,7 @@ docker logs traefik
 ### Common Issues
 
 **Services not accessible:**
+
 ```bash
 # Check DNS resolution
 nslookup grafana.lvs.me.uk
@@ -233,6 +238,7 @@ docker network ls
 ```
 
 **SSL Certificate issues:**
+
 ```bash
 # Check ACME logs
 docker logs traefik | grep -i acme
@@ -242,8 +248,9 @@ dig grafana.lvs.me.uk
 ```
 
 **Container deployment failures:**
+
 ```bash
-# Check Watchtower logs  
+# Check Watchtower logs
 docker logs watchtower
 
 # Manual image pull
@@ -253,6 +260,7 @@ docker pull registry.lvs.me.uk/ruby-monitor:latest
 ### Recovery Procedures
 
 **Complete infrastructure rebuild:**
+
 ```bash
 terraform destroy -auto-approve
 terraform apply -auto-approve
@@ -260,11 +268,13 @@ terraform apply -auto-approve
 ```
 
 **Service-specific restart:**
+
 ```bash
 docker compose restart <service-name>
 ```
 
 **Certificate renewal:**
+
 ```bash
 docker restart traefik
 # Certificates auto-renew on next request

@@ -7,8 +7,8 @@ services:
     container_name: traefik
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      - '80:80'
+      - '443:443'
     volumes:
       - ./traefik:/etc/traefik
       - ./traefik/acme:/acme
@@ -34,13 +34,13 @@ services:
       - TRAEFIK_CERTIFICATESRESOLVERS_MYRESOLVER_ACME_HTTPCHALLENGE=true
       - TRAEFIK_CERTIFICATESRESOLVERS_MYRESOLVER_ACME_HTTPCHALLENGE_ENTRYPOINT=web
     labels:
-      - "traefik.enable=true"
+      - 'traefik.enable=true'
 
       # Dashboard over HTTPS at traefik.lvs.me.uk
-      - "traefik.http.routers.traefik.rule=Host(`traefik.lvs.me.uk`)"
-      - "traefik.http.routers.traefik.entrypoints=websecure"
-      - "traefik.http.routers.traefik.tls.certresolver=myresolver"
-      - "traefik.http.routers.traefik.service=api@internal"
+      - 'traefik.http.routers.traefik.rule=Host(`traefik.lvs.me.uk`)'
+      - 'traefik.http.routers.traefik.entrypoints=websecure'
+      - 'traefik.http.routers.traefik.tls.certresolver=myresolver'
+      - 'traefik.http.routers.traefik.service=api@internal'
     networks:
       - traefik
 
@@ -58,11 +58,11 @@ services:
       - ./registry/data:/data
       - ./registry/auth:/auth
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.registry.rule=Host(`registry.lvs.me.uk`)"
-      - "traefik.http.routers.registry.entrypoints=websecure"
-      - "traefik.http.routers.registry.tls.certresolver=myresolver"
-      - "traefik.http.services.registry.loadbalancer.server.port=5000"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.registry.rule=Host(`registry.lvs.me.uk`)'
+      - 'traefik.http.routers.registry.entrypoints=websecure'
+      - 'traefik.http.routers.registry.tls.certresolver=myresolver'
+      - 'traefik.http.services.registry.loadbalancer.server.port=5000'
     networks:
       - traefik
 
@@ -79,11 +79,11 @@ services:
       - ./grafana/data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.lvs.me.uk`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls.certresolver=myresolver"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.grafana.rule=Host(`grafana.lvs.me.uk`)'
+      - 'traefik.http.routers.grafana.entrypoints=websecure'
+      - 'traefik.http.routers.grafana.tls.certresolver=myresolver'
+      - 'traefik.http.services.grafana.loadbalancer.server.port=3000'
     networks:
       - traefik
 
@@ -103,11 +103,11 @@ services:
       - ./prometheus/config:/etc/prometheus
       - ./prometheus/data:/prometheus
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.lvs.me.uk`)"
-      - "traefik.http.routers.prometheus.entrypoints=websecure"
-      - "traefik.http.routers.prometheus.tls.certresolver=myresolver"
-      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.prometheus.rule=Host(`prometheus.lvs.me.uk`)'
+      - 'traefik.http.routers.prometheus.entrypoints=websecure'
+      - 'traefik.http.routers.prometheus.tls.certresolver=myresolver'
+      - 'traefik.http.services.prometheus.loadbalancer.server.port=9090'
     networks:
       - traefik
 
@@ -121,11 +121,11 @@ services:
       - ./loki/data:/loki
       - ./loki/config:/etc/loki
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.loki.rule=Host(`loki.lvs.me.uk`)"
-      - "traefik.http.routers.loki.entrypoints=websecure"
-      - "traefik.http.routers.loki.tls.certresolver=myresolver"
-      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.loki.rule=Host(`loki.lvs.me.uk`)'
+      - 'traefik.http.routers.loki.entrypoints=websecure'
+      - 'traefik.http.routers.loki.tls.certresolver=myresolver'
+      - 'traefik.http.services.loki.loadbalancer.server.port=3100'
     networks:
       - traefik
 

@@ -14,7 +14,7 @@ packages:
   - wget
   - git
   - htop
-  - apache2-utils  # for htpasswd
+  - apache2-utils # for htpasswd
 
 write_files:
   - path: /opt/monitoring-stack/docker-compose.yml

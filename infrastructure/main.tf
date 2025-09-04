@@ -9,7 +9,7 @@ terraform {
     skip_credentials_validation = true
     skip_metadata_api_check     = true
     skip_region_validation      = true
-    force_path_style           = true
+    force_path_style            = true
   }
 
   required_providers {
@@ -58,13 +58,13 @@ variable "registry_pass" {
 variable "server_type" {
   description = "Hetzner server type"
   type        = string
-  default     = "cx22"  # 2 vCPU, 4GB RAM, 40GB SSD - ~€4.90/month
+  default     = "cx22" # 2 vCPU, 4GB RAM, 40GB SSD - ~€4.90/month
 }
 
 variable "datacenter" {
   description = "Hetzner datacenter"
   type        = string
-  default     = "nbg1-dc3"  # Nuremberg
+  default     = "nbg1-dc3" # Nuremberg
 }
 
 # SSH Key for server access
@@ -98,39 +98,39 @@ resource "hcloud_firewall" "web" {
   name = "${var.project_name}-web"
 
   rule {
-    direction = "in"
-    port      = "22"
-    protocol  = "tcp"
+    direction  = "in"
+    port       = "22"
+    protocol   = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 
   rule {
-    direction = "in"
-    port      = "80"
-    protocol  = "tcp"
+    direction  = "in"
+    port       = "80"
+    protocol   = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 
   rule {
-    direction = "in"
-    port      = "443"
-    protocol  = "tcp"
+    direction  = "in"
+    port       = "443"
+    protocol   = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 
   # Grafana
   rule {
-    direction = "in"
-    port      = "3000"
-    protocol  = "tcp"
+    direction  = "in"
+    port       = "3000"
+    protocol   = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 
   # Container Registry
   rule {
-    direction = "in"
-    port      = "5000"
-    protocol  = "tcp"
+    direction  = "in"
+    port       = "5000"
+    protocol   = "tcp"
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 
@@ -163,7 +163,7 @@ resource "hcloud_server" "main" {
   }
 
   user_data = templatefile("${path.module}/cloud-init.yml", {
-    ssh_key = trimspace(file("${path.module}/lvs-cloud.pub"))
+    ssh_key       = trimspace(file("${path.module}/lvs-cloud.pub"))
     registry_user = var.registry_user
     registry_pass = var.registry_pass
   })

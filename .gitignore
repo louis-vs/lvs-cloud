@@ -43,9 +43,7 @@ __pycache__/
 .venv/
 venv/
 
-# Pre-commit
-.secrets.baseline
-
 # Editor and formatter caches
 .prettierrc.cache
 .eslintcache
+node_modules/

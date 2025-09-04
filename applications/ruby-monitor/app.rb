@@ -11,7 +11,8 @@ set :environment, :production
 # Prometheus metrics setup
 prometheus = Prometheus::Client.registry
 uptime_gauge = prometheus.gauge(:app_uptime_seconds, docstring: 'Application uptime in seconds')
-request_counter = prometheus.counter(:http_requests_total, docstring: 'Total HTTP requests', labels: [:method, :path, :status])
+request_counter = prometheus.counter(:http_requests_total, docstring: 'Total HTTP requests',
+                                                           labels: %i[method path status])
 response_time_histogram = prometheus.histogram(:http_request_duration_seconds, docstring: 'HTTP request duration')
 
 # Store app start time
@@ -32,8 +33,8 @@ end
 get '/' do
   content_type :json
   {
-    message: "Ruby Monitor Application",
-    version: "1.0.0",
+    message: 'Ruby Monitor Application',
+    version: '1.0.0',
     uptime: Time.now - START_TIME,
     timestamp: Time.now.iso8601
   }.to_json
@@ -43,9 +44,9 @@ get '/health' do
   content_type :json
   uptime_seconds = Time.now - START_TIME
   uptime_gauge.set(uptime_seconds)
-  
+
   {
-    status: "healthy",
+    status: 'healthy',
     uptime: uptime_seconds,
     timestamp: Time.now.iso8601
   }.to_json
@@ -53,46 +54,44 @@ end
 
 get '/metrics' do
   content_type 'text/plain; version=0.0.4'
-  
+
   # Update uptime metric
   uptime_gauge.set(Time.now - START_TIME)
-  
+
   Prometheus::Client::Formats::Text.marshal(prometheus)
 end
 
 # External service monitoring
 get '/monitor' do
   content_type :json
-  
+
   services = [
-    { name: "grafana", url: "http://grafana:3000/api/health" },
-    { name: "prometheus", url: "http://prometheus:9090/-/healthy" },
-    { name: "loki", url: "http://loki:3100/ready" }
+    { name: 'grafana', url: 'http://grafana:3000/api/health' },
+    { name: 'prometheus', url: 'http://prometheus:9090/-/healthy' },
+    { name: 'loki', url: 'http://loki:3100/ready' }
   ]
-  
+
   results = services.map do |service|
-    begin
-      start_time = Time.now
-      response = HTTParty.get(service[:url], timeout: 5)
-      duration = Time.now - start_time
-      
-      {
-        service: service[:name],
-        status: response.success? ? "up" : "down",
-        response_time: duration,
-        http_code: response.code
-      }
-    rescue => e
-      {
-        service: service[:name],
-        status: "error",
-        error: e.message,
-        response_time: nil,
-        http_code: nil
-      }
-    end
+    start_time = Time.now
+    response = HTTParty.get(service[:url], timeout: 5)
+    duration = Time.now - start_time
+
+    {
+      service: service[:name],
+      status: response.success? ? 'up' : 'down',
+      response_time: duration,
+      http_code: response.code
+    }
+  rescue StandardError => e
+    {
+      service: service[:name],
+      status: 'error',
+      error: e.message,
+      response_time: nil,
+      http_code: nil
+    }
   end
-  
+
   {
     monitoring_results: results,
     timestamp: Time.now.iso8601
@@ -103,8 +102,8 @@ end
 get '/info' do
   content_type :json
   {
-    application: "Ruby Monitor",
-    version: "1.0.0",
+    application: 'Ruby Monitor',
+    version: '1.0.0',
     ruby_version: RUBY_VERSION,
     sinatra_version: Sinatra::VERSION,
     hostname: `hostname`.strip,
@@ -116,9 +115,9 @@ end
 not_found do
   content_type :json
   status 404
-  { error: "Not found", path: request.path }.to_json
+  { error: 'Not found', path: request.path }.to_json
 end
 
-puts "Ruby Monitor starting on port 4567..."
-puts "Metrics available at /metrics"
-puts "Health check at /health"
+puts 'Ruby Monitor starting on port 4567...'
+puts 'Metrics available at /metrics'
+puts 'Health check at /health'

@@ -15,7 +15,7 @@ GitHub → Actions → Container Registry → Watchtower → Production
 
 - **Traefik**: Reverse proxy with automatic SSL certificates
 - **Docker Registry**: Self-hosted container registry at `registry.lvs.me.uk`
-- **Grafana**: Monitoring dashboards at `grafana.lvs.me.uk` 
+- **Grafana**: Monitoring dashboards at `grafana.lvs.me.uk`
 - **Prometheus**: Metrics collection at `prometheus.lvs.me.uk`
 - **Loki**: Log aggregation at `loki.lvs.me.uk`
 - **Watchtower**: Automatic container updates every 5 minutes
@@ -30,6 +30,7 @@ GitHub → Actions → Container Registry → Watchtower → Production
 ## Deployment Process
 
 ### Initial Setup
+
 ```bash
 # Apply infrastructure (creates server with cloud-init)
 terraform apply
@@ -38,6 +39,7 @@ terraform apply
 ```
 
 ### Automatic Updates
+
 - **Code changes** trigger builds and deployments
 - **Container updates** are automatically pulled by Watchtower
 - **Infrastructure changes** are applied via Terraform
@@ -45,10 +47,10 @@ terraform apply
 
 ## Access Points
 
-- **Grafana**: https://grafana.lvs.me.uk (admin/admin123)
-- **Registry**: https://registry.lvs.me.uk (admin/registry123)
-- **Prometheus**: https://prometheus.lvs.me.uk
-- **Loki**: https://loki.lvs.me.uk
+- **Grafana**: <https://grafana.lvs.me.uk> (admin/admin123)
+- **Registry**: <https://registry.lvs.me.uk> (admin/registry123)
+- **Prometheus**: <https://prometheus.lvs.me.uk>
+- **Loki**: <https://loki.lvs.me.uk>
 
 ## Security
 
@@ -60,6 +62,6 @@ terraform apply
 ## Monitoring
 
 - **System metrics**: Node Exporter → Prometheus → Grafana
-- **Application logs**: Docker → Loki → Grafana  
+- **Application logs**: Docker → Loki → Grafana
 - **Service health**: Prometheus health checks
 - **Uptime monitoring**: Ruby app sends metrics to Prometheus

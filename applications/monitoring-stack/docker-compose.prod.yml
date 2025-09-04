@@ -7,9 +7,9 @@ services:
     container_name: traefik
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"  # Dashboard (internal only)
+      - '80:80'
+      - '443:443'
+      - '8080:8080' # Dashboard (internal only)
     volumes:
       - /etc/traefik:/etc/traefik
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
     environment:
       REGISTRY_AUTH: htpasswd
-      REGISTRY_AUTH_HTPASSWD_REALM: "Registry Realm"
+      REGISTRY_AUTH_HTPASSWD_REALM: 'Registry Realm'
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
       REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
       REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: '[https://registry.lvs.me.uk]'
@@ -50,11 +50,11 @@ services:
       - /var/lib/registry:/var/lib/registry
       - /etc/docker/registry/auth:/auth
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.registry.rule=Host(`registry.lvs.me.uk`)"
-      - "traefik.http.routers.registry.entrypoints=websecure"
-      - "traefik.http.routers.registry.tls.certresolver=letsencrypt"
-      - "traefik.http.services.registry.loadbalancer.server.port=5000"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.registry.rule=Host(`registry.lvs.me.uk`)'
+      - 'traefik.http.routers.registry.entrypoints=websecure'
+      - 'traefik.http.routers.registry.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.registry.loadbalancer.server.port=5000'
     networks:
       - web
 
@@ -72,11 +72,11 @@ services:
       - /var/lib/grafana:/var/lib/grafana
       - /etc/grafana/provisioning:/etc/grafana/provisioning
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.lvs.me.uk`)"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.grafana.rule=Host(`grafana.lvs.me.uk`)'
+      - 'traefik.http.routers.grafana.entrypoints=websecure'
+      - 'traefik.http.routers.grafana.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.grafana.loadbalancer.server.port=3000'
     networks:
       - web
       - monitoring
@@ -98,11 +98,11 @@ services:
       - /etc/prometheus:/etc/prometheus
       - /var/lib/prometheus:/prometheus
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.lvs.me.uk`)"
-      - "traefik.http.routers.prometheus.entrypoints=websecure"
-      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
-      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.prometheus.rule=Host(`prometheus.lvs.me.uk`)'
+      - 'traefik.http.routers.prometheus.entrypoints=websecure'
+      - 'traefik.http.routers.prometheus.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.prometheus.loadbalancer.server.port=9090'
     networks:
       - web
       - monitoring
@@ -117,11 +117,11 @@ services:
       - /etc/loki:/etc/loki
       - /var/lib/loki:/loki
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.loki.rule=Host(`loki.lvs.me.uk`)"
-      - "traefik.http.routers.loki.entrypoints=websecure"
-      - "traefik.http.routers.loki.tls.certresolver=letsencrypt"
-      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.loki.rule=Host(`loki.lvs.me.uk`)'
+      - 'traefik.http.routers.loki.entrypoints=websecure'
+      - 'traefik.http.routers.loki.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.loki.loadbalancer.server.port=3100'
     networks:
       - web
       - monitoring
@@ -136,7 +136,7 @@ services:
       - /etc/docker/config.json:/config.json:ro
     environment:
       - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=300  # Check every 5 minutes
+      - WATCHTOWER_POLL_INTERVAL=300 # Check every 5 minutes
       - WATCHTOWER_INCLUDE_RESTARTING=true
       - WATCHTOWER_NOTIFICATIONS=shoutrrr
       - WATCHTOWER_NOTIFICATION_URL=logger://

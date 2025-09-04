@@ -58,6 +58,7 @@ make commit     # Pre-commit check + ready to commit
 ## File Structure Standards
 
 ### Directory Layout
+
 ```
 lvs-cloud/
 ├── .github/           # GitHub Actions workflows
@@ -86,7 +87,7 @@ lvs-cloud/
 resource "hcloud_server" "main" {
   name        = "${var.project_name}-server"
   server_type = var.server_type
-  
+
   # Always add labels
   labels = {
     project = var.project_name
@@ -118,10 +119,11 @@ terraform {
 
 - **`region = "us-east-1"`**: Required by Terraform but ignored (not AWS)
 - **`endpoint`**: Points to Hetzner Object Storage (Nuremberg datacenter)
-- **Skip validations**: Bypasses AWS-specific checks for S3-compatible storage  
+- **Skip validations**: Bypasses AWS-specific checks for S3-compatible storage
 - **`force_path_style`**: Uses `endpoint/bucket/key` instead of `bucket.endpoint/key`
 
 **Environment Setup:**
+
 ```bash
 # Required for S3 backend authentication
 export AWS_ACCESS_KEY_ID="${S3_ACCESS_KEY}"
@@ -129,8 +131,9 @@ export AWS_SECRET_ACCESS_KEY="${S3_SECRET_KEY}"
 ```
 
 **Benefits:**
+
 - ✅ **Multi-machine access** - shared state across team members
-- ✅ **State locking** - prevents concurrent modifications  
+- ✅ **State locking** - prevents concurrent modifications
 - ✅ **Version control** - state change history in Object Storage
 - ✅ **Cost effective** - €1/month vs AWS S3 pricing
 
@@ -229,6 +232,7 @@ make commit
 ### IDE Configuration
 
 #### VS Code Settings
+
 ```json
 {
   "editor.formatOnSave": true,
@@ -245,11 +249,13 @@ make commit
 ## Testing
 
 ### Run All Tests
+
 ```bash
 make test
 ```
 
 ### Individual Test Types
+
 ```bash
 # Terraform validation
 cd infrastructure && terraform validate
@@ -269,7 +275,7 @@ Code quality is enforced in CI:
 
 - **Pre-commit hooks** run on every PR
 - **Security scanning** with Trivy
-- **Terraform validation** 
+- **Terraform validation**
 - **Ruby linting** with RuboCop
 
 ### Local Development
@@ -288,6 +294,7 @@ make test
 ### Common Issues
 
 **Pre-commit hook failures:**
+
 ```bash
 # Update hooks
 pre-commit autoupdate
@@ -297,12 +304,14 @@ pre-commit clean
 ```
 
 **Terraform formatting:**
+
 ```bash
 # Auto-fix formatting
 terraform fmt -recursive
 ```
 
 **Ruby linting issues:**
+
 ```bash
 # Auto-fix Ruby issues
 bundle exec rubocop --auto-correct-all
@@ -311,7 +320,7 @@ bundle exec rubocop --auto-correct-all
 ### Getting Help
 
 1. **Check the logs** - Most tools provide detailed error messages
-2. **Run individual tools** - Test specific formatters in isolation  
+2. **Run individual tools** - Test specific formatters in isolation
 3. **Update dependencies** - `pre-commit autoupdate`
 4. **Clean state** - Remove caches and reinstall
 

@@ -81,8 +81,9 @@ Traffic: 20 TiB included
 | **System** | ~200m | ~500MB | ~2GB |
 
 **Total Usage:**
+
 - CPU: ~1.18 vCPU (59% utilization)
-- RAM: ~2GB (50% utilization)  
+- RAM: ~2GB (50% utilization)
 - Storage: ~6.8GB (17% utilization)
 
 **Capacity for Growth:** Significant headroom available
@@ -110,6 +111,7 @@ Traffic: 20 TiB included
 ## Cost Optimization Tips
 
 ### 1. Resource Monitoring
+
 ```bash
 # Monitor actual usage
 docker stats
@@ -118,6 +120,7 @@ df -h
 ```
 
 ### 2. Log Retention
+
 ```yaml
 # Limit log storage in Loki config
 limits_config:
@@ -125,6 +128,7 @@ limits_config:
 ```
 
 ### 3. Prometheus Retention
+
 ```yaml
 # Prometheus storage settings
 --storage.tsdb.retention.time=30d
@@ -132,6 +136,7 @@ limits_config:
 ```
 
 ### 4. Registry Cleanup
+
 ```bash
 # Automated cleanup in Watchtower
 WATCHTOWER_CLEANUP=true
@@ -140,11 +145,13 @@ WATCHTOWER_CLEANUP=true
 ## Long-term Projections
 
 ### Year 1 Costs
+
 - **Infrastructure**: €58.80
 - **Domain**: €12.00
 - **Total**: €70.80/year
 
 ### Potential Additional Costs
+
 - **Monitoring tools**: €0 (self-hosted)
 - **SSL certificates**: €0 (Let's Encrypt)
 - **Backups**: €5-10/month (if needed)
@@ -153,6 +160,7 @@ WATCHTOWER_CLEANUP=true
 ### ROI Analysis
 
 **vs Managed Solutions:**
+
 - **Grafana Cloud**: €25-100/month
 - **DataDog**: €15-50/month per host
 - **New Relic**: €25-100/month
@@ -162,11 +170,13 @@ WATCHTOWER_CLEANUP=true
 ## Cost Alerts & Monitoring
 
 ### Hetzner Usage Monitoring
+
 - Built-in cost tracking in console
 - Traffic usage alerts
 - Resource utilization graphs
 
 ### Budget Recommendations
+
 - Set budget alerts at €10/month
 - Monitor traffic usage monthly
 - Review resource utilization quarterly

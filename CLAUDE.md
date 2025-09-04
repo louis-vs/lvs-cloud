@@ -1,9 +1,11 @@
 # LVS Cloud - Hetzner Infrastructure Monorepo
 
 ## Project Brief
+
 Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for hosting applications with centralized logging and monitoring. This is a monorepo containing all infrastructure, applications, and deployment configurations.
 
 ## Requirements
+
 - **Cloud Provider**: Hetzner Cloud
 - **Infrastructure**: Terraform for IaaC
 - **Main Service**: Grafana instance for logging and dashboards
@@ -14,6 +16,7 @@ Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for ho
 - **DevOps Practices**: Modern CI/CD with GitOps principles
 
 ## DevOps Architecture
+
 - **CI/CD**: GitHub Actions for build and deployment
 - **GitOps**: Declarative deployments triggered by git commits
 - **Container Registry**: Self-hosted registry with automated image builds
@@ -21,6 +24,7 @@ Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for ho
 - **Infrastructure**: Everything as code, no manual server configuration
 
 ## Deliverables ✅
+
 1. ✅ Hetzner Cloud account setup and API configuration
 2. ✅ Terraform infrastructure definitions with cloud-init
 3. ✅ Complete monitoring stack (Grafana, Prometheus, Loki)
@@ -33,6 +37,7 @@ Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for ho
 10. ✅ Comprehensive documentation and cost analysis
 
 ## Structure
+
 - Monorepo with projects in subfolders (no nesting)
 - Modern DevOps practices
 - Cost estimation for all resources
@@ -40,6 +45,7 @@ Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for ho
 - Conventional commits (all lowercase) for commit messages
 
 ## High-level Architecture
+
 ```
 lvs.me.uk domain
 ├── grafana.lvs.me.uk (Grafana dashboard)

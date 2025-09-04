@@ -63,13 +63,18 @@ jobs:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
 
       - name: Terraform Plan
-        run: terraform plan -no-color -input=false
+        run: terraform plan -no-color -input=false -out=tfplan
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
 
+      - name: Show Plan Summary
+        run: terraform show -no-color tfplan
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
       - name: Terraform Apply
         if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        run: terraform apply -auto-approve -input=false
+        run: terraform apply -auto-approve tfplan
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
 

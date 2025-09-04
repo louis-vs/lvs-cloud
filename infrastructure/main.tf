@@ -6,6 +6,7 @@ terraform {
     key                         = "terraform.tfstate"
     region                      = "us-east-1"
     endpoint                    = "https://nbg1.your-objectstorage.com"
+    skip_requesting_account_id  = true
     skip_credentials_validation = true
     skip_metadata_api_check     = true
     skip_region_validation      = true

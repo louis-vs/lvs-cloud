@@ -76,6 +76,16 @@ resource "hcloud_ssh_key" "default" {
   }
 }
 
+# SSH Key for GitHub Actions deployment
+resource "hcloud_ssh_key" "github_actions" {
+  name       = "${var.project_name}-github-actions"
+  public_key = file("${path.module}/github-actions-key.pub")
+  labels = {
+    project = var.project_name
+    purpose = "github-actions"
+  }
+}
+
 # Private network
 resource "hcloud_network" "main" {
   name     = "${var.project_name}-network"
@@ -146,7 +156,7 @@ resource "hcloud_server" "main" {
   server_type = var.server_type
   datacenter  = var.datacenter
 
-  ssh_keys = [hcloud_ssh_key.default.id]
+  ssh_keys = [hcloud_ssh_key.default.id, hcloud_ssh_key.github_actions.id]
 
   firewall_ids = [hcloud_firewall.web.id]
 
@@ -163,9 +173,10 @@ resource "hcloud_server" "main" {
   }
 
   user_data = templatefile("${path.module}/cloud-init.yml", {
-    ssh_key       = trimspace(file("${path.module}/lvs-cloud.pub"))
-    registry_user = var.registry_user
-    registry_pass = var.registry_pass
+    ssh_key                = trimspace(file("${path.module}/lvs-cloud.pub"))
+    github_actions_ssh_key = trimspace(file("${path.module}/github-actions-key.pub"))
+    registry_user          = var.registry_user
+    registry_pass          = var.registry_pass
   })
 }
 

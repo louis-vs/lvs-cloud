@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Test deployment workflow with automatic GitOps
 require 'sinatra'
 require 'json'
 require 'prometheus/client'

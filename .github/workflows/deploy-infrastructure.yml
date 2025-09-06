@@ -10,6 +10,10 @@ on:
       - 'traefik/**'
   workflow_dispatch:
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   TF_VAR_project_name: 'lvs-cloud'
   TF_VAR_domain: 'lvs.me.uk'

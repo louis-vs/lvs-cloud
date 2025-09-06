@@ -10,6 +10,10 @@ on:
     paths:
       - 'applications/ruby-monitor/**'
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   REGISTRY_URL: registry.lvs.me.uk
   IMAGE_NAME: ruby-monitor

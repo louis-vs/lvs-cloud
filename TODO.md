@@ -44,35 +44,46 @@
 - [x] Update cloud-init with proper Traefik static configuration
 - [x] Fix Let's Encrypt certificate resolver naming
 
+### Registry Architecture & Code Quality (September 2025)
+- [x] Extract registry from monitoring-stack to dedicated service
+- [x] Create separate applications/registry/ with own docker-compose.yml
+- [x] Update deployment workflow for parallel registry/monitoring deployment
+- [x] Remove deprecated Docker Compose version keys from all files
+- [x] Fix deprecated Terraform S3 backend parameters (endpoint → endpoints.s3, force_path_style → use_path_style)
+- [x] Centralize RuboCop configuration at project root
+- [x] Update code-quality workflow to run RuboCop project-wide
+- [x] Document container user ID requirements for monitoring services
+
 ## Current Issues 🔧
 
 ### High Priority
-- [ ] **Deploy and test updated infrastructure** with new Traefik architecture
-- [ ] Verify SSL certificate generation works with Let's Encrypt
-- [ ] Test site accessibility after infrastructure deployment
+- [ ] **Deploy and test registry separation** with new parallel deployment architecture
+- [ ] Verify all services work correctly after registry extraction
+- [ ] Test complete GitOps workflow with updated deployment dependencies
 
 ### Medium Priority
-- [ ] Create deployment documentation for shared Traefik architecture
 - [ ] Add ruby-monitor application to GitOps deployment
-- [ ] Optimize monitoring stack service dependencies
+- [ ] Create comprehensive deployment documentation
+- [ ] Investigate Docker Hub timeout issues in monitoring stack deployment
 
 ## Service Status 📊
 
 | Service | Status | URL | Notes |
 |---------|--------|-----|-------|
-| Traefik | 🔄 Updated | https://traefik.lvs.me.uk | Extracted to shared infrastructure |
-| Registry | ✅ Working | https://registry.lvs.me.uk | Fully operational |
-| Grafana | 🔄 Updated | https://grafana.lvs.me.uk | Architecture improved |
-| Prometheus | 🔄 Updated | https://prometheus.lvs.me.uk | Architecture improved |
-| Loki | 🔄 Updated | https://loki.lvs.me.uk | Architecture improved |
+| Traefik | ✅ Working | https://traefik.lvs.me.uk | Shared infrastructure service |
+| Registry | 🔄 Updated | https://registry.lvs.me.uk | Extracted to separate service |
+| Grafana | ✅ Working | https://grafana.lvs.me.uk | Container permissions fixed |
+| Prometheus | ✅ Working | https://prometheus.lvs.me.uk | Container permissions fixed |
+| Loki | ✅ Working | https://loki.lvs.me.uk | Container permissions fixed |
 | Node Exporter | ✅ Working | - | Internal metrics collection |
 | Watchtower | ✅ Working | - | Automatic container updates |
 
 ### Architecture Status
-- **Traefik**: Moved to shared `/traefik/` directory with static configuration
-- **SSL Certificates**: Let's Encrypt resolver standardized across all services
-- **Networks**: Consistent `web` (external) and `monitoring` (internal) networks
-- **Deployment**: Ready for infrastructure update and testing
+- **Registry**: Extracted to dedicated `applications/registry/` service
+- **Parallel Deployment**: Registry and monitoring stack deploy simultaneously
+- **Code Quality**: Centralized RuboCop configuration across project
+- **Dependencies**: Applications now wait for registry before deployment
+- **Deprecation Cleanup**: Removed deprecated Docker/Terraform configurations
 
 ---
 *Last updated: 2025-09-06*

@@ -106,7 +106,8 @@ The deployment follows a structured GitOps approach with proper service dependen
    - External `web` network created for service discovery
 
 3. **Application Deployment** (`applications/`)
-   - Monitoring stack deployed after Traefik is ready
+   - Registry and monitoring stack deployed in parallel after Traefik
+   - Registry provides container storage for custom applications
    - Services connect to external `web` network
    - Internal `monitoring` network for service communication
 
@@ -115,6 +116,7 @@ GitHub Actions workflows trigger on changes to:
 - `infrastructure/**` - Full infrastructure rebuild
 - `traefik/**` - Shared Traefik configuration updates
 - `applications/monitoring-stack/**` - Monitoring services updates
+- `applications/registry/**` - Container registry updates
 
 ### Service Dependencies
 ```
@@ -124,9 +126,29 @@ GitHub Actions workflows trigger on changes to:
           │
 ┌─────────▼───────┐
 │    Traefik      │ (Reverse Proxy + SSL)
-└─────────┬───────┘
-          │
-┌─────────▼───────┐
-│  Applications   │ (Monitoring Stack, Apps)
+└─────┬───────────┘
+      │
+      ├─────────────────┐
+      │                 │
+┌─────▼──────┐    ┌─────▼───────────┐
+│  Registry  │    │ Monitoring Stack│ (Parallel Deployment)
+└─────┬──────┘    └─────────────────┘
+      │
+┌─────▼───────────┐
+│  Applications   │ (Custom Apps)
 └─────────────────┘
 ```
+
+## Recent Updates (September 2025)
+
+### Registry Architecture Separation
+- **Registry extracted** from monitoring-stack to dedicated `applications/registry/`
+- **Parallel deployment** with monitoring stack after Traefik is ready
+- **Independent scaling** and management of registry vs monitoring services
+- **Applications depend** on registry for custom image storage
+
+### Code Quality Improvements
+- **Centralized RuboCop** configuration at project root
+- **Project-wide Ruby linting** across all applications
+- **Simplified CI/CD** workflows with global gem installation
+- **Removed deprecated** Docker Compose version keys and Terraform S3 parameters

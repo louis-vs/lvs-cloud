@@ -56,22 +56,50 @@ jobs:
             exit 0
           fi
 
-          # Extract unique app names from changed files
-          apps=$(echo "$changed_files" | cut -d'/' -f2 | sort -u | jq -R . | jq -s .)
+          # Extract unique app names from changed files, excluding platform services
+          platform_services="monitoring-stack registry"
+          all_dirs=$(echo "$changed_files" | cut -d'/' -f2 | sort -u)
 
-          echo "Changed applications: $apps"
-          echo "apps=$apps" >> $GITHUB_OUTPUT
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-
-          # Verify apps have required files
-          echo "$apps" | jq -r '.[]' | while read app; do
-            if [ ! -f "applications/$app/Dockerfile" ]; then
-              echo "⚠️  Warning: applications/$app/Dockerfile not found"
-            fi
-            if [ ! -f "applications/$app/docker-compose.prod.yml" ]; then
-              echo "⚠️  Warning: applications/$app/docker-compose.prod.yml not found"
+          # Filter out platform services
+          user_apps=""
+          for dir in $all_dirs; do
+            is_platform=false
+            for service in $platform_services; do
+              if [ "$dir" = "$service" ]; then
+                echo "🏗️  Skipping platform service: $dir (handled by infrastructure workflow)"
+                is_platform=true
+                break
+              fi
+            done
+            if [ "$is_platform" = "false" ]; then
+              user_apps="$user_apps $dir"
             fi
           done
+
+          # Convert to JSON array
+          if [ -z "$user_apps" ]; then
+            apps="[]"
+            has_changes="false"
+          else
+            apps=$(echo "$user_apps" | tr ' ' '\n' | grep -v '^$' | jq -R . | jq -s .)
+            has_changes="true"
+          fi
+
+          echo "Changed user applications: $apps"
+          echo "apps=$apps" >> $GITHUB_OUTPUT
+          echo "has_changes=$has_changes" >> $GITHUB_OUTPUT
+
+          # Verify apps have required files
+          if [ "$has_changes" = "true" ]; then
+            echo "$apps" | jq -r '.[]' | while read app; do
+              if [ ! -f "applications/$app/Dockerfile" ]; then
+                echo "⚠️  Warning: applications/$app/Dockerfile not found"
+              fi
+              if [ ! -f "applications/$app/docker-compose.prod.yml" ]; then
+                echo "⚠️  Warning: applications/$app/docker-compose.prod.yml not found"
+              fi
+            done
+          fi
 
   build-and-deploy:
     name: 'Build and Deploy Apps'

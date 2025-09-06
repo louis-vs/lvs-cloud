@@ -104,16 +104,36 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e  # Exit on any error
+
+            # Wait for cloud-init to complete
+            echo "⏳ Waiting for system setup to complete..."
+            sudo cloud-init status --wait || {
+              echo "❌ Cloud-init failed or timed out"
+              exit 1
+            }
+
+            # Verify Docker is available
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker is not available"
+              exit 1
+            fi
+
+            # Create directories if they don't exist
+            sudo mkdir -p /opt/traefik
+            sudo mkdir -p /etc/traefik
+            sudo chown ubuntu:ubuntu /opt/traefik
+
             # Update shared Traefik
-            cd /opt/traefik || sudo mkdir -p /opt/traefik
+            cd /opt/traefik
 
             # Download latest traefik configuration files
-            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/traefik/docker-compose.yml
 
-            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o /tmp/traefik.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/traefik/traefik.yml
@@ -143,11 +163,23 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e  # Exit on any error
+
+            # Verify prerequisites are met
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker is not available"
+              exit 1
+            fi
+
+            # Create directories if they don't exist
+            sudo mkdir -p /opt/monitoring-stack
+            sudo chown ubuntu:ubuntu /opt/monitoring-stack
+
             # Update monitoring stack
-            cd /opt/monitoring-stack || sudo mkdir -p /opt/monitoring-stack
+            cd /opt/monitoring-stack
 
             # Download latest docker-compose file
-            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/docker-compose.prod.yml
@@ -180,11 +212,23 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e  # Exit on any error
+
+            # Verify prerequisites are met
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker is not available"
+              exit 1
+            fi
+
+            # Create directories if they don't exist
+            sudo mkdir -p /opt/apps/ruby-monitor
+            sudo chown ubuntu:ubuntu /opt/apps/ruby-monitor
+
             # Update Ruby monitor app
-            cd /opt/apps/ruby-monitor || sudo mkdir -p /opt/apps/ruby-monitor
+            cd /opt/apps/ruby-monitor
 
             # Download latest docker-compose file
-            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/applications/ruby-monitor/docker-compose.prod.yml

@@ -5,9 +5,9 @@ on:
     branches: [master]
     paths:
       - 'infrastructure/**'
-      - 'applications/monitoring-stack/**'
-      - 'applications/registry/**'
-      - 'traefik/**'
+      - 'platform/monitoring/**'
+      - 'platform/registry/**'
+      - 'platform/traefik/**'
   workflow_dispatch:
 
 concurrency:
@@ -135,12 +135,12 @@ jobs:
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/traefik/docker-compose.yml
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/traefik/docker-compose.yml
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o /tmp/traefik.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/traefik/traefik.yml
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/traefik/traefik.yml
 
             # Update Traefik static configuration
             sudo cp /tmp/traefik.yml /etc/traefik/traefik.yml
@@ -186,7 +186,7 @@ jobs:
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/applications/registry/docker-compose.yml
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/registry/docker-compose.yml
 
             # Start registry service
             sudo docker compose up -d --remove-orphans
@@ -240,7 +240,7 @@ jobs:
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/docker-compose.prod.yml
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/docker-compose.prod.yml
 
             # Create Grafana config directory structure
             mkdir -p grafana/provisioning/{dashboards,datasources}
@@ -249,12 +249,12 @@ jobs:
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o grafana/provisioning/datasources/prometheus.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/grafana/provisioning/datasources/prometheus.yml
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/datasources/prometheus.yml
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o grafana/provisioning/dashboards/dashboards.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/grafana/provisioning/dashboards/dashboards.yml
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/dashboards.yml
 
             # Stop existing services first to avoid conflicts
             sudo docker compose down 2>/dev/null || true

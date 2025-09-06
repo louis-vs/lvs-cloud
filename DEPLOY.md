@@ -72,10 +72,11 @@ git push origin master
 ### What Triggers Infrastructure Deploy
 
 - `infrastructure/**` - Terraform changes
-- `traefik/**` - SSL/routing changes
-- `applications/monitoring-stack/**` - Monitoring changes
-- `applications/registry/**` - Registry changes
-- `applications/ruby-demo-app/docker-compose.prod.yml` - Ruby demo app
+- `platform/traefik/**` - SSL/routing changes
+- `platform/monitoring/**` - Monitoring changes
+- `platform/registry/**` - Registry changes
+
+**Note**: User apps in `applications/` now trigger the dedicated deploy-applications.yml workflow
 
 ## Current Issues Blocking Seamless Deployment
 
@@ -89,11 +90,10 @@ git push origin master
 **Now**: All services use secure environment variables from GitHub secrets
 **Added**: GRAFANA_ADMIN_PASS secret, proper provisioning configs
 
-### 3. Repository Structure Issues
-**Problem**: Platform services mixed with user apps in `applications/`
-**Current**: `applications/{monitoring-stack,registry,ruby-demo-app}`
-**Should Be**: `platform/{monitoring,registry}` + `applications/{ruby-demo-app}`
-**Impact**: Confusing, hard to scale to multiple apps
+### 3. ✅ Fixed - Repository Structure
+**Was**: Platform services mixed with user apps in `applications/`
+**Now**: Clean separation with `platform/{monitoring,registry,traefik}` + `applications/{ruby-demo-app}`
+**Result**: Clear structure, scalable for multiple apps, no confusion between platform services and user apps
 
 ### Fix Needed
 Need separate workflows that:

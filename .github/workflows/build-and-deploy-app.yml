@@ -10,11 +10,11 @@ on:
   push:
     branches: [master]
     paths:
-      - 'applications/ruby-demo-app/**' # Updated path
+      - 'applications/ruby-demo-app/**' # User app path (unchanged)
   pull_request:
     branches: [master]
     paths:
-      - 'applications/ruby-demo-app/**' # Updated path
+      - 'applications/ruby-demo-app/**' # User app path (unchanged)
 
 concurrency:
   group: deploy-ruby-app-${{ github.ref }}

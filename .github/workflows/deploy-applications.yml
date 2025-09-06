@@ -56,32 +56,16 @@ jobs:
             exit 0
           fi
 
-          # Extract unique app names from changed files, excluding platform services
-          platform_services="monitoring-stack registry"
+          # Extract unique app names from changed files
+          # Note: Platform services are now in platform/ so won't be detected here
           all_dirs=$(echo "$changed_files" | cut -d'/' -f2 | sort -u)
 
-          # Filter out platform services
-          user_apps=""
-          for dir in $all_dirs; do
-            is_platform=false
-            for service in $platform_services; do
-              if [ "$dir" = "$service" ]; then
-                echo "🏗️  Skipping platform service: $dir (handled by infrastructure workflow)"
-                is_platform=true
-                break
-              fi
-            done
-            if [ "$is_platform" = "false" ]; then
-              user_apps="$user_apps $dir"
-            fi
-          done
-
-          # Convert to JSON array
-          if [ -z "$user_apps" ]; then
+          # Convert to JSON array (all dirs in applications/ are now user apps)
+          if [ -z "$all_dirs" ]; then
             apps="[]"
             has_changes="false"
           else
-            apps=$(echo "$user_apps" | tr ' ' '\n' | grep -v '^$' | jq -R . | jq -s .)
+            apps=$(echo "$all_dirs" | tr ' ' '\n' | grep -v '^$' | jq -R . | jq -s .)
             has_changes="true"
           fi
 

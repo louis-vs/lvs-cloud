@@ -58,12 +58,18 @@ get '/health' do
 end
 
 get '/metrics' do
-  content_type 'text/plain; version=0.0.4'
+  content_type 'text/plain; version=0.0.4; charset=utf-8'
 
   # Update uptime metric
   uptime_gauge.set(Time.now - START_TIME)
 
-  Prometheus::Client::Formats::Text.marshal(prometheus)
+  begin
+    Prometheus::Client::Formats::Text.marshal(prometheus)
+  rescue StandardError => e
+    puts "Error marshaling metrics: #{e.message}"
+    status 500
+    "# Error: Unable to generate metrics\n"
+  end
 end
 
 # External service monitoring

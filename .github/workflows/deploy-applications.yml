@@ -65,7 +65,8 @@ jobs:
             apps="[]"
             has_changes="false"
           else
-            apps=$(echo "$all_dirs" | tr ' ' '\n' | grep -v '^$' | jq -R . | jq -s .)
+            # Create compact JSON array without indentation
+            apps=$(echo "$all_dirs" | tr ' ' '\n' | grep -v '^$' | jq -R . | jq -s -c .)
             has_changes="true"
           fi
 

@@ -39,10 +39,20 @@ Set up a complete IaaC cloud environment on Hetzner Cloud using Terraform for ho
 ## Current Status
 
 **Infrastructure**: ✅ Fully deployed and operational
-**Monitoring Stack**: ✅ All services operational with improved architecture
+**Monitoring Stack**: ✅ All services operational with proper container permissions
 **CI/CD**: ✅ GitHub Actions workflows operational with proper authentication
 **SSL/DNS**: ✅ Let's Encrypt certificates configured, deployment ready
 **Traefik**: ✅ Extracted to shared infrastructure service
+
+### Container User ID Requirements
+
+Monitoring stack containers require specific user IDs for data directory access:
+
+- **Grafana**: UID/GID 472 (`/var/lib/grafana`)
+- **Prometheus**: UID/GID 65534 (`/var/lib/prometheus`)
+- **Loki**: UID/GID 10001 (`/var/lib/loki` and `/loki`)
+
+Cloud-init sets these permissions with `|| true` fallback to prevent provisioning failures if directories don't exist during initial setup. The `|| true` ensures the script continues even if chown fails, preventing total deployment failure.
 
 ## Structure
 

@@ -57,6 +57,12 @@ runcmd:
   - chown -R ubuntu:ubuntu /opt/traefik
   - chown -R ubuntu:ubuntu /opt/apps
 
+  # Set container-specific permissions for data directories
+  - chown -R 472:472 /var/lib/grafana || true
+  - chown -R 65534:65534 /var/lib/prometheus || true
+  - chown -R 10001:10001 /var/lib/loki || true
+  - chown -R 10001:10001 /loki || true
+
   # Create registry auth
   - htpasswd -Bbn "${registry_user}" "${registry_pass}" > /etc/docker/registry/auth/htpasswd
 

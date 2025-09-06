@@ -19,7 +19,7 @@ packages:
 
 write_files:
   - path: /opt/monitoring-stack/docker-compose.yml
-    owner: root:root
+    owner: ubuntu:ubuntu
     permissions: '0644'
     content: |
       # Placeholder - will be updated by GitHub Actions
@@ -29,7 +29,7 @@ write_files:
           image: hello-world
 
   - path: /opt/traefik/docker-compose.yml
-    owner: root:root
+    owner: ubuntu:ubuntu
     permissions: '0644'
     content: |
       version: '3.8'
@@ -94,12 +94,10 @@ runcmd:
   - mkdir -p /etc/docker/registry/auth
 
   # Set permissions
-  - chown -R 472:472 /var/lib/grafana
-  - chown -R 65534:65534 /var/lib/prometheus
-  - chown -R 10001:10001 /var/lib/loki
   - chown -R ubuntu:ubuntu /opt/monitoring-stack
   - chown -R ubuntu:ubuntu /opt/traefik
   - chown -R ubuntu:ubuntu /opt/apps
+  # Note: Container-specific user permissions will be handled by Docker
 
   # Create registry auth
   - htpasswd -Bbn "${registry_user}" "${registry_pass}" > /etc/docker/registry/auth/htpasswd

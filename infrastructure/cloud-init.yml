@@ -19,7 +19,7 @@ packages:
 
 write_files:
   - path: /opt/monitoring-stack/docker-compose.yml
-    owner: ubuntu:ubuntu
+    owner: root:root
     permissions: '0644'
     content: |
       # Placeholder - will be updated by GitHub Actions
@@ -29,7 +29,7 @@ write_files:
           image: hello-world
 
   - path: /opt/traefik/docker-compose.yml
-    owner: ubuntu:ubuntu
+    owner: root:root
     permissions: '0644'
     content: |
       version: '3.8'

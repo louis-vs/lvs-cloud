@@ -122,7 +122,7 @@ jobs:
             sudo cp /tmp/traefik.yml /etc/traefik/traefik.yml
 
             # Restart Traefik (must be done first before other services)
-            sudo docker-compose up -d --remove-orphans
+            sudo docker compose up -d --remove-orphans
 
             echo "✅ Shared Traefik updated successfully"
 
@@ -153,7 +153,7 @@ jobs:
                  https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/docker-compose.prod.yml
 
             # Restart services (Traefik is already running)
-            sudo docker-compose up -d --remove-orphans
+            sudo docker compose up -d --remove-orphans
 
             echo "✅ Monitoring stack updated successfully"
 
@@ -187,7 +187,7 @@ jobs:
             echo "${{ secrets.REGISTRY_PASSWORD }}" | sudo docker login registry.lvs.me.uk -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
 
             # Pull latest image and restart application
-            sudo docker-compose pull
-            sudo docker-compose up -d --remove-orphans
+            sudo docker compose pull
+            sudo docker compose up -d --remove-orphans
 
             echo "✅ Ruby monitor application deployed successfully"

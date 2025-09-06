@@ -24,7 +24,7 @@ sudo cp docker-compose.yml /opt/monitoring-stack/
 
 # Start services
 cd /opt/monitoring-stack
-sudo docker-compose up -d
+sudo docker compose up -d
 
 echo "✅ Services started!"
 echo "🔗 Access points:"

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   ruby-monitor:
     image: registry.lvs.me.uk/ruby-monitor:latest

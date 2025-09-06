@@ -240,7 +240,7 @@ runcmd:
 
   # Create networks
   - docker network create web 2>/dev/null || true
-  - docker network create monitoring 2>/dev/null || true
+  # Note: monitoring network will be created by docker-compose when services start
 
   # Start Traefik (must be started first)
   - cd /opt/traefik && docker compose up -d

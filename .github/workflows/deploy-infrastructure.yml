@@ -152,7 +152,13 @@ jobs:
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/docker-compose.prod.yml
 
-            # Restart services (Traefik is already running)
+            # Stop existing services first to avoid conflicts
+            sudo docker compose down 2>/dev/null || true
+
+            # Remove potentially conflicting networks (they'll be recreated correctly)
+            sudo docker network rm monitoring 2>/dev/null || true
+
+            # Start services (Traefik is already running)
             sudo docker compose up -d --remove-orphans
 
             echo "✅ Monitoring stack updated successfully"

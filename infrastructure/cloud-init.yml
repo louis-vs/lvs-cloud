@@ -18,47 +18,6 @@ packages:
   - apache2-utils # for htpasswd
 
 write_files:
-  - path: /opt/monitoring-stack/docker-compose.yml
-    owner: ubuntu:ubuntu
-    permissions: '0644'
-    content: |
-      # Placeholder - will be updated by GitHub Actions
-      version: '3.8'
-      services:
-        placeholder:
-          image: hello-world
-
-  - path: /opt/traefik/docker-compose.yml
-    owner: ubuntu:ubuntu
-    permissions: '0644'
-    content: |
-      version: '3.8'
-
-      services:
-        traefik:
-          image: traefik:v3.0
-          container_name: traefik
-          restart: unless-stopped
-          ports:
-            - "80:80"
-            - "443:443"
-          volumes:
-            - /etc/traefik:/etc/traefik:ro
-            - /var/run/docker.sock:/var/run/docker.sock:ro
-          labels:
-            - "traefik.enable=true"
-            - "traefik.http.routers.traefik-dashboard.rule=Host(\`traefik.lvs.me.uk\`)"
-            - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
-            - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
-            - "traefik.http.routers.traefik-dashboard.service=api@internal"
-          networks:
-            - web
-
-      networks:
-        web:
-          name: web
-          external: true
-
   - path: /etc/docker/daemon.json
     owner: root:root
     permissions: '0644'
@@ -93,11 +52,10 @@ runcmd:
   - mkdir -p /etc/grafana/provisioning/dashboards
   - mkdir -p /etc/docker/registry/auth
 
-  # Set permissions
+  # Set permissions for directories
   - chown -R ubuntu:ubuntu /opt/monitoring-stack
   - chown -R ubuntu:ubuntu /opt/traefik
   - chown -R ubuntu:ubuntu /opt/apps
-  # Note: Container-specific user permissions will be handled by Docker
 
   # Create registry auth
   - htpasswd -Bbn "${registry_user}" "${registry_pass}" > /etc/docker/registry/auth/htpasswd

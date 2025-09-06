@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  ruby-monitor:
+    image: registry.lvs.me.uk/ruby-monitor:latest
+    container_name: ruby-monitor
+    restart: unless-stopped
+    environment:
+      - RACK_ENV=production
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.ruby-monitor.rule=Host(`app.lvs.me.uk`)'
+      - 'traefik.http.routers.ruby-monitor.entrypoints=websecure'
+      - 'traefik.http.routers.ruby-monitor.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.ruby-monitor.loadbalancer.server.port=4567'
+    networks:
+      - web
+
+networks:
+  web:
+    name: web
+    external: true

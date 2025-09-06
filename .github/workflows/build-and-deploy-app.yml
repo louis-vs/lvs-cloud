@@ -56,50 +56,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy to Production
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Hetzner Cloud CLI
-        uses: hetznercloud/setup-hcloud@v1
-
-      - name: Get server IP from Hetzner Cloud
-        id: server-ip
-        run: |
-          server_ip=$(hcloud server list -o columns=name,public_ipv4 | grep "lvs-cloud-server" | awk '{print $2}')
-          echo "server_ip=$server_ip" >> $GITHUB_OUTPUT
-        env:
-          HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN_RO }}
-
-      - name: Deploy Ruby application
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # Login to registry
-            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY_URL }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
-
-            # Create app directory
-            sudo mkdir -p /opt/apps/ruby-monitor
-
-            # Download docker-compose file for app
-            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o /tmp/app-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/applications/ruby-monitor/docker-compose.prod.yml
-
-            # Update and restart app
-            cd /opt/apps/ruby-monitor
-            sudo cp /tmp/app-compose.yml docker-compose.yml
-            sudo docker-compose pull
-            sudo docker-compose up -d --remove-orphans
-
-            echo "✅ Ruby application deployed successfully"
+  # Note: Deployment now handled by deploy-infrastructure.yml workflow
+  # This workflow only handles building and pushing the Docker image
+  # The application deployment is integrated into the GitOps infrastructure workflow

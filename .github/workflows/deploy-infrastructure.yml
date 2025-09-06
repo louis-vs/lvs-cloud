@@ -6,6 +6,8 @@ on:
     paths:
       - 'infrastructure/**'
       - 'applications/monitoring-stack/**'
+      - 'applications/ruby-monitor/docker-compose.prod.yml'
+      - 'traefik/**'
   workflow_dispatch:
 
 env:
@@ -85,10 +87,49 @@ jobs:
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
 
+  deploy-traefik:
+    name: 'Deploy Shared Traefik'
+    runs-on: ubuntu-latest
+    needs: terraform
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && !cancelled() && !failure()
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy shared Traefik configuration
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ needs.terraform.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Update shared Traefik
+            cd /opt/traefik || sudo mkdir -p /opt/traefik
+
+            # Download latest traefik configuration files
+            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/traefik/docker-compose.yml
+
+            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o /tmp/traefik.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/traefik/traefik.yml
+
+            # Update Traefik static configuration
+            sudo cp /tmp/traefik.yml /etc/traefik/traefik.yml
+
+            # Restart Traefik (must be done first before other services)
+            sudo docker-compose up -d --remove-orphans
+
+            echo "✅ Shared Traefik updated successfully"
+
   deploy-stack:
     name: 'Deploy Monitoring Stack'
     runs-on: ubuntu-latest
-    needs: terraform
+    needs: [terraform, deploy-traefik]
     if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
 
     steps:
@@ -111,7 +152,42 @@ jobs:
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/docker-compose.prod.yml
 
-            # Restart services
+            # Restart services (Traefik is already running)
             sudo docker-compose up -d --remove-orphans
 
             echo "✅ Monitoring stack updated successfully"
+
+  deploy-apps:
+    name: 'Deploy Applications'
+    runs-on: ubuntu-latest
+    needs: [terraform, deploy-traefik]
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && !cancelled() && !failure()
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy Ruby monitor application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ needs.terraform.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Update Ruby monitor app
+            cd /opt/apps/ruby-monitor || sudo mkdir -p /opt/apps/ruby-monitor
+
+            # Download latest docker-compose file
+            curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/applications/ruby-monitor/docker-compose.prod.yml
+
+            # Login to registry
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | sudo docker login registry.lvs.me.uk -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+            # Pull latest image and restart application
+            sudo docker-compose pull
+            sudo docker-compose up -d --remove-orphans
+
+            echo "✅ Ruby monitor application deployed successfully"

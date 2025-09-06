@@ -78,3 +78,45 @@ lvs.me.uk domain
 - Standardized on `letsencrypt` resolver across all services
 - HTTP-01 challenge configured for automatic certificate generation
 - Secure ACME storage with proper file permissions
+
+## Deployment Architecture
+
+### GitOps Workflow
+The deployment follows a structured GitOps approach with proper service dependencies:
+
+1. **Infrastructure Provisioning** (`infrastructure/`)
+   - Terraform provisions Hetzner Cloud server
+   - Cloud-init sets up Docker, networks, and initial Traefik configuration
+   - Creates directory structure for all services
+
+2. **Shared Services Deployment** (`traefik/`)
+   - Traefik deployed first as shared reverse proxy
+   - Static configuration file deployed to `/etc/traefik/traefik.yml`
+   - Let's Encrypt certificates automatically generated
+   - External `web` network created for service discovery
+
+3. **Application Deployment** (`applications/`)
+   - Monitoring stack deployed after Traefik is ready
+   - Services connect to external `web` network
+   - Internal `monitoring` network for service communication
+
+### Deployment Triggers
+GitHub Actions workflows trigger on changes to:
+- `infrastructure/**` - Full infrastructure rebuild
+- `traefik/**` - Shared Traefik configuration updates
+- `applications/monitoring-stack/**` - Monitoring services updates
+
+### Service Dependencies
+```
+┌─────────────────┐
+│   Terraform     │ (Infrastructure)
+└─────────┬───────┘
+          │
+┌─────────▼───────┐
+│    Traefik      │ (Reverse Proxy + SSL)
+└─────────┬───────┘
+          │
+┌─────────▼───────┐
+│  Applications   │ (Monitoring Stack, Apps)
+└─────────────────┘
+```

@@ -1,0 +1,202 @@
+name: Deploy Applications
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'applications/**'
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Specific app to deploy (leave empty for all changed apps)'
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-apps-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY_URL: registry.lvs.me.uk
+
+jobs:
+  detect-changes:
+    name: 'Detect Changed Applications'
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.detect.outputs.apps }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Need previous commit for comparison
+
+      - name: Detect changed applications
+        id: detect
+        run: |
+          set -e
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.app_name }}" ]; then
+            # Manual dispatch with specific app
+            echo "apps=[\"${{ inputs.app_name }}\"]" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment requested for: ${{ inputs.app_name }}"
+            exit 0
+          fi
+
+          # Get changed files in applications/ directory
+          changed_files=$(git diff --name-only HEAD^ HEAD | grep "^applications/" || true)
+
+          if [ -z "$changed_files" ]; then
+            echo "No changes in applications/ directory"
+            echo "apps=[]" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Extract unique app names from changed files
+          apps=$(echo "$changed_files" | cut -d'/' -f2 | sort -u | jq -R . | jq -s .)
+
+          echo "Changed applications: $apps"
+          echo "apps=$apps" >> $GITHUB_OUTPUT
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+
+          # Verify apps have required files
+          echo "$apps" | jq -r '.[]' | while read app; do
+            if [ ! -f "applications/$app/Dockerfile" ]; then
+              echo "⚠️  Warning: applications/$app/Dockerfile not found"
+            fi
+            if [ ! -f "applications/$app/docker-compose.prod.yml" ]; then
+              echo "⚠️  Warning: applications/$app/docker-compose.prod.yml not found"
+            fi
+          done
+
+  build-and-deploy:
+    name: 'Build and Deploy Apps'
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.detect-changes.outputs.apps) }}
+      fail-fast: false # Continue deploying other apps if one fails
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Verify app structure
+        run: |
+          set -e
+
+          if [ ! -f "applications/${{ matrix.app }}/Dockerfile" ]; then
+            echo "❌ Error: applications/${{ matrix.app }}/Dockerfile not found"
+            exit 1
+          fi
+
+          if [ ! -f "applications/${{ matrix.app }}/docker-compose.prod.yml" ]; then
+            echo "❌ Error: applications/${{ matrix.app }}/docker-compose.prod.yml not found"
+            exit 1
+          fi
+
+          echo "✅ App structure verified for ${{ matrix.app }}"
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_URL }}/${{ matrix.app }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./applications/${{ matrix.app }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      - name: Get server IP
+        id: server-ip
+        run: |
+          # Get server IP from DNS (more reliable than Terraform output)
+          SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
+
+          if [ -z "$SERVER_IP" ]; then
+            echo "❌ Error: Could not resolve server IP from app.lvs.me.uk"
+            exit 1
+          fi
+
+          echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+          echo "✅ Server IP: $SERVER_IP"
+
+      - name: Deploy application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e  # Exit on any error
+
+            APP_NAME="${{ matrix.app }}"
+            APP_DIR="/opt/apps/$APP_NAME"
+
+            echo "🚀 Deploying application: $APP_NAME"
+
+            # Create app directory if it doesn't exist
+            sudo mkdir -p "$APP_DIR"
+            sudo chown ubuntu:ubuntu "$APP_DIR"
+
+            # Navigate to app directory
+            cd "$APP_DIR"
+
+            # Download latest docker-compose file
+            echo "📥 Downloading docker-compose.prod.yml..."
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/applications/$APP_NAME/docker-compose.prod.yml"
+
+            # Login to registry
+            echo "🔑 Logging into container registry..."
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | sudo docker login ${{ env.REGISTRY_URL }} \
+                -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+            # Pull latest image
+            echo "📦 Pulling latest container image..."
+            sudo docker compose pull
+
+            # Deploy with zero downtime
+            echo "🔄 Deploying application..."
+            sudo docker compose up -d --remove-orphans
+
+            # Verify deployment
+            sleep 5
+            if sudo docker compose ps --services --filter "status=running" | grep -q .; then
+              echo "✅ Application $APP_NAME deployed successfully"
+            else
+              echo "❌ Application $APP_NAME deployment failed"
+              sudo docker compose logs
+              exit 1
+            fi
+
+            echo "🎉 Deployment completed for $APP_NAME"

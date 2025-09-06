@@ -1,22 +1,28 @@
-name: Build and Deploy Ruby App
+# DEPRECATED: This workflow is replaced by deploy-applications.yml
+# The new workflow handles all applications dynamically
+#
+# This file remains for now but will be removed once the new workflow is verified
+# All application deployments now use the deploy-applications.yml workflow
+
+name: '[DEPRECATED] Build and Deploy Ruby App'
 
 on:
   push:
     branches: [master]
     paths:
-      - 'applications/ruby-monitor/**'
+      - 'applications/ruby-demo-app/**' # Updated path
   pull_request:
     branches: [master]
     paths:
-      - 'applications/ruby-monitor/**'
+      - 'applications/ruby-demo-app/**' # Updated path
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-ruby-app-${{ github.ref }}
   cancel-in-progress: false
 
 env:
   REGISTRY_URL: registry.lvs.me.uk
-  IMAGE_NAME: ruby-monitor
+  IMAGE_NAME: ruby-demo-app # Updated name
 
 jobs:
   build:
@@ -52,14 +58,13 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./applications/ruby-monitor
+          context: ./applications/ruby-demo-app # Updated path
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=ruby-demo-app
+          cache-to: type=gha,mode=max,scope=ruby-demo-app
 
-  # Note: Deployment now handled by deploy-infrastructure.yml workflow
-  # This workflow only handles building and pushing the Docker image
-  # The application deployment is integrated into the GitOps infrastructure workflow
+  # NOTE: Deployment is now handled by deploy-applications.yml workflow
+  # This workflow will be removed once the new dynamic workflow is verified

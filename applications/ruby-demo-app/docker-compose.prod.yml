@@ -1,0 +1,24 @@
+services:
+  ruby-demo-app:
+    image: registry.lvs.me.uk/ruby-demo-app:latest
+    container_name: ruby-demo-app
+    restart: unless-stopped
+    environment:
+      - RACK_ENV=production
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.ruby-demo-app.rule=Host(`app.lvs.me.uk`)'
+      - 'traefik.http.routers.ruby-demo-app.entrypoints=websecure'
+      - 'traefik.http.routers.ruby-demo-app.tls.certresolver=letsencrypt'
+      - 'traefik.http.services.ruby-demo-app.loadbalancer.server.port=4567'
+    networks:
+      - web
+      - monitoring # Connect to monitoring for metrics
+
+networks:
+  web:
+    name: web
+    external: true
+  monitoring:
+    name: monitoring
+    external: true

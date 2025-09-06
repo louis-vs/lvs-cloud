@@ -36,10 +36,11 @@ end
 get '/' do
   content_type :json
   {
-    message: 'Ruby Monitor Application',
-    version: '1.0.0',
+    message: 'Ruby Demo Application - Clean Architecture',
+    version: '1.1.0',
     uptime: Time.now - START_TIME,
-    timestamp: Time.now.iso8601
+    timestamp: Time.now.iso8601,
+    architecture: 'platform/applications separation'
   }.to_json
 end
 

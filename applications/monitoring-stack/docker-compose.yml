@@ -1,49 +1,6 @@
 version: '3.8'
 
 services:
-  # Traefik - Reverse proxy with automatic SSL
-  traefik:
-    image: traefik:v3.0
-    container_name: traefik
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ./traefik:/etc/traefik
-      - ./traefik/acme:/acme
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      # Core
-      - TRAEFIK_API_DASHBOARD=true
-      - TRAEFIK_API_INSECURE=false
-      - TRAEFIK_PROVIDERS_DOCKER=true
-      - TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT=false
-
-      # Entrypoints
-      - TRAEFIK_ENTRYPOINTS_WEB_ADDRESS=:80
-      - TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS=:443
-
-      # Redirect HTTP -> HTTPS
-      - TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO=websecure
-      - TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME=https
-
-      # ACME (HTTP-01 on :80)
-      - TRAEFIK_CERTIFICATESRESOLVERS_MYRESOLVER_ACME_EMAIL=louis@lvs.me.uk
-      - TRAEFIK_CERTIFICATESRESOLVERS_MYRESOLVER_ACME_STORAGE=/acme/acme.json
-      - TRAEFIK_CERTIFICATESRESOLVERS_MYRESOLVER_ACME_HTTPCHALLENGE=true
-      - TRAEFIK_CERTIFICATESRESOLVERS_MYRESOLVER_ACME_HTTPCHALLENGE_ENTRYPOINT=web
-    labels:
-      - 'traefik.enable=true'
-
-      # Dashboard over HTTPS at traefik.lvs.me.uk
-      - 'traefik.http.routers.traefik.rule=Host(`traefik.lvs.me.uk`)'
-      - 'traefik.http.routers.traefik.entrypoints=websecure'
-      - 'traefik.http.routers.traefik.tls.certresolver=myresolver'
-      - 'traefik.http.routers.traefik.service=api@internal'
-    networks:
-      - traefik
-
   # Docker Registry - Self-hosted container registry
   registry:
     image: registry:2
@@ -61,10 +18,10 @@ services:
       - 'traefik.enable=true'
       - 'traefik.http.routers.registry.rule=Host(`registry.lvs.me.uk`)'
       - 'traefik.http.routers.registry.entrypoints=websecure'
-      - 'traefik.http.routers.registry.tls.certresolver=myresolver'
+      - 'traefik.http.routers.registry.tls.certresolver=letsencrypt'
       - 'traefik.http.services.registry.loadbalancer.server.port=5000'
     networks:
-      - traefik
+      - web
 
   # Grafana - Monitoring dashboard
   grafana:
@@ -82,10 +39,11 @@ services:
       - 'traefik.enable=true'
       - 'traefik.http.routers.grafana.rule=Host(`grafana.lvs.me.uk`)'
       - 'traefik.http.routers.grafana.entrypoints=websecure'
-      - 'traefik.http.routers.grafana.tls.certresolver=myresolver'
+      - 'traefik.http.routers.grafana.tls.certresolver=letsencrypt'
       - 'traefik.http.services.grafana.loadbalancer.server.port=3000'
     networks:
-      - traefik
+      - web
+      - monitoring
 
   # Prometheus - Metrics collection
   prometheus:
@@ -106,10 +64,11 @@ services:
       - 'traefik.enable=true'
       - 'traefik.http.routers.prometheus.rule=Host(`prometheus.lvs.me.uk`)'
       - 'traefik.http.routers.prometheus.entrypoints=websecure'
-      - 'traefik.http.routers.prometheus.tls.certresolver=myresolver'
+      - 'traefik.http.routers.prometheus.tls.certresolver=letsencrypt'
       - 'traefik.http.services.prometheus.loadbalancer.server.port=9090'
     networks:
-      - traefik
+      - web
+      - monitoring
 
   # Loki - Log aggregation
   loki:
@@ -124,11 +83,50 @@ services:
       - 'traefik.enable=true'
       - 'traefik.http.routers.loki.rule=Host(`loki.lvs.me.uk`)'
       - 'traefik.http.routers.loki.entrypoints=websecure'
-      - 'traefik.http.routers.loki.tls.certresolver=myresolver'
+      - 'traefik.http.routers.loki.tls.certresolver=letsencrypt'
       - 'traefik.http.services.loki.loadbalancer.server.port=3100'
     networks:
-      - traefik
+      - web
+      - monitoring
+
+  # Watchtower - Automatic container updates
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/docker/config.json:/config.json:ro
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300 # Check every 5 minutes
+      - WATCHTOWER_INCLUDE_RESTARTING=true
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL=logger://
+    networks:
+      - monitoring
+
+  # Node Exporter - System metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - monitoring
 
 networks:
-  traefik:
+  web:
+    name: web
+    external: true
+  monitoring:
+    name: monitoring
     driver: bridge

@@ -36,28 +36,43 @@
 - [x] Configure SSL certificates with Let's Encrypt
 - [x] Self-hosted container registry with authentication
 
+### SSL & Traefik Architecture (September 2025)
+- [x] Identify SSL certificate resolver configuration inconsistencies
+- [x] Create shared Traefik configuration at repository root level
+- [x] Extract Traefik service from monitoring-stack to shared infrastructure
+- [x] Standardize Docker networks across all configurations
+- [x] Update cloud-init with proper Traefik static configuration
+- [x] Fix Let's Encrypt certificate resolver naming
+
 ## Current Issues 🔧
 
 ### High Priority
-- [ ] **Resolve intermittent timeout issues** with Grafana, Prometheus, and Loki services
-- [ ] Debug Traefik routing stability for monitoring services
+- [ ] **Deploy and test updated infrastructure** with new Traefik architecture
+- [ ] Verify SSL certificate generation works with Let's Encrypt
+- [ ] Test site accessibility after infrastructure deployment
 
 ### Medium Priority
-- [ ] Fix Grafana static asset loading issues (frontend build/reverse proxy config)
-- [ ] Optimize Docker Compose service startup sequence
-- [ ] Document deployment process and provide cost estimates
+- [ ] Create deployment documentation for shared Traefik architecture
+- [ ] Add ruby-monitor application to GitOps deployment
+- [ ] Optimize monitoring stack service dependencies
 
 ## Service Status 📊
 
 | Service | Status | URL | Notes |
 |---------|--------|-----|-------|
+| Traefik | 🔄 Updated | https://traefik.lvs.me.uk | Extracted to shared infrastructure |
 | Registry | ✅ Working | https://registry.lvs.me.uk | Fully operational |
-| Traefik | ✅ Working | - | SSL termination & routing |
-| Grafana | ⚠️ Issues | https://grafana.lvs.me.uk | Intermittent timeouts |
-| Prometheus | ⚠️ Issues | https://prometheus.lvs.me.uk | Intermittent timeouts |
-| Loki | ⚠️ Issues | https://loki.lvs.me.uk | Intermittent timeouts |
+| Grafana | 🔄 Updated | https://grafana.lvs.me.uk | Architecture improved |
+| Prometheus | 🔄 Updated | https://prometheus.lvs.me.uk | Architecture improved |
+| Loki | 🔄 Updated | https://loki.lvs.me.uk | Architecture improved |
 | Node Exporter | ✅ Working | - | Internal metrics collection |
 | Watchtower | ✅ Working | - | Automatic container updates |
 
+### Architecture Status
+- **Traefik**: Moved to shared `/traefik/` directory with static configuration
+- **SSL Certificates**: Let's Encrypt resolver standardized across all services
+- **Networks**: Consistent `web` (external) and `monitoring` (internal) networks
+- **Deployment**: Ready for infrastructure update and testing
+
 ---
-*Last updated: 2025-09-04*
+*Last updated: 2025-09-06*

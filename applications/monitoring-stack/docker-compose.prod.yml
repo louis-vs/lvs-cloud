@@ -1,35 +1,6 @@
 version: '3.8'
 
 services:
-  # Traefik - Reverse proxy with automatic SSL
-  traefik:
-    image: traefik:v3.0
-    container_name: traefik
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-      - '8080:8080' # Dashboard (internal only)
-    volumes:
-      - /etc/traefik:/etc/traefik
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      - TRAEFIK_API_DASHBOARD=true
-      - TRAEFIK_API_INSECURE=true
-      - TRAEFIK_PROVIDERS_DOCKER=true
-      - TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT=false
-      - TRAEFIK_ENTRYPOINTS_WEB_ADDRESS=:80
-      - TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS=:443
-      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL=louis@lvs.me.uk
-      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_STORAGE=/etc/traefik/acme.json
-      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_HTTPCHALLENGE=true
-      - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_HTTPCHALLENGE_ENTRYPOINT=web
-      # Redirect HTTP to HTTPS
-      - TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO=websecure
-      - TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME=https
-    networks:
-      - web
-
   # Docker Registry - Self-hosted container registry
   registry:
     image: registry:2.8
@@ -39,7 +10,7 @@ services:
       REGISTRY_AUTH: htpasswd
       REGISTRY_AUTH_HTPASSWD_REALM: 'Registry Realm'
       REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
-      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
       REGISTRY_HTTP_HEADERS_Access-Control-Allow-Origin: '[https://registry.lvs.me.uk]'
       REGISTRY_HTTP_HEADERS_Access-Control-Allow-Methods: '[HEAD,GET,OPTIONS,DELETE]'
       REGISTRY_HTTP_HEADERS_Access-Control-Allow-Headers: '[Authorization,Accept,Cache-Control]'
@@ -47,7 +18,7 @@ services:
       REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials: '[true]'
       REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: '[Docker-Content-Digest]'
     volumes:
-      - /var/lib/registry:/var/lib/registry
+      - /var/lib/registry:/data
       - /etc/docker/registry/auth:/auth
     labels:
       - 'traefik.enable=true'
@@ -141,7 +112,7 @@ services:
       - WATCHTOWER_NOTIFICATIONS=shoutrrr
       - WATCHTOWER_NOTIFICATION_URL=logger://
     networks:
-      - web
+      - monitoring
 
   # Node Exporter - System metrics
   node-exporter:
@@ -163,7 +134,7 @@ services:
 networks:
   web:
     name: web
-    driver: bridge
+    external: true
   monitoring:
     name: monitoring
     driver: bridge

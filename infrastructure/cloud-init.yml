@@ -28,6 +28,37 @@ write_files:
         placeholder:
           image: hello-world
 
+  - path: /opt/traefik/docker-compose.yml
+    owner: ubuntu:ubuntu
+    permissions: '0644'
+    content: |
+      version: '3.8'
+
+      services:
+        traefik:
+          image: traefik:v3.0
+          container_name: traefik
+          restart: unless-stopped
+          ports:
+            - "80:80"
+            - "443:443"
+          volumes:
+            - /etc/traefik:/etc/traefik:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+          labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.traefik-dashboard.rule=Host(\`traefik.lvs.me.uk\`)"
+            - "traefik.http.routers.traefik-dashboard.entrypoints=websecure"
+            - "traefik.http.routers.traefik-dashboard.tls.certresolver=letsencrypt"
+            - "traefik.http.routers.traefik-dashboard.service=api@internal"
+          networks:
+            - web
+
+      networks:
+        web:
+          name: web
+          external: true
+
   - path: /etc/docker/daemon.json
     owner: root:root
     permissions: '0644'
@@ -49,6 +80,7 @@ runcmd:
 
   # Create directory structure
   - mkdir -p /opt/monitoring-stack
+  - mkdir -p /opt/traefik
   - mkdir -p /opt/apps
   - mkdir -p /var/lib/grafana
   - mkdir -p /var/lib/prometheus
@@ -66,12 +98,52 @@ runcmd:
   - chown -R 65534:65534 /var/lib/prometheus
   - chown -R 10001:10001 /var/lib/loki
   - chown -R ubuntu:ubuntu /opt/monitoring-stack
+  - chown -R ubuntu:ubuntu /opt/traefik
   - chown -R ubuntu:ubuntu /opt/apps
 
   # Create registry auth
   - htpasswd -Bbn "${registry_user}" "${registry_pass}" > /etc/docker/registry/auth/htpasswd
 
-  # Create Traefik ACME file
+  # Create Traefik configuration and ACME file
+  - |
+    cat > /etc/traefik/traefik.yml << 'TRAEFIKEOF'
+    api:
+      dashboard: true
+      insecure: false
+
+    entryPoints:
+      web:
+        address: ":80"
+        http:
+          redirections:
+            entrypoint:
+              to: websecure
+              scheme: https
+              permanent: true
+
+      websecure:
+        address: ":443"
+
+    providers:
+      docker:
+        endpoint: "unix:///var/run/docker.sock"
+        exposedByDefault: false
+        network: web
+
+    certificatesResolvers:
+      letsencrypt:
+        acme:
+          email: louis@lvs.me.uk
+          storage: /etc/traefik/acme.json
+          httpChallenge:
+            entryPoint: web
+
+    log:
+      level: INFO
+
+    accessLog: {}
+    TRAEFIKEOF
+
   - touch /etc/traefik/acme.json
   - chmod 600 /etc/traefik/acme.json
 
@@ -169,6 +241,9 @@ runcmd:
   # Create networks
   - docker network create web 2>/dev/null || true
   - docker network create monitoring 2>/dev/null || true
+
+  # Start Traefik (must be started first)
+  - cd /opt/traefik && docker compose up -d
 
   # Create Loki data directories
   - mkdir -p /loki/{chunks,boltdb-shipper-active,boltdb-shipper-cache,rules,rules-temp}

@@ -84,10 +84,10 @@ git push origin master
 **Impact**: Code changes don't deploy automatically
 **Fix**: Need per-app workflows triggering on ANY file changes
 
-### 2. Insecure Credentials
-**Problem**: Grafana hardcoded admin/admin123, registry uses .env properly
-**Impact**: Security risk, inconsistent credential management
-**Fix**: Move all services to proper config files + .env credentials
+### 2. ✅ Fixed - Secure Credentials
+**Was**: Grafana hardcoded admin/admin123, registry uses .env properly
+**Now**: All services use secure environment variables from GitHub secrets
+**Added**: GRAFANA_ADMIN_PASS secret, proper provisioning configs
 
 ### 3. Repository Structure Issues
 **Problem**: Platform services mixed with user apps in `applications/`
@@ -113,6 +113,7 @@ S3_SECRET_KEY=xxx        # Object Storage secret
 SSH_PRIVATE_KEY=xxx      # Server access
 REGISTRY_USERNAME=admin  # From .env file
 REGISTRY_PASSWORD=xxx    # From .env file
+GRAFANA_ADMIN_PASS=xxx   # Grafana admin password (secure)
 ```
 
 ## First Time Setup

@@ -5,13 +5,14 @@ services:
     container_name: grafana
     restart: unless-stopped
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASS:-admin123}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-clock-panel
       - GF_SERVER_ROOT_URL=https://grafana.lvs.me.uk
     volumes:
       - /var/lib/grafana:/var/lib/grafana
-      - /etc/grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning:/etc/grafana/provisioning
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.grafana.rule=Host(`grafana.lvs.me.uk`)'

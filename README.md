@@ -6,7 +6,7 @@ Personal private cloud on Hetzner with enterprise-grade monitoring, automatic de
 
 | Service | URL | Status |
 |---------|-----|--------|
-| **Grafana** | https://grafana.lvs.me.uk | ✅ (admin/admin123) |
+| **Grafana** | https://grafana.lvs.me.uk | ✅ (admin/secure-pass) |
 | **Registry** | https://registry.lvs.me.uk | ✅ (see .env) |
 | **Prometheus** | https://prometheus.lvs.me.uk | ✅ |
 | **Ruby Demo** | https://app.lvs.me.uk | ✅ |
@@ -46,11 +46,11 @@ cd infrastructure && terraform destroy -auto-approve && terraform apply -auto-ap
 
 ## Current Issues
 
-- [ ] **GitOps**: Apps only deploy on compose file changes, not code changes
-- [ ] **Security**: Grafana uses hardcoded admin/admin123 password
+- [x] **GitOps**: Apps only deploy on compose file changes, not code changes ✅
+- [x] **Security**: Grafana uses hardcoded admin/admin123 password ✅
 - [ ] **Structure**: Platform services mixed with user apps in applications/
 - [ ] **Monitoring**: No app metrics collection configured
-- [ ] **Scalability**: Only handles one hardcoded Ruby app
+- [x] **Scalability**: Only handles one hardcoded Ruby app ✅
 
 ## Next: Adding Apps
 

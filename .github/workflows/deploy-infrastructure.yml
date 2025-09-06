@@ -225,11 +225,36 @@ jobs:
             # Update monitoring stack
             cd /opt/monitoring-stack
 
+            # Create environment file with secure credentials
+            cat > .env << 'EOF'
+            # Grafana Configuration
+            GRAFANA_ADMIN_USER=admin
+            GRAFANA_ADMIN_PASS=${{ secrets.GRAFANA_ADMIN_PASS }}
+
+            # Registry Configuration
+            REGISTRY_USER=${{ secrets.REGISTRY_USERNAME }}
+            REGISTRY_PASS=${{ secrets.REGISTRY_PASSWORD }}
+            EOF
+
             # Download latest docker-compose file
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/docker-compose.prod.yml
+
+            # Create Grafana config directory structure
+            mkdir -p grafana/provisioning/{dashboards,datasources}
+
+            # Download Grafana provisioning configurations
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/datasources/prometheus.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/grafana/provisioning/datasources/prometheus.yml
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/dashboards/dashboards.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/applications/monitoring-stack/grafana/provisioning/dashboards/dashboards.yml
 
             # Stop existing services first to avoid conflicts
             sudo docker compose down 2>/dev/null || true
@@ -237,7 +262,7 @@ jobs:
             # Remove potentially conflicting networks (they'll be recreated correctly)
             sudo docker network rm monitoring 2>/dev/null || true
 
-            # Start services (Traefik is already running)
+            # Start services with environment variables (Traefik is already running)
             sudo docker compose up -d --remove-orphans
 
             echo "✅ Monitoring stack updated successfully"

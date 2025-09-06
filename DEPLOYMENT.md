@@ -257,6 +257,22 @@ docker logs watchtower
 docker pull registry.lvs.me.uk/ruby-monitor:latest
 ```
 
+**Server access when Terraform state unavailable:**
+
+```bash
+# Get server IP using DNS (any subdomain works)
+SERVER_IP=$(dig +short traefik.lvs.me.uk)
+
+# SSH to server for debugging
+ssh root@$SERVER_IP
+
+# Clean up conflicting containers
+docker stop <container_name> && docker rm <container_name>
+
+# Check all running containers
+docker ps -a
+```
+
 ### Recovery Procedures
 
 **Complete infrastructure rebuild:**

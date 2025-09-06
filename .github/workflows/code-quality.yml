@@ -30,8 +30,6 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
-          bundler-cache: true
-          working-directory: applications/ruby-monitor
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -71,9 +69,7 @@ jobs:
           terraform fmt -check=true
 
       - name: Ruby lint
-        run: |
-          cd applications/ruby-monitor
-          bundle exec rubocop
+        run: rubocop
 
   security-scan:
     name: Security Scan

@@ -308,6 +308,11 @@ jobs:
             sudo chown ubuntu:ubuntu /opt/registry
             cd /opt/registry
 
+            cat > .env << 'EOF'
+            REGISTRY_USER=${{ secrets.REGISTRY_USERNAME }}
+            REGISTRY_PASS=${{ secrets.REGISTRY_PASSWORD }}
+            EOF
+
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o docker-compose.yml \
@@ -365,8 +370,6 @@ jobs:
             cat > .env << 'EOF'
             GRAFANA_ADMIN_USER=admin
             GRAFANA_ADMIN_PASS=${{ secrets.GRAFANA_ADMIN_PASS }}
-            REGISTRY_USER=${{ secrets.REGISTRY_USERNAME }}
-            REGISTRY_PASS=${{ secrets.REGISTRY_PASSWORD }}
             EOF
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \

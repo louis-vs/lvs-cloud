@@ -171,9 +171,10 @@ resource "hcloud_server" "main" {
   depends_on = [hcloud_network_subnet.main]
 
   labels = {
-    project = var.project_name
-    role    = "main"
-    test    = "approval-workflow"
+    project   = var.project_name
+    role      = "main"
+    test      = "approval-workflow"
+    timestamp = "20250907111900"
   }
 
   user_data = templatefile("${path.module}/cloud-init.yml", {

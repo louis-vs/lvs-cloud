@@ -1,0 +1,584 @@
+name: Deploy Infrastructure & Applications
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'infrastructure/**'
+      - 'platform/**'
+      - 'applications/**'
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Specific app to deploy (leave empty for all changed apps)'
+        required: false
+        type: string
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TF_VAR_project_name: 'lvs-cloud'
+  TF_VAR_domain: 'lvs.me.uk'
+  TF_VAR_registry_user: ${{ secrets.REGISTRY_USERNAME }}
+  TF_VAR_registry_pass: ${{ secrets.REGISTRY_PASSWORD }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+  REGISTRY_URL: registry.lvs.me.uk
+
+jobs:
+  infrastructure:
+    name: 'Deploy Infrastructure'
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'infrastructure/') || contains(github.event.head_commit.added, 'infrastructure/')
+    permissions:
+      issues: write
+      contents: read
+    outputs:
+      server_ip: ${{ steps.terraform-output.outputs.server_ip }}
+      changed: ${{ steps.check-changes.outputs.changed }}
+
+    defaults:
+      run:
+        working-directory: infrastructure
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+      AWS_EC2_METADATA_DISABLED: true
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for infrastructure changes
+        id: check-changes
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check if infrastructure files changed
+          git diff --name-only HEAD^ HEAD | grep "^infrastructure/" || {
+            echo "changed=false" >> $GITHUB_OUTPUT
+            exit 0
+          }
+          echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.0'
+
+      - name: Terraform Format
+        run: terraform fmt -check
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Terraform Validate
+        run: terraform validate
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -input=false -out=tfplan -detailed-exitcode
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
+        continue-on-error: true
+
+      - name: Show Plan Summary
+        run: terraform show tfplan
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Request Approval for Infrastructure Changes
+        if: steps.plan.outputs.exitcode == '2'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+          issue-title: 'Infrastructure Deployment Approval Required'
+          issue-body: |
+            **Infrastructure changes detected!**
+
+            Terraform plan shows changes will be made to the infrastructure.
+
+            **Review the plan output above** and approve this deployment to proceed.
+
+            - **Branch**: `${{ github.ref_name }}`
+            - **Commit**: `${{ github.sha }}`
+            - **Triggered by**: ${{ github.event_name }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (steps.plan.outputs.exitcode == '0' || steps.plan.outputs.exitcode == '2')
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
+
+      - name: Get Terraform Outputs
+        id: terraform-output
+        run: |
+          echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+  platform-traefik:
+    name: 'Deploy Traefik'
+    runs-on: ubuntu-latest
+    needs: [infrastructure]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (contains(github.event.head_commit.modified, 'platform/traefik/') ||
+       contains(github.event.head_commit.added, 'platform/traefik/') ||
+       needs.infrastructure.outputs.changed == 'true')
+    outputs:
+      changed: ${{ steps.check-changes.outputs.changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Infrastructure changed, redeploying Traefik"
+            exit 0
+          fi
+
+          # Check if traefik files changed
+          if git diff --name-only HEAD^ HEAD | grep "^platform/traefik/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Traefik files changed"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get server IP
+        id: server-ip
+        run: |
+          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
+            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
+          else
+            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
+            if [ -z "$SERVER_IP" ]; then
+              echo "❌ Error: Could not resolve server IP"
+              exit 1
+            fi
+            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy Traefik
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "⏳ Waiting for system setup to complete..."
+            sudo cloud-init status --wait || {
+              echo "❌ Cloud-init failed or timed out"
+              exit 1
+            }
+
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker is not available"
+              exit 1
+            fi
+
+            sudo mkdir -p /opt/traefik
+            sudo mkdir -p /etc/traefik
+            sudo chown ubuntu:ubuntu /opt/traefik
+            cd /opt/traefik
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/traefik/docker-compose.yml
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o /tmp/traefik.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/traefik/traefik.yml
+
+            sudo cp /tmp/traefik.yml /etc/traefik/traefik.yml
+            sudo docker compose up -d --remove-orphans
+            echo "✅ Traefik deployed successfully"
+
+  platform-registry:
+    name: 'Deploy Registry'
+    runs-on: ubuntu-latest
+    needs: [infrastructure, platform-traefik]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (contains(github.event.head_commit.modified, 'platform/registry/') ||
+       contains(github.event.head_commit.added, 'platform/registry/') ||
+       needs.infrastructure.outputs.changed == 'true')
+    outputs:
+      changed: ${{ steps.check-changes.outputs.changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Infrastructure changed, redeploying Registry"
+            exit 0
+          fi
+
+          # Check if registry files changed
+          if git diff --name-only HEAD^ HEAD | grep "^platform/registry/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Registry files changed"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get server IP
+        id: server-ip
+        run: |
+          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
+            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
+          else
+            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
+            if [ -z "$SERVER_IP" ]; then
+              echo "❌ Error: Could not resolve server IP"
+              exit 1
+            fi
+            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy Registry
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker is not available"
+              exit 1
+            fi
+
+            sudo mkdir -p /opt/registry
+            sudo chown ubuntu:ubuntu /opt/registry
+            cd /opt/registry
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/registry/docker-compose.yml
+
+            sudo docker compose up -d --remove-orphans
+            echo "✅ Registry deployed successfully"
+
+  platform-monitoring:
+    name: 'Deploy Monitoring'
+    runs-on: ubuntu-latest
+    needs: [infrastructure, platform-traefik]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (contains(github.event.head_commit.modified, 'platform/monitoring/') ||
+       contains(github.event.head_commit.added, 'platform/monitoring/') ||
+       needs.infrastructure.outputs.changed == 'true')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get server IP
+        id: server-ip
+        run: |
+          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
+            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
+          else
+            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
+            if [ -z "$SERVER_IP" ]; then
+              echo "❌ Error: Could not resolve server IP"
+              exit 1
+            fi
+            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy Monitoring
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker is not available"
+              exit 1
+            fi
+
+            sudo mkdir -p /opt/monitoring-stack
+            sudo chown ubuntu:ubuntu /opt/monitoring-stack
+            cd /opt/monitoring-stack
+
+            cat > .env << 'EOF'
+            GRAFANA_ADMIN_USER=admin
+            GRAFANA_ADMIN_PASS=${{ secrets.GRAFANA_ADMIN_PASS }}
+            REGISTRY_USER=${{ secrets.REGISTRY_USERNAME }}
+            REGISTRY_PASS=${{ secrets.REGISTRY_PASSWORD }}
+            EOF
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/docker-compose.prod.yml
+
+            mkdir -p grafana/provisioning/{dashboards,datasources}
+            mkdir -p loki
+
+            echo "📥 Downloading monitoring configuration files..."
+
+            # Download all config files in parallel
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o prometheus.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/prometheus.yml" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o loki/local-config.yaml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/loki/local-config.yaml" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/datasources/prometheus.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/datasources/prometheus.yml" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/dashboards/dashboards.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/dashboards.yml" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/dashboards/system-overview.json \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/system-overview.json" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/dashboards/application-metrics.json \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/application-metrics.json" &
+
+            wait  # Wait for all downloads to complete
+            echo "✅ All configuration files downloaded"
+
+            sudo docker compose down 2>/dev/null || true
+            sudo docker network rm monitoring 2>/dev/null || true
+            sudo docker compose up -d --remove-orphans
+            echo "✅ Monitoring stack deployed successfully"
+
+  detect-app-changes:
+    name: 'Detect Changed Applications'
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.detect.outputs.apps }}
+      has_changes: ${{ steps.detect.outputs.has_changes }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed applications
+        id: detect
+        run: |
+          set -e
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.app_name }}" ]; then
+            echo "apps=[\"${{ inputs.app_name }}\"]" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment requested for: ${{ inputs.app_name }}"
+            exit 0
+          fi
+
+          # Check if applications changed OR if registry changed (apps depend on registry)
+          app_changes=$(git diff --name-only HEAD^ HEAD | grep "^applications/" || true)
+          registry_changes=$(git diff --name-only HEAD^ HEAD | grep "^platform/registry/" || true)
+
+          if [ -z "$app_changes" ] && [ -z "$registry_changes" ]; then
+            echo "No changes affecting applications"
+            echo "apps=[]" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if [ -n "$registry_changes" ] && [ -z "$app_changes" ]; then
+            # Registry changed but no app changes - deploy all apps
+            all_apps=$(find applications/ -maxdepth 1 -type d ! -path applications/ | sed 's|applications/||' | sort)
+            if [ -z "$all_apps" ]; then
+              apps="[]"
+              has_changes="false"
+            else
+              apps=$(echo "$all_apps" | tr ' ' '\n' | jq -R . | jq -s -c .)
+              has_changes="true"
+            fi
+            echo "Registry changed, deploying all apps: $apps"
+          else
+            # App changes detected
+            changed_apps=$(echo "$app_changes" | cut -d'/' -f2 | sort -u)
+            if [ -z "$changed_apps" ]; then
+              apps="[]"
+              has_changes="false"
+            else
+              apps=$(echo "$changed_apps" | tr ' ' '\n' | grep -v '^$' | jq -R . | jq -s -c .)
+              has_changes="true"
+            fi
+            echo "Changed applications: $apps"
+          fi
+
+          echo "apps=$apps" >> $GITHUB_OUTPUT
+          echo "has_changes=$has_changes" >> $GITHUB_OUTPUT
+
+          # Verify apps have required files
+          if [ "$has_changes" = "true" ]; then
+            echo "$apps" | jq -r '.[]' | while read app; do
+              if [ ! -f "applications/$app/Dockerfile" ]; then
+                echo "⚠️  Warning: applications/$app/Dockerfile not found"
+              fi
+              if [ ! -f "applications/$app/docker-compose.prod.yml" ]; then
+                echo "⚠️  Warning: applications/$app/docker-compose.prod.yml not found"
+              fi
+            done
+          fi
+
+  applications:
+    name: 'Deploy Applications'
+    runs-on: ubuntu-latest
+    needs: [platform-registry, detect-app-changes]
+    if: |
+      always() && !cancelled() && !failure() &&
+      needs.detect-app-changes.outputs.has_changes == 'true'
+    strategy:
+      matrix:
+        app: ${{ fromJSON(needs.detect-app-changes.outputs.apps) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_URL }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Verify app structure
+        run: |
+          set -e
+          if [ ! -f "applications/${{ matrix.app }}/Dockerfile" ]; then
+            echo "❌ Error: applications/${{ matrix.app }}/Dockerfile not found"
+            exit 1
+          fi
+          if [ ! -f "applications/${{ matrix.app }}/docker-compose.prod.yml" ]; then
+            echo "❌ Error: applications/${{ matrix.app }}/docker-compose.prod.yml not found"
+            exit 1
+          fi
+          echo "✅ App structure verified for ${{ matrix.app }}"
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_URL }}/${{ matrix.app }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./applications/${{ matrix.app }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      - name: Get server IP
+        id: server-ip
+        run: |
+          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
+            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
+          else
+            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
+            if [ -z "$SERVER_IP" ]; then
+              echo "❌ Error: Could not resolve server IP from app.lvs.me.uk"
+              exit 1
+            fi
+            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+            echo "✅ Server IP: $SERVER_IP"
+          fi
+
+      - name: Deploy application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            APP_NAME="${{ matrix.app }}"
+            APP_DIR="/opt/apps/$APP_NAME"
+            echo "🚀 Deploying application: $APP_NAME"
+
+            sudo mkdir -p "$APP_DIR"
+            sudo chown ubuntu:ubuntu "$APP_DIR"
+            cd "$APP_DIR"
+
+            echo "📥 Downloading docker-compose.prod.yml..."
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/applications/$APP_NAME/docker-compose.prod.yml"
+
+            echo "🔑 Logging into container registry..."
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | sudo docker login ${{ env.REGISTRY_URL }} \
+                -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+
+            echo "📦 Pulling latest container image..."
+            sudo docker compose pull
+
+            echo "🔄 Deploying application..."
+            sudo docker compose up -d --remove-orphans
+
+            sleep 5
+            if sudo docker compose ps --services --filter "status=running" | grep -q .; then
+              echo "✅ Application $APP_NAME deployed successfully"
+            else
+              echo "❌ Application $APP_NAME deployment failed"
+              sudo docker compose logs
+              exit 1
+            fi
+
+            echo "🎉 Deployment completed for $APP_NAME"

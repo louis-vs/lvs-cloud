@@ -152,7 +152,7 @@ resource "hcloud_firewall" "web" {
   }
 }
 
-# Main server
+# Main server (testing approval workflow)
 resource "hcloud_server" "main" {
   name        = "${var.project_name}-server"
   image       = "ubuntu-22.04"

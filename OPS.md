@@ -9,9 +9,9 @@
 
 ### Current Critical Issues
 **Platform Issues**:
-- [x] **Security**: Grafana uses secure credentials from GitHub secrets ✅
-- [ ] **Structure**: Platform services mixed with apps in `applications/`
-- [ ] **GitOps**: Apps only deploy on compose changes, not code changes
+- [x] **Security**: All services use secure credentials from GitHub secrets ✅
+- [x] **Structure**: Clean separation - platform/ for services, applications/ for apps ✅
+- [x] **GitOps**: Apps deploy automatically on ANY file changes ✅
 
 **Monitoring Gaps**:
 - [ ] Prometheus scraping app metrics
@@ -50,10 +50,16 @@ ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker restart traefik'
 
 ### App Not Updating
 ```bash
-# Check Watchtower logs
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker logs watchtower'
+# Check GitHub Actions workflow status
+gh run list --repo $(gh repo view --json nameWithOwner -q .nameWithOwner)
 
-# Force update
+# Force app deployment
+gh workflow run "Deploy Infrastructure & Applications" -f app_name=ruby-demo-app
+
+# Check app container status
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'cd /opt/apps/ruby-demo-app && docker compose ps'
+
+# Force manual update
 ssh ubuntu@$(dig +short app.lvs.me.uk) 'cd /opt/apps/ruby-demo-app && docker compose pull && docker compose up -d'
 ```
 

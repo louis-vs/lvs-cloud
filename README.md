@@ -31,8 +31,14 @@ GitHub Push → Actions → Registry → Watchtower → Live
 ## Quick Commands
 
 ```bash
-# Deploy infrastructure (requires approval)
-gh workflow run "Deploy Infrastructure"
+# Deploy everything (requires approval for infrastructure changes)
+gh workflow run "Deploy Infrastructure & Applications"
+
+# Deploy specific app only
+gh workflow run "Deploy Infrastructure & Applications" -f app_name=ruby-demo-app
+
+# Deploy all apps and platform services
+gh workflow run "Deploy Infrastructure & Applications" -f deploy_everything=true
 
 # Check service status
 ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker ps'
@@ -46,11 +52,11 @@ cd infrastructure && terraform destroy -auto-approve && terraform apply -auto-ap
 
 ## Current Issues
 
-- [x] **GitOps**: Apps only deploy on compose file changes, not code changes ✅
-- [x] **Security**: Grafana uses hardcoded admin/admin123 password ✅
-- [x] **Structure**: Platform services mixed with user apps in applications/ ✅
-- [ ] **Monitoring**: No app metrics collection configured
-- [x] **Scalability**: Only handles one hardcoded Ruby app ✅
+- [x] **GitOps**: Apps deploy automatically on ANY file changes via unified workflow ✅
+- [x] **Security**: All services use secure credentials from GitHub secrets ✅
+- [x] **Structure**: Clean separation - platform/ for services, applications/ for apps ✅
+- [x] **Scalability**: Dynamic app detection supports unlimited apps via matrix strategy ✅
+- [ ] **Monitoring**: App metrics collection needs configuration for custom dashboards
 
 ## Next: Adding Apps
 

@@ -18,14 +18,14 @@ GitHub → Actions → Container Registry → Watchtower → Production
 - **Grafana**: Monitoring dashboards at `grafana.lvs.me.uk`
 - **Prometheus**: Metrics collection at `prometheus.lvs.me.uk`
 - **Loki**: Log aggregation at `loki.lvs.me.uk`
-- **Watchtower**: Automatic container updates every 5 minutes
+- **Direct Deployment**: Container updates triggered by GitHub Actions via SSH
 - **Node Exporter**: System metrics collection
 
 ## GitOps Workflow
 
-1. **Infrastructure Changes**: Push to `infrastructure/` → Terraform apply via GitHub Actions
-2. **Stack Updates**: Push to `applications/monitoring-stack/` → Docker Compose update via GitHub Actions
-3. **App Deployments**: Push to `applications/ruby-monitor/` → Build image → Push to registry → Watchtower auto-deploys
+1. **Infrastructure Changes**: Push to `infrastructure/` → Terraform apply via GitHub Actions (requires approval)
+2. **Platform Updates**: Push to `platform/monitoring/` → Direct deployment via SSH in GitHub Actions
+3. **App Deployments**: Push to `applications/*/` → Build image → Push to registry → Direct deployment via SSH
 
 ## Deployment Process
 
@@ -40,9 +40,9 @@ terraform apply
 
 ### Automatic Updates
 
-- **Code changes** trigger builds and deployments
-- **Container updates** are automatically pulled by Watchtower
-- **Infrastructure changes** are applied via Terraform
+- **Code changes** trigger builds and direct deployments via GitHub Actions
+- **Platform changes** are deployed directly via SSH when files change
+- **Infrastructure changes** are applied via Terraform (with approval)
 - **SSL certificates** are automatically renewed by Traefik
 
 ## Access Points
@@ -57,7 +57,7 @@ terraform apply
 - All services behind Traefik with automatic HTTPS
 - Container registry with HTTP basic auth
 - Docker networks for service isolation
-- Regular security updates via Watchtower
+- Security updates managed through GitHub Actions deployments
 
 ## Monitoring
 

@@ -3,7 +3,7 @@
 ## Adding New Apps
 
 ### ✅ Automatic Deployment Working
-**FIXED**: Now deploys on ANY file changes in `applications/*/` folders via `deploy-applications.yml` workflow.
+**FIXED**: Now deploys on ANY file changes in `applications/*/` folders via unified `Deploy Infrastructure & Applications` workflow.
 
 ### App Structure Required
 
@@ -49,10 +49,11 @@ Add A record: `your-app.lvs.me.uk → server-ip`
 ### Current Deployment Flow
 
 1. **Push code** → `applications/your-app/**`
-2. **GitHub Actions** builds Docker image
-3. **Push to registry** → registry.lvs.me.uk/your-app:latest
-4. **Watchtower detects** new image (5min intervals)
-5. **Auto-deploys** with zero downtime
+2. **Workflow detects** changed apps automatically
+3. **Builds Docker image** with multi-arch support (amd64/arm64)
+4. **Pushes to registry** → registry.lvs.me.uk/your-app:latest
+5. **SSH deploys** directly to server with health checks
+6. **Zero downtime** deployment via Docker Compose
 
 ## Infrastructure Changes
 
@@ -66,7 +67,7 @@ git commit -m "infra: update server config"
 git push origin master
 
 # Manually approve in GitHub Actions
-# OR force run: gh workflow run "Deploy Infrastructure"
+# OR force run: gh workflow run "Deploy Infrastructure & Applications"
 ```
 
 ### What Triggers Infrastructure Deploy
@@ -76,7 +77,7 @@ git push origin master
 - `platform/monitoring/**` - Monitoring changes
 - `platform/registry/**` - Registry changes
 
-**Note**: User apps in `applications/` now trigger the dedicated deploy-applications.yml workflow
+**Note**: User apps in `applications/` trigger the applications job in the unified workflow
 
 ## Current Issues Blocking Seamless Deployment
 

@@ -56,7 +56,7 @@ services:
     restart: unless-stopped
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - /etc/loki:/etc/loki
+      - ./loki/local-config.yaml:/etc/loki/local-config.yaml
       - /var/lib/loki:/loki
     labels:
       - 'traefik.enable=true'

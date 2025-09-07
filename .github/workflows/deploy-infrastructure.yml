@@ -70,32 +70,18 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: |
-          set +e  # Don't exit on error for this step
-          echo "🔄 Running terraform plan..."
-          terraform plan -input=false -out=tfplan -detailed-exitcode
-          PLAN_EXIT_CODE=$?
-          echo "📊 Terraform plan exit code: $PLAN_EXIT_CODE"
-          echo "exitcode=$PLAN_EXIT_CODE" >> $GITHUB_OUTPUT
-
-          # Exit codes: 0 = no changes, 1 = error, 2 = changes present
-          if [ $PLAN_EXIT_CODE -eq 1 ]; then
-            echo "❌ Terraform plan failed with an error"
-            exit 1
-          elif [ $PLAN_EXIT_CODE -eq 2 ]; then
-            echo "⚠️  Infrastructure changes detected - approval required"
-            exit 0
-          else
-            echo "✅ No infrastructure changes detected (exit code: $PLAN_EXIT_CODE)"
-            exit 0
-          fi
+        run: terraform plan -input=false -out=tfplan -detailed-exitcode
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
+        continue-on-error: true
 
       - name: Show Plan Summary
         run: terraform show tfplan
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Debug Plan Exit Code
+        run: echo "Plan exit code from action outputs:" ${{ steps.plan.outputs.exitcode }}
 
       - name: Request Approval for Infrastructure Changes
         if: steps.plan.outputs.exitcode == '2'

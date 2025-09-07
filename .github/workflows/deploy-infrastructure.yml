@@ -31,6 +31,9 @@ jobs:
   terraform:
     name: 'Terraform'
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
     outputs:
       server_ip: ${{ steps.terraform-output.outputs.server_ip }}
 

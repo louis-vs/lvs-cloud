@@ -47,8 +47,8 @@ terraform apply
 
 ## Access Points
 
-- **Grafana**: <https://grafana.lvs.me.uk> (admin/admin123)
-- **Registry**: <https://registry.lvs.me.uk> (admin/registry123)
+- **Grafana**: <https://grafana.lvs.me.uk> (admin/[secure-password])
+- **Registry**: <https://registry.lvs.me.uk> (admin/[secure-password])
 - **Prometheus**: <https://prometheus.lvs.me.uk>
 - **Loki**: <https://loki.lvs.me.uk>
 

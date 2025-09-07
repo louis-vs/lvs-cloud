@@ -37,7 +37,7 @@ services:
       - '--web.enable-lifecycle'
       - '--web.external-url=https://prometheus.lvs.me.uk'
     volumes:
-      - /etc/prometheus:/etc/prometheus
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - /var/lib/prometheus:/prometheus
     labels:
       - 'traefik.enable=true'

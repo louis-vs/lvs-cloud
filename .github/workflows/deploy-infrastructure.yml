@@ -265,8 +265,21 @@ jobs:
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/docker-compose.prod.yml
 
-            # Create Grafana config directory structure
+            # Create config directory structure
             mkdir -p grafana/provisioning/{dashboards,datasources}
+            mkdir -p loki
+
+            # Download Prometheus configuration
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o prometheus.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/prometheus.yml
+
+            # Download Loki configuration
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o loki/local-config.yaml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/loki/local-config.yaml
 
             # Download Grafana provisioning configurations
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
@@ -278,6 +291,17 @@ jobs:
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o grafana/provisioning/dashboards/dashboards.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/dashboards.yml
+
+            # Download Grafana dashboards
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/dashboards/system-overview.json \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/system-overview.json
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o grafana/provisioning/dashboards/application-metrics.json \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/application-metrics.json
 
             # Stop existing services first to avoid conflicts
             sudo docker compose down 2>/dev/null || true

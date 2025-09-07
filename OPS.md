@@ -3,13 +3,13 @@
 ## Monitoring
 
 ### Access Points
-- **Grafana**: https://grafana.lvs.me.uk (admin/admin123)
+- **Grafana**: https://grafana.lvs.me.uk (admin/[secure-password])
 - **Prometheus**: https://prometheus.lvs.me.uk
 - **Server SSH**: `ssh ubuntu@$(dig +short app.lvs.me.uk)`
 
 ### Current Critical Issues
 **Platform Issues**:
-- [ ] **Security**: Grafana hardcoded admin/admin123 (should use .env)
+- [x] **Security**: Grafana uses secure credentials from GitHub secrets ✅
 - [ ] **Structure**: Platform services mixed with apps in `applications/`
 - [ ] **GitOps**: Apps only deploy on compose changes, not code changes
 

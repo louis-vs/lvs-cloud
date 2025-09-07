@@ -72,8 +72,10 @@ jobs:
         id: plan
         run: |
           set +e  # Don't exit on error for this step
+          echo "🔄 Running terraform plan..."
           terraform plan -input=false -out=tfplan -detailed-exitcode
           PLAN_EXIT_CODE=$?
+          echo "📊 Terraform plan exit code: $PLAN_EXIT_CODE"
           echo "exitcode=$PLAN_EXIT_CODE" >> $GITHUB_OUTPUT
 
           # Exit codes: 0 = no changes, 1 = error, 2 = changes present
@@ -84,7 +86,7 @@ jobs:
             echo "⚠️  Infrastructure changes detected - approval required"
             exit 0
           else
-            echo "✅ No infrastructure changes detected"
+            echo "✅ No infrastructure changes detected (exit code: $PLAN_EXIT_CODE)"
             exit 0
           fi
         env:

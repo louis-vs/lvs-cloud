@@ -174,7 +174,7 @@ resource "hcloud_server" "main" {
     project   = var.project_name
     role      = "main"
     test      = "approval-workflow"
-    timestamp = "20250907112300"
+    timestamp = "20250907113100"
   }
 
   user_data = templatefile("${path.module}/cloud-init.yml", {

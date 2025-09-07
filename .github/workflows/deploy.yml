@@ -305,13 +305,13 @@ jobs:
             fi
 
             sudo mkdir -p /opt/registry
+            sudo mkdir -p /etc/docker/registry/auth
             sudo chown ubuntu:ubuntu /opt/registry
             cd /opt/registry
 
-            cat > .env << 'EOF'
-            REGISTRY_USER=${{ secrets.REGISTRY_USERNAME }}
-            REGISTRY_PASS=${{ secrets.REGISTRY_PASSWORD }}
-            EOF
+            # Generate htpasswd file for registry authentication
+            echo "🔐 Creating registry authentication..."
+            sudo htpasswd -Bbn "${{ secrets.REGISTRY_USERNAME }}" "${{ secrets.REGISTRY_PASSWORD }}" | sudo tee /etc/docker/registry/auth/htpasswd
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \

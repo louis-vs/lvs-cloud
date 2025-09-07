@@ -265,43 +265,49 @@ jobs:
                  -o docker-compose.yml \
                  https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/docker-compose.prod.yml
 
-            # Create config directory structure
+            # Create all config directories
             mkdir -p grafana/provisioning/{dashboards,datasources}
             mkdir -p loki
 
-            # Download Prometheus configuration
+            # Download all monitoring configuration files
+            echo "📥 Downloading monitoring configuration files..."
+
+            # Prometheus config
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o prometheus.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/prometheus.yml
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/prometheus.yml"
 
-            # Download Loki configuration
+            # Loki config
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o loki/local-config.yaml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/loki/local-config.yaml
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/loki/local-config.yaml"
 
-            # Download Grafana provisioning configurations
+            # Grafana datasources
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o grafana/provisioning/datasources/prometheus.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/datasources/prometheus.yml
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/datasources/prometheus.yml"
 
+            # Grafana dashboards config
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o grafana/provisioning/dashboards/dashboards.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/dashboards.yml
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/dashboards.yml"
 
-            # Download Grafana dashboards
+            # Grafana dashboard files
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o grafana/provisioning/dashboards/system-overview.json \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/system-overview.json
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/system-overview.json"
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
                  -o grafana/provisioning/dashboards/application-metrics.json \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/application-metrics.json
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/application-metrics.json"
+
+            echo "✅ All configuration files downloaded"
 
             # Stop existing services first to avoid conflicts
             sudo docker compose down 2>/dev/null || true

@@ -9,6 +9,11 @@ on:
       - 'applications/**'
   workflow_dispatch:
     inputs:
+      deploy_everything:
+        description: 'Deploy entire stack (infrastructure, platform, and all apps)'
+        required: false
+        type: boolean
+        default: false
       app_name:
         description: 'Specific app to deploy (leave empty for all changed apps)'
         required: false
@@ -31,7 +36,10 @@ jobs:
   infrastructure:
     name: 'Deploy Infrastructure'
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.modified, 'infrastructure/') || contains(github.event.head_commit.added, 'infrastructure/')
+    if: |
+      inputs.deploy_everything == true ||
+      contains(github.event.head_commit.modified, 'infrastructure/') ||
+      contains(github.event.head_commit.added, 'infrastructure/')
     permissions:
       issues: write
       contents: read
@@ -57,7 +65,12 @@ jobs:
         id: check-changes
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
+            if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "Manual deployment of everything requested"
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
             exit 0
           fi
 
@@ -138,7 +151,8 @@ jobs:
     needs: [infrastructure]
     if: |
       always() && !cancelled() && !failure() &&
-      (contains(github.event.head_commit.modified, 'platform/traefik/') ||
+      (inputs.deploy_everything == true ||
+       contains(github.event.head_commit.modified, 'platform/traefik/') ||
        contains(github.event.head_commit.added, 'platform/traefik/') ||
        needs.infrastructure.outputs.changed == 'true')
     outputs:
@@ -151,6 +165,12 @@ jobs:
       - name: Check for changes
         id: check-changes
         run: |
+          if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment of everything requested, redeploying Traefik"
+            exit 0
+          fi
+
           if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "Infrastructure changed, redeploying Traefik"
@@ -223,7 +243,8 @@ jobs:
     needs: [infrastructure, platform-traefik]
     if: |
       always() && !cancelled() && !failure() &&
-      (contains(github.event.head_commit.modified, 'platform/registry/') ||
+      (inputs.deploy_everything == true ||
+       contains(github.event.head_commit.modified, 'platform/registry/') ||
        contains(github.event.head_commit.added, 'platform/registry/') ||
        needs.infrastructure.outputs.changed == 'true')
     outputs:
@@ -236,6 +257,12 @@ jobs:
       - name: Check for changes
         id: check-changes
         run: |
+          if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment of everything requested, redeploying Registry"
+            exit 0
+          fi
+
           if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "Infrastructure changed, redeploying Registry"
@@ -295,7 +322,8 @@ jobs:
     needs: [infrastructure, platform-traefik]
     if: |
       always() && !cancelled() && !failure() &&
-      (contains(github.event.head_commit.modified, 'platform/monitoring/') ||
+      (inputs.deploy_everything == true ||
+       contains(github.event.head_commit.modified, 'platform/monitoring/') ||
        contains(github.event.head_commit.added, 'platform/monitoring/') ||
        needs.infrastructure.outputs.changed == 'true')
 
@@ -408,11 +436,26 @@ jobs:
         run: |
           set -e
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.app_name }}" ]; then
-            echo "apps=[\"${{ inputs.app_name }}\"]" >> $GITHUB_OUTPUT
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "Manual deployment requested for: ${{ inputs.app_name }}"
-            exit 0
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ inputs.deploy_everything }}" = "true" ]; then
+              # Deploy all applications
+              all_apps=$(find applications/ -maxdepth 1 -type d ! -path applications/ | sed 's|applications/||' | sort)
+              if [ -z "$all_apps" ]; then
+                echo "apps=[]" >> $GITHUB_OUTPUT
+                echo "has_changes=false" >> $GITHUB_OUTPUT
+              else
+                apps=$(echo "$all_apps" | tr ' ' '\n' | jq -R . | jq -s -c .)
+                echo "apps=$apps" >> $GITHUB_OUTPUT
+                echo "has_changes=true" >> $GITHUB_OUTPUT
+                echo "Manual deployment of all apps requested: $apps"
+              fi
+              exit 0
+            elif [ -n "${{ inputs.app_name }}" ]; then
+              echo "apps=[\"${{ inputs.app_name }}\"]" >> $GITHUB_OUTPUT
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+              echo "Manual deployment requested for: ${{ inputs.app_name }}"
+              exit 0
+            fi
           fi
 
           # Check if applications changed OR if registry changed (apps depend on registry)

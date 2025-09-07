@@ -69,17 +69,40 @@ jobs:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
 
       - name: Terraform Plan
-        run: terraform plan -input=false -out=tfplan
+        id: plan
+        run: |
+          terraform plan -input=false -out=tfplan -detailed-exitcode
+          echo "exitcode=$?" >> $GITHUB_OUTPUT
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
+        continue-on-error: true
 
       - name: Show Plan Summary
         run: terraform show tfplan
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
 
+      - name: Request Approval for Infrastructure Changes
+        if: steps.plan.outputs.exitcode == '2'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+          issue-title: 'Infrastructure Deployment Approval Required'
+          issue-body: |
+            **Infrastructure changes detected!**
+
+            Terraform plan shows changes will be made to the infrastructure.
+
+            **Review the plan output above** and approve this deployment to proceed.
+
+            - **Branch**: `${{ github.ref_name }}`
+            - **Commit**: `${{ github.sha }}`
+            - **Triggered by**: ${{ github.event_name }}
+
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (steps.plan.outputs.exitcode == '0' || steps.plan.outputs.exitcode == '2')
         run: terraform apply -auto-approve tfplan
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}

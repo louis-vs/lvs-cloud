@@ -83,9 +83,6 @@ jobs:
         env:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
 
-      - name: Debug Plan Exit Code
-        run: echo "Plan exit code from action outputs:" ${{ steps.plan.outputs.exitcode }}
-
       - name: Request Approval for Infrastructure Changes
         if: steps.plan.outputs.exitcode == '2'
         uses: trstringer/manual-approval@v1

@@ -248,9 +248,6 @@ jobs:
             # Update monitoring stack
             cd /opt/monitoring-stack
 
-            # Force cleanup of corrupted directory structure
-            sudo rm -rf loki prometheus.yml grafana/provisioning/dashboards/*.json 2>/dev/null || true
-
             # Create environment file with secure credentials
             cat > .env << 'EOF'
             # Grafana Configuration

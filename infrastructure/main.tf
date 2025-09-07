@@ -152,7 +152,7 @@ resource "hcloud_firewall" "web" {
   }
 }
 
-# Main server (testing approval workflow)
+# Main server
 resource "hcloud_server" "main" {
   name        = "${var.project_name}-server"
   image       = "ubuntu-22.04"
@@ -173,6 +173,7 @@ resource "hcloud_server" "main" {
   labels = {
     project = var.project_name
     role    = "main"
+    test    = "approval-workflow"
   }
 
   user_data = templatefile("${path.module}/cloud-init.yml", {

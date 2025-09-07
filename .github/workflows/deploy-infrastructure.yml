@@ -270,9 +270,6 @@ jobs:
 
             # Create config directory structure
             mkdir -p grafana/provisioning/{dashboards,datasources}
-
-            # Clean up any conflicting directories/files
-            rm -rf loki prometheus.yml 2>/dev/null || true
             mkdir -p loki
 
             # Download Prometheus configuration

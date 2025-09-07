@@ -103,3 +103,4 @@ ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker ps'
 - **Documentation**: Keep minimal, essential information only
 - **Costs**: Always include Object Storage in calculations
 - **Focus**: Prioritize working deployment pipeline and monitoring visibility
+- All commits should be GPG signed.

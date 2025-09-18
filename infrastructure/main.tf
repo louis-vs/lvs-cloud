@@ -1,5 +1,6 @@
 terraform {
   required_version = ">= 1.0"
+  # Temporary comment to trigger workflow - remove after testing
 
   backend "s3" {
     bucket = "lvs-cloud-terraform-state"

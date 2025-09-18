@@ -11,7 +11,7 @@ services:
       - GF_INSTALL_PLUGINS=grafana-clock-panel
       - GF_SERVER_ROOT_URL=https://grafana.lvs.me.uk
     volumes:
-      - /var/lib/grafana:/var/lib/grafana
+      - /mnt/data/grafana:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
     labels:
       - 'traefik.enable=true'
@@ -38,7 +38,7 @@ services:
       - '--web.external-url=https://prometheus.lvs.me.uk'
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - /var/lib/prometheus:/prometheus
+      - /mnt/data/prometheus:/prometheus
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.prometheus.rule=Host(`prometheus.lvs.me.uk`)'
@@ -57,7 +57,7 @@ services:
     command: -config.file=/loki/local-config.yaml
     volumes:
       - ./loki/local-config.yaml:/loki/local-config.yaml:ro
-      - /var/lib/loki:/loki
+      - /mnt/data/loki:/loki
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.loki.rule=Host(`loki.lvs.me.uk`)'

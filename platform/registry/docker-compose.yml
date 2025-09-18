@@ -16,7 +16,7 @@ services:
       REGISTRY_HTTP_HEADERS_Access-Control-Allow-Credentials: '[true]'
       REGISTRY_HTTP_HEADERS_Access-Control-Expose-Headers: '[Docker-Content-Digest]'
     volumes:
-      - /var/lib/registry:/data
+      - /mnt/data/registry:/data
       - /etc/docker/registry/auth:/auth
     labels:
       - 'traefik.enable=true'

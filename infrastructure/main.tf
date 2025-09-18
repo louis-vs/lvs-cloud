@@ -152,6 +152,23 @@ resource "hcloud_firewall" "web" {
   }
 }
 
+# Persistent storage volume
+resource "hcloud_volume" "data" {
+  name     = "${var.project_name}-data"
+  location = var.datacenter
+  size     = 50 # 50GB initial size
+  format   = "ext4"
+
+  labels = {
+    project = var.project_name
+    purpose = "persistent-data"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 # Main server
 resource "hcloud_server" "main" {
   name        = "${var.project_name}-server"
@@ -183,6 +200,13 @@ resource "hcloud_server" "main" {
   })
 }
 
+# Attach volume to server
+resource "hcloud_volume_attachment" "data" {
+  volume_id = hcloud_volume.data.id
+  server_id = hcloud_server.main.id
+  automount = true
+}
+
 # Outputs
 output "server_ip" {
   value = hcloud_server.main.ipv4_address
@@ -194,4 +218,12 @@ output "server_ipv6" {
 
 output "network_id" {
   value = hcloud_network.main.id
+}
+
+output "volume_id" {
+  value = hcloud_volume.data.id
+}
+
+output "volume_device_path" {
+  value = "/dev/disk/by-id/scsi-0HC_Volume_${hcloud_volume.data.id}"
 }

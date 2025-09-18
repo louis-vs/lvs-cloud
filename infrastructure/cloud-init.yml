@@ -37,15 +37,51 @@ runcmd:
   - systemctl start docker
   - usermod -aG docker ubuntu
 
+  # Wait for volume to be attached and create mount point
+  - sleep 10
+  - mkdir -p /mnt/data
+
+  # Find and mount the volume (Hetzner volumes appear as /dev/sdb typically)
+  - |
+    for i in {1..30}; do
+      if [ -e /dev/sdb ]; then
+        echo "Volume found at /dev/sdb"
+        break
+      fi
+      echo "Waiting for volume... ($i/30)"
+      sleep 2
+    done
+
+  # Check if volume is already formatted, if not format it
+  - |
+    if ! blkid /dev/sdb; then
+      echo "Formatting volume with ext4"
+      mkfs.ext4 /dev/sdb
+    fi
+
+  # Mount the volume
+  - mount /dev/sdb /mnt/data
+
+  # Add to fstab for persistent mounting
+  - echo '/dev/sdb /mnt/data ext4 defaults 0 2' >> /etc/fstab
+
   # Create directory structure (GitOps workflows will handle configs)
   - mkdir -p /opt/monitoring-stack
   - mkdir -p /opt/traefik
   - mkdir -p /opt/apps
-  - mkdir -p /var/lib/grafana
-  - mkdir -p /var/lib/prometheus
-  - mkdir -p /var/lib/loki
-  - mkdir -p /var/lib/registry
   - mkdir -p /etc/traefik
+
+  # Create persistent data directories on volume
+  - mkdir -p /mnt/data/grafana
+  - mkdir -p /mnt/data/prometheus
+  - mkdir -p /mnt/data/loki
+  - mkdir -p /mnt/data/registry
+
+  # Create symbolic links from standard paths to persistent storage
+  - ln -sfn /mnt/data/grafana /var/lib/grafana
+  - ln -sfn /mnt/data/prometheus /var/lib/prometheus
+  - ln -sfn /mnt/data/loki /var/lib/loki
+  - ln -sfn /mnt/data/registry /var/lib/registry
 
   # Set permissions for directories
   - chown -R ubuntu:ubuntu /opt/monitoring-stack
@@ -53,9 +89,9 @@ runcmd:
   - chown -R ubuntu:ubuntu /opt/apps
 
   # Set container-specific permissions for data directories
-  - chown -R 472:472 /var/lib/grafana || true
-  - chown -R 65534:65534 /var/lib/prometheus || true
-  - chown -R 10001:10001 /var/lib/loki || true
+  - chown -R 472:472 /mnt/data/grafana || true
+  - chown -R 65534:65534 /mnt/data/prometheus || true
+  - chown -R 10001:10001 /mnt/data/loki || true
   - chown -R 10001:10001 /loki || true
 
   # Create Traefik configuration and ACME file
@@ -116,8 +152,9 @@ runcmd:
   # Start Traefik (must be started first)
   - cd /opt/traefik && docker compose up -d
 
-  # Create Loki data directories (needed by container)
-  - mkdir -p /loki/{chunks,boltdb-shipper-active,boltdb-shipper-cache,rules,rules-temp}
-  - chown -R 10001:10001 /loki
+  # Create Loki data directories (needed by container) on persistent storage
+  - mkdir -p /mnt/data/loki/{chunks,boltdb-shipper-active,boltdb-shipper-cache,rules,rules-temp}
+  - ln -sfn /mnt/data/loki /loki
+  - chown -R 10001:10001 /mnt/data/loki
 
   - echo "Server setup complete - ready for GitOps deployment" > /var/log/setup.log

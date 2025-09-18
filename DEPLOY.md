@@ -2,12 +2,9 @@
 
 ## Adding New Apps
 
-### ✅ Automatic Deployment Working
-**FIXED**: Now deploys on ANY file changes in `applications/*/` folders via unified `Deploy Infrastructure & Applications` workflow.
-
 ### App Structure Required
 
-```
+```plaintext
 applications/your-app/
 ├── Dockerfile
 ├── docker-compose.prod.yml  # Required for deployment
@@ -32,7 +29,7 @@ services:
       - 'traefik.http.services.your-app.loadbalancer.server.port=8080'
     networks:
       - web
-      - monitoring  # Connect to monitoring for metrics
+      - monitoring # Connect to monitoring for metrics
 
 networks:
   web:
@@ -44,6 +41,7 @@ networks:
 ```
 
 ### DNS Setup
+
 Add A record: `your-app.lvs.me.uk → server-ip`
 
 ### Current Deployment Flow
@@ -58,6 +56,7 @@ Add A record: `your-app.lvs.me.uk → server-ip`
 ## Infrastructure Changes
 
 ### Terraform Changes
+
 **REQUIRES APPROVAL** - Can destroy/recreate server
 
 ```bash
@@ -79,36 +78,11 @@ git push origin master
 
 **Note**: User apps in `applications/` trigger the applications job in the unified workflow
 
-## Current Issues Blocking Seamless Deployment
-
-### 1. ✅ Fixed - Automatic GitOps
-**Was**: App deployment only triggered on compose file changes
-**Now**: Deploys automatically on ANY file changes in applications/
-**Result**: Seamless development experience with zero-downtime deployments
-
-### 2. ✅ Fixed - Secure Credentials
-**Was**: Grafana hardcoded admin/admin123, registry uses .env properly
-**Now**: All services use secure environment variables from GitHub secrets
-**Added**: GRAFANA_ADMIN_PASS secret, proper provisioning configs
-
-### 3. ✅ Fixed - Repository Structure
-**Was**: Platform services mixed with user apps in `applications/`
-**Now**: Clean separation with `platform/{monitoring,registry,traefik}` + `applications/{ruby-demo-app}`
-**Result**: Clear structure, scalable for multiple apps, no confusion between platform services and user apps
-
-### ✅ All Issues Resolved
-The deployment pipeline now provides:
-- ✅ Triggers on ANY file changes in `applications/*/`
-- ✅ Builds and pushes images automatically
-- ✅ Deploys via docker-compose automatically
-- ✅ Works for unlimited apps dynamically
-- ✅ Zero-downtime deployments with health checks
-- ✅ Clean separation between platform services and user apps
-
 ## Secrets Management
 
 GitHub Repository Secrets:
-```
+
+```bash
 HCLOUD_TOKEN_RO=xxx      # Read-only Hetzner API
 HCLOUD_TOKEN_RW=xxx      # Read-write Hetzner API
 S3_ACCESS_KEY=xxx        # Object Storage access
@@ -116,17 +90,19 @@ S3_SECRET_KEY=xxx        # Object Storage secret
 SSH_PRIVATE_KEY=xxx      # Server access
 REGISTRY_USERNAME=admin  # From .env file
 REGISTRY_PASSWORD=xxx    # From .env file
-GRAFANA_ADMIN_PASS=xxx   # Grafana admin password (secure)
+GRAFANA_ADMIN_PASS=xxx   # Grafana admin password
 ```
 
 ## First Time Setup
 
 ### 1. Hetzner Setup
+
 - Create API tokens (RO + RW)
 - Create Object Storage bucket: `lvs-cloud-terraform-state`
 - Get S3 credentials for bucket
 
 ### 2. Environment Setup
+
 ```bash
 cp .env.example .env
 # Edit .env with your values
@@ -134,6 +110,7 @@ source .env
 ```
 
 ### 3. Terraform State Setup
+
 ```bash
 cd infrastructure
 terraform init  # Uses S3 backend automatically
@@ -141,18 +118,22 @@ terraform apply # Creates server + initial setup
 ```
 
 ### 4. DNS Setup
+
 Point these A records to your server IP:
+
 - `app.lvs.me.uk`
 - `grafana.lvs.me.uk`
 - `prometheus.lvs.me.uk`
 - `registry.lvs.me.uk`
 
 ### 5. GitHub Secrets
+
 Add all secrets listed above to repository settings.
 
 ## Disaster Recovery
 
 ### Complete Rebuild
+
 ```bash
 # 1. Destroy everything
 cd infrastructure && terraform destroy -auto-approve
@@ -165,6 +146,8 @@ terraform apply -auto-approve
 ```
 
 ### State Recovery
+
 If you lose terraform state:
+
 1. Import existing server: `terraform import hcloud_server.main <server-id>`
 2. Or destroy and recreate (faster)

@@ -6,23 +6,24 @@ Personal private cloud on Hetzner with enterprise-grade monitoring, automatic de
 
 | Service | URL | Status |
 |---------|-----|--------|
-| **Grafana** | https://grafana.lvs.me.uk | ✅ (admin/secure-pass) |
-| **Registry** | https://registry.lvs.me.uk | ✅ (see .env) |
-| **Prometheus** | https://prometheus.lvs.me.uk | ✅ |
-| **Ruby Demo** | https://app.lvs.me.uk | ✅ |
+| **Grafana** | <https://grafana.lvs.me.uk> | ✅ (admin/secure-pass) |
+| **Registry** | <https://registry.lvs.me.uk> | ✅ (see .env) |
+| **Prometheus** | <https://prometheus.lvs.me.uk> | ✅ |
+| **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
 
 **Server:** Hetzner cx22 (2 vCPU, 4GB RAM)
 **Total Cost:** €9.89/month (€4.90 server + €4.99 Object Storage)
 
 ## Architecture
 
-```
+```plaintext
 GitHub Push → Actions → Registry → Watchtower → Live
      ↓           ↓         ↓          ↓         ↓
    Code      Build    Push Image  Auto-update  Running
 ```
 
 **Services:**
+
 - **Traefik**: SSL termination, routing
 - **Registry**: Container images (registry.lvs.me.uk)
 - **Monitoring**: Grafana + Prometheus + Loki

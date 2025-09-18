@@ -36,9 +36,6 @@ jobs:
   infrastructure:
     name: 'Deploy Infrastructure'
     runs-on: ubuntu-latest
-    if: |
-      inputs.deploy_everything == true ||
-      github.event_name == 'push'
     permissions:
       issues: write
       contents: read
@@ -148,10 +145,7 @@ jobs:
     name: 'Deploy Traefik'
     runs-on: ubuntu-latest
     needs: [infrastructure]
-    if: |
-      always() && !cancelled() && !failure() &&
-      (inputs.deploy_everything == true ||
-       needs.infrastructure.outputs.changed == 'true')
+    if: always() && !cancelled() && !failure()
     outputs:
       changed: ${{ steps.check-changes.outputs.changed }}
 
@@ -238,10 +232,7 @@ jobs:
     name: 'Deploy Registry'
     runs-on: ubuntu-latest
     needs: [infrastructure, platform-traefik]
-    if: |
-      always() && !cancelled() && !failure() &&
-      (inputs.deploy_everything == true ||
-       needs.infrastructure.outputs.changed == 'true')
+    if: always() && !cancelled() && !failure()
     outputs:
       changed: ${{ steps.check-changes.outputs.changed }}
 
@@ -320,10 +311,7 @@ jobs:
     name: 'Deploy Monitoring'
     runs-on: ubuntu-latest
     needs: [infrastructure, platform-traefik]
-    if: |
-      always() && !cancelled() && !failure() &&
-      (inputs.deploy_everything == true ||
-       needs.infrastructure.outputs.changed == 'true')
+    if: always() && !cancelled() && !failure()
 
     steps:
       - name: Checkout

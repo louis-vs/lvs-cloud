@@ -36,10 +36,6 @@ jobs:
   infrastructure:
     name: 'Deploy Infrastructure'
     runs-on: ubuntu-latest
-    if: |
-      inputs.deploy_everything == true ||
-      contains(github.event.head_commit.modified, 'infrastructure/') ||
-      contains(github.event.head_commit.added, 'infrastructure/')
     permissions:
       issues: write
       contents: read

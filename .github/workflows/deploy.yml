@@ -359,15 +359,20 @@ jobs:
                  https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/docker-compose.prod.yml
 
             mkdir -p grafana/provisioning/{dashboards,datasources}
-            mkdir -p loki
+            mkdir -p loki mimir tempo
 
             echo "📥 Downloading monitoring configuration files..."
 
             # Download all config files in parallel
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
-                 -o prometheus.yml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/prometheus.yml" &
+                 -o mimir/mimir.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/mimir/mimir.yml" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o tempo/tempo.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/tempo/tempo.yml" &
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
@@ -376,8 +381,8 @@ jobs:
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \
-                 -o grafana/provisioning/datasources/prometheus.yml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/datasources/prometheus.yml" &
+                 -o grafana/provisioning/datasources/datasources.yml \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/datasources/datasources.yml" &
 
             curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
                  -H "Accept: application/vnd.github.v3.raw" \

@@ -1,0 +1,58 @@
+# Tempo configuration for single instance deployment
+# This config runs all components in a single process (monolithic mode)
+
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 9096
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+ingester:
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    block_retention: 1h
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /data/tempo/blocks
+    wal:
+      path: /data/tempo/wal
+
+query_frontend:
+  search:
+    duration_slo: 5s
+    throughput_bytes_slo: 1.073741824e+09
+  trace_by_id:
+    duration_slo: 5s
+
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: docker-compose
+  storage:
+    path: /data/tempo/generator/wal
+    remote_write:
+      - url: http://mimir:8080/api/v1/push
+        send_exemplars: true
+
+overrides:
+  defaults:
+    metrics_generator_processors:
+      - service-graphs
+      - span-metrics
+
+# Analytics and usage stats
+analytics:
+  reporting_enabled: false

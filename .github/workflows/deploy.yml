@@ -405,6 +405,8 @@ jobs:
   detect-app-changes:
     name: 'Detect Changed Applications'
     runs-on: ubuntu-latest
+    needs: [infrastructure]
+    if: always() && !cancelled() && !failure()
     outputs:
       apps: ${{ steps.detect.outputs.apps }}
       has_changes: ${{ steps.detect.outputs.has_changes }}
@@ -442,19 +444,21 @@ jobs:
             fi
           fi
 
-          # Check if applications changed OR if registry/infrastructure changed (apps depend on them)
+          # Check if applications changed OR if registry changed (apps depend on registry)
           app_changes=$(git diff --name-only HEAD^ HEAD | grep "^applications/" || true)
           registry_changes=$(git diff --name-only HEAD^ HEAD | grep "^platform/registry/" || true)
-          infra_changes=$(git diff --name-only HEAD^ HEAD | grep "^infrastructure/" || true)
 
-          if [ -z "$app_changes" ] && [ -z "$registry_changes" ] && [ -z "$infra_changes" ]; then
+          # Check if infrastructure changed (use output from infrastructure job)
+          infra_changed="${{ needs.infrastructure.outputs.changed }}"
+
+          if [ -z "$app_changes" ] && [ -z "$registry_changes" ] && [ "$infra_changed" != "true" ]; then
             echo "No changes affecting applications"
             echo "apps=[]" >> $GITHUB_OUTPUT
             echo "has_changes=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          if [ -n "$registry_changes" ] || [ -n "$infra_changes" ]; then
+          if [ -n "$registry_changes" ] || [ "$infra_changed" = "true" ]; then
             # Registry or infrastructure changed - deploy all apps
             all_apps=$(find applications/ -maxdepth 1 -type d ! -path applications/ | sed 's|applications/||' | sort)
             if [ -z "$all_apps" ]; then
@@ -464,7 +468,7 @@ jobs:
               apps=$(echo "$all_apps" | tr ' ' '\n' | jq -R . | jq -s -c .)
               has_changes="true"
             fi
-            if [ -n "$infra_changes" ]; then
+            if [ "$infra_changed" = "true" ]; then
               echo "Infrastructure changed, deploying all apps: $apps"
             else
               echo "Registry changed, deploying all apps: $apps"

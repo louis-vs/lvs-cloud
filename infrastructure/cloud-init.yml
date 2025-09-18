@@ -71,7 +71,14 @@ runcmd:
   - mkdir -p /opt/apps
   - mkdir -p /etc/traefik
 
-  # Set permissions for directories
+  # Create persistent data directories with correct permissions
+  - mkdir -p /mnt/data/grafana /mnt/data/prometheus /mnt/data/loki /mnt/data/registry
+  - chown -R 472:472 /mnt/data/grafana
+  - chown -R 65534:65534 /mnt/data/prometheus
+  - chown -R 10001:10001 /mnt/data/loki
+  - chown -R 1000:1000 /mnt/data/registry
+
+  # Set permissions for other directories
   - chown -R ubuntu:ubuntu /opt/monitoring-stack
   - chown -R ubuntu:ubuntu /opt/traefik
   - chown -R ubuntu:ubuntu /opt/apps

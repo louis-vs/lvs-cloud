@@ -1,6 +1,5 @@
 terraform {
   required_version = ">= 1.0"
-  # Temporary comment to trigger workflow - remove after testing
 
   backend "s3" {
     bucket = "lvs-cloud-terraform-state"
@@ -63,6 +62,12 @@ variable "server_type" {
   description = "Hetzner server type"
   type        = string
   default     = "cx22" # 2 vCPU, 4GB RAM, 40GB SSD - ~€4.90/month
+}
+
+variable "location" {
+  description = "Hetzner location"
+  type        = string
+  default     = "nbg1" # Nuremberg
 }
 
 variable "datacenter" {
@@ -156,7 +161,7 @@ resource "hcloud_firewall" "web" {
 # Persistent storage volume
 resource "hcloud_volume" "data" {
   name     = "${var.project_name}-data"
-  location = var.datacenter
+  location = var.location
   size     = 50 # 50GB initial size
   format   = "ext4"
 

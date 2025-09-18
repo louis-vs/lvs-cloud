@@ -36,6 +36,9 @@ jobs:
   infrastructure:
     name: 'Deploy Infrastructure'
     runs-on: ubuntu-latest
+    if: |
+      inputs.deploy_everything == true ||
+      github.event_name == 'push'
     permissions:
       issues: write
       contents: read
@@ -148,8 +151,6 @@ jobs:
     if: |
       always() && !cancelled() && !failure() &&
       (inputs.deploy_everything == true ||
-       contains(github.event.head_commit.modified, 'platform/traefik/') ||
-       contains(github.event.head_commit.added, 'platform/traefik/') ||
        needs.infrastructure.outputs.changed == 'true')
     outputs:
       changed: ${{ steps.check-changes.outputs.changed }}
@@ -240,8 +241,6 @@ jobs:
     if: |
       always() && !cancelled() && !failure() &&
       (inputs.deploy_everything == true ||
-       contains(github.event.head_commit.modified, 'platform/registry/') ||
-       contains(github.event.head_commit.added, 'platform/registry/') ||
        needs.infrastructure.outputs.changed == 'true')
     outputs:
       changed: ${{ steps.check-changes.outputs.changed }}
@@ -324,8 +323,6 @@ jobs:
     if: |
       always() && !cancelled() && !failure() &&
       (inputs.deploy_everything == true ||
-       contains(github.event.head_commit.modified, 'platform/monitoring/') ||
-       contains(github.event.head_commit.added, 'platform/monitoring/') ||
        needs.infrastructure.outputs.changed == 'true')
 
     steps:

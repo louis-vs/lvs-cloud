@@ -4,7 +4,7 @@ Modern DevOps monitoring stack with automated CI/CD deployment.
 
 ## Architecture
 
-```
+```plaintext
 GitHub → Actions → Container Registry → Watchtower → Production
    ↓         ↓           ↓                  ↓            ↓
   Code    Build &      Push Image     Auto-update    Running

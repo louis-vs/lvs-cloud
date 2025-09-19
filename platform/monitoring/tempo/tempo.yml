@@ -53,6 +53,4 @@ overrides:
       - service-graphs
       - span-metrics
 
-# Analytics and usage stats
-analytics:
-  reporting_enabled: false
+# Analytics not supported in this Tempo version

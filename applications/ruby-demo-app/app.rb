@@ -39,7 +39,6 @@ set :environment, :production
 
 # OpenTelemetry setup
 tracer = OpenTelemetry.tracer_provider.tracer('ruby-demo-app')
-OpenTelemetry.meter_provider.meter('ruby-demo-app')
 
 # Create custom attributes for spans (metrics will be generated from spans via Tempo)
 # Tempo's metrics generator will create span-based metrics automatically

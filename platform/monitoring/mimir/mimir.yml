@@ -8,6 +8,9 @@ server:
   grpc_listen_port: 9095
   log_level: info
 
+# Disable multi-tenancy for single-tenant setup
+multitenancy_enabled: false
+
 common:
   storage:
     backend: filesystem

@@ -65,22 +65,6 @@ services:
     networks:
       - monitoring
 
-  # Watchtower - Automatic container updates
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /etc/docker/config.json:/config.json:ro
-    environment:
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=300 # Check every 5 minutes
-      - WATCHTOWER_INCLUDE_RESTARTING=true
-      - WATCHTOWER_NOTIFICATIONS=shoutrrr
-      - WATCHTOWER_NOTIFICATION_URL=logger://
-    networks:
-      - monitoring
 
   # Node Exporter - System metrics
   node-exporter:

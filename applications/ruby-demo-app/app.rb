@@ -4,10 +4,52 @@
 require 'sinatra'
 require 'json'
 require 'httparty'
+require 'securerandom'
 require 'opentelemetry/sdk'
 require 'opentelemetry/exporter/otlp'
 require 'opentelemetry/instrumentation/sinatra'
 require 'opentelemetry/instrumentation/http'
+
+# Structured logging configuration
+class StructuredLogger
+  def initialize
+    @base_fields = {
+      service: 'ruby-demo-app',
+      version: '1.2.0',
+      environment: ENV.fetch('RACK_ENV', 'production')
+    }
+  end
+
+  def info(message, **fields)
+    log('INFO', message, **fields)
+  end
+
+  def error(message, **fields)
+    log('ERROR', message, **fields)
+  end
+
+  def warn(message, **fields)
+    log('WARN', message, **fields)
+  end
+
+  private
+
+  def log(level, message, **fields)
+    log_entry = @base_fields.merge(
+      timestamp: Time.now.utc.iso8601,
+      level: level,
+      message: message,
+      **fields
+    )
+    puts JSON.generate(log_entry)
+  end
+end
+
+class << self
+  attr_accessor :logger
+end
+
+self.logger = StructuredLogger.new
 
 # Configure OpenTelemetry
 OpenTelemetry::SDK.configure do |c|
@@ -49,10 +91,20 @@ START_TIME = Time.now
 # Middleware to track metrics and tracing
 before do
   @start_time = Time.now
+  @request_id = SecureRandom.hex(8)
   @span = tracer.start_span("#{request.request_method} #{request.path}")
   @span.set_attribute('http.method', request.request_method)
   @span.set_attribute('http.url', request.url)
   @span.set_attribute('http.route', request.path)
+  @span.set_attribute('request.id', @request_id)
+
+  # Log request start
+  logger.info('Request started',
+              request_id: @request_id,
+              method: request.request_method,
+              path: request.path,
+              user_agent: request.user_agent,
+              ip: request.ip)
 end
 
 after do
@@ -70,6 +122,16 @@ after do
     @span.status = response.status >= 400 ? OpenTelemetry::Trace::Status.error : OpenTelemetry::Trace::Status.ok
     @span.finish
   end
+
+  # Log request completion
+  log_level = response.status >= 400 ? :error : :info
+  logger.send(log_level, 'Request completed',
+              request_id: @request_id,
+              method: request.request_method,
+              path: request.path,
+              status: response.status,
+              duration_ms: (duration * 1000).round(2),
+              response_size: response.body&.length)
 end
 
 # Routes
@@ -209,6 +271,13 @@ not_found do
   { error: 'Not found', path: request.path }.to_json
 end
 
-puts 'Ruby Monitor starting on port 4567...'
-puts 'Metrics available at /metrics'
-puts 'Health check at /health'
+logger.info('Application starting',
+            port: 4567,
+            environment: ENV.fetch('RACK_ENV', 'production'),
+            endpoints: {
+              health: '/health',
+              metrics: '/metrics',
+              monitor: '/monitor'
+            })
+
+logger.info('Application ready to serve requests')

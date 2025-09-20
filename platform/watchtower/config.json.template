@@ -1,0 +1,7 @@
+{
+  "auths": {
+    "registry.lvs.me.uk": {
+      "auth": "BASE64_ENCODED_USERNAME_PASSWORD"
+    }
+  }
+}

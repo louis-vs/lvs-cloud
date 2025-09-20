@@ -11,6 +11,7 @@ services:
       - 'traefik.http.routers.ruby-demo-app.entrypoints=websecure'
       - 'traefik.http.routers.ruby-demo-app.tls.certresolver=letsencrypt'
       - 'traefik.http.services.ruby-demo-app.loadbalancer.server.port=4567'
+      - 'com.centurylinklabs.watchtower.enable=true'  # Enable Watchtower auto-updates
     networks:
       - web
       - monitoring # Connect to monitoring for metrics

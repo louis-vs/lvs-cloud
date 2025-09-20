@@ -27,10 +27,14 @@ The project is hosted in Hetzner. Infrastructure is handled with Terraform. Appl
 - Create a detailed plan before writing any code
 - Commit changes often
 
-## Important Instructions
-
-Keep documentation concise and to the point.
+### Git and GitHub
 
 IMPORTANT: All commits should be GPG signed. However, pinentry *will break your prompt*. Before you run a git command, check that this script has output `gpg-connect-agent 'keyinfo --list' /bye | grep ' 1 '`. If there is not output, ASK THE USER TO RUN THE `reset-gpg` script.
 
 NEVER use `--no-verify` when using `git commit`.
+
+Infrastructure deployments require approval. Provide approval by replying "LGTM" to the open GitHub issue. IMPORTANT: verify that Terraform plans will not destroy persistent block storage by inspecting the workflow first.
+
+## Important Instructions
+
+Keep documentation concise and to the point.

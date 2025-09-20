@@ -151,13 +151,15 @@ jobs:
                 docker load --input /tmp/${{ matrix.app }}.tar
 
                 # Push all tags
-                for tag in ${{ steps.meta.outputs.tags }}; do
-                  echo "📦 Pushing $tag..."
-                  if docker push "$tag"; then
-                    echo "✅ Successfully pushed $tag"
-                  else
-                    echo "❌ Failed to push $tag on attempt $attempt"
-                    return 1
+                echo "${{ steps.meta.outputs.tags }}" | while read -r tag; do
+                  if [ -n "$tag" ]; then
+                    echo "📦 Pushing $tag..."
+                    if docker push "$tag"; then
+                      echo "✅ Successfully pushed $tag"
+                    else
+                      echo "❌ Failed to push $tag on attempt $attempt"
+                      return 1
+                    fi
                   fi
                 done
 

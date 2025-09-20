@@ -47,14 +47,10 @@ class StructuredLogger
   end
 end
 
-class << self
-  attr_accessor :logger
-end
-
 # Store app start time
 START_TIME = Time.now
 
-self.logger = StructuredLogger.new
+APP_LOGGER = StructuredLogger.new
 
 # Prometheus metrics configuration
 prometheus = Prometheus::Client.registry
@@ -131,12 +127,12 @@ before do
   @span.set_attribute('request.id', @request_id)
 
   # Log request start
-  logger.info('Request started',
-              request_id: @request_id,
-              method: request.request_method,
-              path: request.path,
-              user_agent: request.user_agent,
-              ip: request.ip)
+  APP_LOGGER.info('Request started',
+                  request_id: @request_id,
+                  method: request.request_method,
+                  path: request.path,
+                  user_agent: request.user_agent,
+                  ip: request.ip)
 end
 
 after do
@@ -176,13 +172,13 @@ after do
 
   # Log request completion
   log_level = response.status >= 400 ? :error : :info
-  logger.send(log_level, 'Request completed',
-              request_id: @request_id,
-              method: request.request_method,
-              path: request.path,
-              status: response.status,
-              duration_ms: (duration * 1000).round(2),
-              response_size: response.body&.length)
+  APP_LOGGER.send(log_level, 'Request completed',
+                  request_id: @request_id,
+                  method: request.request_method,
+                  path: request.path,
+                  status: response.status,
+                  duration_ms: (duration * 1000).round(2),
+                  response_size: response.body&.length)
 end
 
 # Routes
@@ -327,13 +323,13 @@ not_found do
   { error: 'Not found', path: request.path }.to_json
 end
 
-logger.info('Application starting',
-            port: 4567,
-            environment: ENV.fetch('RACK_ENV', 'production'),
-            endpoints: {
-              health: '/health',
-              metrics: '/metrics',
-              monitor: '/monitor'
-            })
+APP_LOGGER.info('Application starting',
+                port: 4567,
+                environment: ENV.fetch('RACK_ENV', 'production'),
+                endpoints: {
+                  health: '/health',
+                  metrics: '/metrics',
+                  monitor: '/monitor'
+                })
 
-logger.info('Application ready to serve requests')
+APP_LOGGER.info('Application ready to serve requests')

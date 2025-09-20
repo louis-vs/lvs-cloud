@@ -1,24 +1,40 @@
 # Monitoring Stack - GitOps Deployment
 
-Modern DevOps monitoring stack with automated CI/CD deployment.
+Modern observability stack with LGTM (Loki, Grafana, Tempo, Mimir) architecture and automated CI/CD deployment.
 
-## Architecture
+## Architecture Overview
 
 ```plaintext
-GitHub → Actions → Container Registry → Watchtower → Production
-   ↓         ↓           ↓                  ↓            ↓
-  Code    Build &      Push Image     Auto-update    Running
-        Test Image                    Containers     Services
+┌─────────────────────────────────────────────────────────────────┐
+│                        External Access                          │
+├─────────────────────────────────────────────────────────────────┤
+│  Internet → Traefik → Grafana (grafana.lvs.me.uk)             │
+│                          │                                      │
+│                          ▼                                      │
+├─────────────────────────────────────────────────────────────────┤
+│                    Internal Monitoring Network                  │
+├─────────────────────────────────────────────────────────────────┤
+│  Applications  →  Alloy  → ┌─ Loki (logs)                      │
+│  (stdout logs)              ├─ Mimir (metrics)                  │
+│  (OpenTelemetry)            └─ Tempo (traces)                   │
+│                                      │                          │
+│                              Grafana queries all ↑             │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Services Deployed
 
-- **Traefik**: Reverse proxy with automatic SSL certificates
-- **Docker Registry**: Self-hosted container registry at `registry.lvs.me.uk`
-- **Grafana**: Monitoring dashboards at `grafana.lvs.me.uk`
-- **Prometheus**: Metrics collection at `prometheus.lvs.me.uk`
-- **Loki**: Log aggregation at `loki.lvs.me.uk`
-- **Direct Deployment**: Container updates triggered by GitHub Actions via SSH
+### Externally Accessible
+
+- **Grafana**: Unified monitoring dashboard at `grafana.lvs.me.uk`
+- **Registry**: Container registry at `registry.lvs.me.uk`
+
+### Internal Services (Docker Network Only)
+
+- **Loki**: Log aggregation and storage
+- **Tempo**: Distributed tracing storage
+- **Mimir**: Metrics storage and querying
+- **Alloy**: Universal observability collector
 - **Node Exporter**: System metrics collection
 
 ## GitOps Workflow
@@ -47,21 +63,54 @@ terraform apply
 
 ## Access Points
 
+### External Access
+
 - **Grafana**: <https://grafana.lvs.me.uk> (admin/[secure-password])
+  - Unified interface for logs, metrics, and traces
+  - Pre-configured dashboards for system and application monitoring
 - **Registry**: <https://registry.lvs.me.uk> (admin/[secure-password])
-- **Prometheus**: <https://prometheus.lvs.me.uk>
-- **Loki**: <https://loki.lvs.me.uk>
+  - Container image storage and distribution
+
+### Internal Access (Docker Network Only)
+
+- **Loki**: `http://loki:3100` - Log aggregation API
+- **Tempo**: `http://tempo:3200` - Distributed tracing API
+- **Mimir**: `http://mimir:8080` - Metrics storage API
+- **Alloy**: `http://alloy:12345` - Observability collector
 
 ## Security
 
-- All services behind Traefik with automatic HTTPS
-- Container registry with HTTP basic auth
-- Docker networks for service isolation
-- Security updates managed through GitHub Actions deployments
+- **External services**: Behind Traefik with automatic HTTPS and Let's Encrypt
+- **Internal services**: Isolated on Docker monitoring network
+- **Authentication**: HTTP basic auth for registry, built-in auth for Grafana
+- **Network isolation**: Applications and monitoring services on separate networks
+- **Security updates**: Managed through automated GitHub Actions deployments
 
-## Monitoring
+## Observability Data Flow
 
-- **System metrics**: Node Exporter → Prometheus → Grafana
-- **Application logs**: Docker → Loki → Grafana
-- **Service health**: Prometheus health checks
-- **Uptime monitoring**: Ruby app sends metrics to Prometheus
+### Logs (12-Factor App Compliant)
+
+```plaintext
+Applications → stdout → Docker → Alloy → Loki → Grafana
+```
+
+### Metrics
+
+```plaintext
+System: Node Exporter → Alloy → Mimir → Grafana
+Apps: OpenTelemetry → Tempo → span metrics → Mimir → Grafana
+```
+
+### Traces
+
+```plaintext
+Applications → OpenTelemetry → Tempo → Grafana
+```
+
+## Key Features
+
+- **Unified observability**: Single Grafana interface for all telemetry data
+- **Auto-discovery**: Alloy automatically discovers and monitors Docker containers
+- **Structured logging**: JSON log parsing with metadata extraction
+- **Trace correlation**: Request IDs link logs, metrics, and traces
+- **12-factor compliance**: Applications log only to stdout

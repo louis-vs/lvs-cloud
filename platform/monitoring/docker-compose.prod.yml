@@ -83,11 +83,12 @@ services:
     networks:
       - monitoring
 
-  # Grafana Alloy - Scrapes metrics and sends to Mimir
+  # Grafana Alloy - Scrapes metrics and logs, sends to Mimir and Loki
   alloy:
     image: grafana/alloy:latest
     container_name: alloy
     restart: unless-stopped
+    user: "0:0"  # Run as root to access Docker socket
     command:
       - run
       - /etc/alloy/config.alloy
@@ -95,6 +96,8 @@ services:
       - --storage.path=/var/lib/alloy/data
     volumes:
       - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Mount Docker socket for log collection
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro  # Mount container logs directory
     networks:
       - monitoring
 

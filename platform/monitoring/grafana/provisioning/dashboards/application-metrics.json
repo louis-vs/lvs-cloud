@@ -90,7 +90,7 @@
       },
       "targets": [
         {
-          "expr": "app_uptime_seconds",
+          "expr": "time() - process_start_time_seconds{job=\"ruby-demo-app\"}",
           "interval": "",
           "legendFormat": "Ruby Demo App Uptime",
           "refId": "A"
@@ -323,6 +323,57 @@
       ],
       "title": "HTTP Status Codes",
       "type": "stat"
+    },
+    {
+      "datasource": "Loki",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "displayMode": "list",
+            "showTime": true,
+            "sortOrder": "Descending"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showLabels": false,
+        "showTime": false,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": "Loki",
+          "expr": "{container=\"ruby-demo-app\"} |= \"\"",
+          "refId": "A"
+        }
+      ],
+      "title": "Application Logs",
+      "type": "logs"
     }
   ],
   "schemaVersion": 27,

@@ -32,3 +32,5 @@ The project is hosted in Hetzner. Infrastructure is handled with Terraform. Appl
 Keep documentation concise and to the point.
 
 IMPORTANT: All commits should be GPG signed. However, pinentry *will break your prompt*. Before you run a git command, check that this script has output `gpg-connect-agent 'keyinfo --list' /bye | grep ' 1 '`. If there is not output, ASK THE USER TO RUN THE `reset-gpg` script.
+
+NEVER use `--no-verify` when using `git commit`.

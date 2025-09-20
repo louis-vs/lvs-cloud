@@ -254,8 +254,14 @@
         {
           "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/\"})",
           "interval": "",
-          "legendFormat": "Disk Usage (/)",
+          "legendFormat": "Root Drive (/)",
           "refId": "A"
+        },
+        {
+          "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/mnt/data\"} * 100) / node_filesystem_size_bytes{mountpoint=\"/mnt/data\"})",
+          "interval": "",
+          "legendFormat": "Data Drive (/mnt/data)",
+          "refId": "B"
         }
       ],
       "title": "Disk Usage",

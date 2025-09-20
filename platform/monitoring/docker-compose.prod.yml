@@ -119,6 +119,16 @@ services:
     networks:
       - monitoring
 
+  # Grafana Agent - Scrapes metrics and sends to Mimir
+  grafana-agent:
+    image: grafana/agent:latest
+    container_name: grafana-agent
+    restart: unless-stopped
+    volumes:
+      - ./grafana-agent/agent.yml:/etc/agent/agent.yml:ro
+    networks:
+      - monitoring
+
 networks:
   web:
     name: web

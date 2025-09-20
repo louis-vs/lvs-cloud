@@ -11,20 +11,6 @@ server:
 # Disable multi-tenancy for single-tenant setup
 multitenancy_enabled: false
 
-# Metrics scraping configuration for Mimir
-scrape_configs:
-    - job_name: 'node-exporter'
-      static_configs:
-        - targets: ['node-exporter:9100']
-      scrape_interval: 15s
-      metrics_path: /metrics
-
-    - job_name: 'mimir'
-      static_configs:
-        - targets: ['localhost:8080']
-      scrape_interval: 15s
-      metrics_path: /metrics
-
 common:
   storage:
     backend: filesystem

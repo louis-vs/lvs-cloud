@@ -171,7 +171,7 @@
       },
       "targets": [
         {
-          "expr": "rate(http_requests_total[5m])",
+          "expr": "rate(http_requests_total{job=\"ruby-demo-app\"}[5m])",
           "interval": "",
           "legendFormat": "{{method}} {{path}} ({{status}})",
           "refId": "A"
@@ -252,13 +252,13 @@
       },
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"ruby-demo-app\"}[5m]))",
           "interval": "",
           "legendFormat": "95th percentile",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))",
+          "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"ruby-demo-app\"}[5m]))",
           "interval": "",
           "legendFormat": "50th percentile",
           "refId": "B"
@@ -315,7 +315,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(http_requests_total[5m])) by (status)",
+          "expr": "sum(rate(http_requests_total{job=\"ruby-demo-app\"}[5m])) by (status)",
           "interval": "",
           "legendFormat": "HTTP {{status}}",
           "refId": "A"

@@ -50,6 +50,20 @@ prometheus.scrape "alloy" {
   metrics_path = "/metrics"
 }
 
+// Scrape Ruby demo app metrics
+prometheus.scrape "ruby_demo_app" {
+  targets = [
+    {
+      "__address__" = "ruby-demo-app:4567",
+      "job"        = "ruby-demo-app",
+    },
+  ]
+
+  forward_to = [prometheus.remote_write.mimir.receiver]
+  scrape_interval = "15s"
+  metrics_path = "/metrics"
+}
+
 // =====================================
 // LOG COLLECTION PIPELINE
 // =====================================

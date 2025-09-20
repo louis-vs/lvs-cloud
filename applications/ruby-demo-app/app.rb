@@ -9,6 +9,8 @@ require 'opentelemetry/sdk'
 require 'opentelemetry/exporter/otlp'
 require 'opentelemetry/instrumentation/sinatra'
 require 'opentelemetry/instrumentation/http'
+require 'prometheus/client'
+require 'prometheus/client/formats/text'
 
 # Structured logging configuration
 class StructuredLogger
@@ -49,7 +51,43 @@ class << self
   attr_accessor :logger
 end
 
+# Store app start time
+START_TIME = Time.now
+
 self.logger = StructuredLogger.new
+
+# Prometheus metrics configuration
+prometheus = Prometheus::Client.registry
+
+# Application info metric
+app_info = prometheus.gauge(
+  :app_info,
+  docstring: 'Application information',
+  labels: %i[version environment service]
+)
+app_info.set(1,
+             labels: { version: '1.2.0', environment: ENV.fetch('RACK_ENV', 'production'), service: 'ruby-demo-app' })
+
+# Process start time for uptime calculation
+process_start_time = prometheus.gauge(
+  :process_start_time_seconds,
+  docstring: 'Start time of the process since unix epoch in seconds'
+)
+process_start_time.set(START_TIME.to_f)
+
+# HTTP request metrics
+http_requests_total = prometheus.counter(
+  :http_requests_total,
+  docstring: 'Total number of HTTP requests',
+  labels: %i[method path status]
+)
+
+http_request_duration = prometheus.histogram(
+  :http_request_duration_seconds,
+  docstring: 'Duration of HTTP requests in seconds',
+  labels: %i[method path status],
+  buckets: [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+)
 
 # Configure OpenTelemetry
 OpenTelemetry::SDK.configure do |c|
@@ -82,12 +120,6 @@ set :environment, :production
 # OpenTelemetry setup
 tracer = OpenTelemetry.tracer_provider.tracer('ruby-demo-app')
 
-# Create custom attributes for spans (metrics will be generated from spans via Tempo)
-# Tempo's metrics generator will create span-based metrics automatically
-
-# Store app start time
-START_TIME = Time.now
-
 # Middleware to track metrics and tracing
 before do
   @start_time = Time.now
@@ -109,6 +141,25 @@ end
 
 after do
   duration = Time.now - @start_time
+  status_code = response.status.to_s
+
+  # Record Prometheus metrics
+  http_requests_total.increment(
+    labels: {
+      method: request.request_method,
+      path: request.path,
+      status: status_code
+    }
+  )
+
+  http_request_duration.observe(
+    duration,
+    labels: {
+      method: request.request_method,
+      path: request.path,
+      status: status_code
+    }
+  )
 
   # Complete span with rich attributes for metrics generation
   if @span
@@ -166,10 +217,16 @@ get '/health' do
 end
 
 get '/metrics' do
+  content_type 'text/plain; version=0.0.4; charset=utf-8'
+
+  # Return Prometheus metrics in text format
+  Prometheus::Client::Formats::Text.marshal(prometheus)
+end
+
+get '/metrics/info' do
   content_type :json
 
-  # Legacy endpoint for backwards compatibility
-  # Traces are sent to Tempo, which generates span metrics and sends them to Mimir
+  # Information endpoint about observability stack
   uptime_seconds = Time.now - START_TIME
 
   tracer.in_span('metrics_info') do |span|
@@ -180,13 +237,12 @@ get '/metrics' do
       message: 'Observability via LGTM stack',
       architecture: {
         traces: 'OpenTelemetry → Tempo → Grafana',
-        metrics: 'Tempo span metrics → Mimir → Grafana',
-        logs: 'Docker logs → Loki → Grafana'
+        metrics: 'Prometheus → Alloy → Mimir → Grafana',
+        logs: 'Docker logs → Alloy → Loki → Grafana'
       },
       endpoints: {
         traces: ENV.fetch('OTEL_EXPORTER_OTLP_TRACES_ENDPOINT', 'http://tempo:4318/v1/traces'),
-        tempo_ui: 'https://tempo.lvs.me.uk',
-        mimir_ui: 'https://mimir.lvs.me.uk',
+        prometheus_metrics: '/metrics',
         grafana: 'https://grafana.lvs.me.uk'
       },
       uptime: uptime_seconds,

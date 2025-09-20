@@ -8,10 +8,15 @@ Personal private cloud on Hetzner with enterprise-grade monitoring, automatic de
 |---------|-----|--------|
 | **Grafana** | <https://grafana.lvs.me.uk> | ✅ (admin/secure-pass) |
 | **Registry** | <https://registry.lvs.me.uk> | ✅ (see .env) |
-| **Prometheus** | <https://prometheus.lvs.me.uk> | ✅ |
 | **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
 
-**Server:** Hetzner cx22 (2 vCPU, 4GB RAM)
+**Internal Services** (accessible via Grafana):
+
+- **Mimir**: Metrics storage & querying
+- **Tempo**: Distributed tracing
+- **Loki**: Log aggregation
+
+**Server:** Hetzner cx22 (2 vCPU, 4GB RAM) + 50GB block storage
 **Total Cost:** €9.89/month (€4.90 server + €4.99 Object Storage)
 
 ## Architecture
@@ -26,7 +31,8 @@ GitHub Push → Actions → Registry → Watchtower → Live
 
 - **Traefik**: SSL termination, routing
 - **Registry**: Container images (registry.lvs.me.uk)
-- **Monitoring**: Grafana + Prometheus + Loki
+- **LGTM Stack**: Loki (logs) + Grafana (dashboards) + Tempo (traces) + Mimir (metrics)
+- **Grafana Alloy**: Metrics collection agent
 - **Apps**: Whatever you deploy
 
 ## Quick Commands
@@ -57,6 +63,8 @@ cd infrastructure && terraform destroy -auto-approve && terraform apply -auto-ap
 - [x] **Security**: All services use secure credentials from GitHub secrets ✅
 - [x] **Structure**: Clean separation - platform/ for services, applications/ for apps ✅
 - [x] **Scalability**: Dynamic app detection supports unlimited apps via matrix strategy ✅
+- [x] **Storage**: Persistent data on 50GB block storage, configs in Git for reproducibility ✅
+- [x] **Security**: LGTM stack internal-only, unique UIDs per service, minimal firewall exposure ✅
 - [ ] **Monitoring**: App metrics collection needs configuration for custom dashboards
 
 ## Next: Adding Apps

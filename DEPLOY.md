@@ -78,6 +78,34 @@ git push origin master
 
 **Note**: User apps in `applications/` trigger the applications job in the unified workflow
 
+## Storage Architecture
+
+### Block Storage (Persistent)
+
+- **Volume**: 50GB Hetzner block storage mounted at `/mnt/data`
+- **Persistent data**: All service data stored on block storage for durability
+- **Paths**:
+  - `/mnt/data/grafana` - Grafana dashboards, users, settings
+  - `/mnt/data/mimir` - Metrics storage (replaces Prometheus data)
+  - `/mnt/data/tempo` - Distributed tracing data
+  - `/mnt/data/loki` - Log aggregation data
+  - `/mnt/data/registry` - Container images
+
+### VM Storage (Ephemeral)
+
+- **Configuration files**: Service configs stored in VM (reproducible via Git)
+- **Logs**: Docker container logs (managed by Docker daemon)
+
+### Permissions
+
+Services run with unique UIDs for security isolation:
+
+- Grafana: `472:472`
+- Mimir: `10001:10001`
+- Tempo: `10002:10002`
+- Loki: `10003:10003`
+- Registry: `1000:1000`
+
 ## Secrets Management
 
 GitHub Repository Secrets:
@@ -123,8 +151,9 @@ Point these A records to your server IP:
 
 - `app.lvs.me.uk`
 - `grafana.lvs.me.uk`
-- `prometheus.lvs.me.uk`
 - `registry.lvs.me.uk`
+
+**Note**: Mimir, Tempo, and Loki are internal-only services (not exposed to internet)
 
 ### 5. GitHub Secrets
 

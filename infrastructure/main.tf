@@ -137,21 +137,6 @@ resource "hcloud_firewall" "web" {
     source_ips = ["0.0.0.0/0", "::/0"]
   }
 
-  # Grafana
-  rule {
-    direction  = "in"
-    port       = "3000"
-    protocol   = "tcp"
-    source_ips = ["0.0.0.0/0", "::/0"]
-  }
-
-  # Container Registry
-  rule {
-    direction  = "in"
-    port       = "5000"
-    protocol   = "tcp"
-    source_ips = ["0.0.0.0/0", "::/0"]
-  }
 
   labels = {
     project = var.project_name

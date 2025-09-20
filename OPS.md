@@ -4,9 +4,17 @@
 
 ### Access Points
 
+**Internet-accessible services:**
+
 - **Grafana**: <https://grafana.lvs.me.uk> (admin/[secure-password])
-- **Prometheus**: <https://prometheus.lvs.me.uk>
+- **Registry**: <https://registry.lvs.me.uk> (see .env for credentials)
 - **Server SSH**: `ssh ubuntu@$(dig +short app.lvs.me.uk)`
+
+**Internal services** (access via Grafana or SSH):
+
+- **Mimir**: `http://mimir:8080` (metrics storage & query)
+- **Tempo**: `http://tempo:3200` (distributed tracing)
+- **Loki**: `http://loki:3100` (log aggregation)
 
 ## Common Issues
 
@@ -64,8 +72,11 @@ ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker logs registry'
 ### Resource Usage
 
 ```bash
-# Check disk space
+# Check disk space (including block storage)
 ssh ubuntu@$(dig +short app.lvs.me.uk) 'df -h'
+
+# Check persistent data usage
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'du -sh /mnt/data/*'
 
 # Check memory usage
 ssh ubuntu@$(dig +short app.lvs.me.uk) 'free -h'
@@ -83,9 +94,10 @@ ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker system prune -f'
 
 ### Updates
 
-- **OS updates**: Handled by Watchtower automatically
+- **OS updates**: Handled automatically by cloud-init
 - **Container updates**: Watchtower checks every 5 minutes
 - **SSL renewal**: Automatic via Traefik
+- **Metrics collection**: Grafana Alloy scrapes every 15s
 
 ## Debugging Workflows
 

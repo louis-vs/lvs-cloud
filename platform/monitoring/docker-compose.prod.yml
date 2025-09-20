@@ -119,13 +119,18 @@ services:
     networks:
       - monitoring
 
-  # Grafana Agent - Scrapes metrics and sends to Mimir
-  grafana-agent:
-    image: grafana/agent:latest
-    container_name: grafana-agent
+  # Grafana Alloy - Scrapes metrics and sends to Mimir
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
     restart: unless-stopped
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
     volumes:
-      - ./grafana-agent/agent.yml:/etc/agent/agent.yml:ro
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
     networks:
       - monitoring
 

@@ -45,6 +45,14 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 - Commit and push changes once you complete a request.
 - Use TodoWrite tool to track complex tasks and give visibility to progress
 
+### Database Development
+
+- **Shared PostgreSQL**: All apps use the shared PostgreSQL server with per-app databases
+- **Connection Pattern**: Use `DATABASE_URL=postgresql://app_user:${POSTGRES_APP_PASSWORD}@postgresql:5432/app_db`
+- **Migrations**: Include migration commands in app startup for GitOps compatibility
+- **Monitoring**: Database metrics automatically collected via Grafana Alloy
+- **Documentation**: See POSTGRES.md for detailed database management procedures
+
 ### GitHub
 
 Infrastructure deployments require approval. Provide approval by replying "LGTM" to the open GitHub issue. IMPORTANT: verify that Terraform plans will not destroy persistent block storage by inspecting the workflow first.

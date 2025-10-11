@@ -32,6 +32,8 @@ GitHub Push → Actions → Registry → Watchtower → Live
      ↓           ↓         ↓          ↓         ↓
    Code      Build    Push Image  Auto-update  Running
                                                ↓
+                                        PostgreSQL ← Apps
+                                               ↓
                                         Grafana Alloy
                                                ↓
                                         LGTM Stack
@@ -43,6 +45,7 @@ GitHub Push → Actions → Registry → Watchtower → Live
 
 - **Traefik**: SSL termination & automatic routing
 - **Registry**: Private container registry (registry.lvs.me.uk)
+- **PostgreSQL**: Shared database server with per-app databases and users
 - **LGTM Stack**: Loki + Grafana + Tempo + Mimir (full observability)
 - **Grafana Alloy**: Automatic metrics & log collection from all containers
 - **Persistent Dashboards**: All Grafana data persisted for custom dashboard development

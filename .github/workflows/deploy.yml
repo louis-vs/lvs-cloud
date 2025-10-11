@@ -391,10 +391,131 @@ jobs:
             sudo docker compose up -d --remove-orphans
             echo "✅ Watchtower deployed successfully"
 
+  platform-postgresql:
+    name: 'Deploy PostgreSQL'
+    runs-on: ubuntu-latest
+    needs: [infrastructure, platform-traefik]
+    if: always() && !cancelled() && !failure()
+    outputs:
+      changed: ${{ steps.check-changes.outputs.changed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Manual deployment of everything requested, redeploying PostgreSQL"
+            exit 0
+          fi
+
+          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Infrastructure changed, redeploying PostgreSQL"
+            exit 0
+          fi
+
+          # Check if postgresql files changed
+          if git diff --name-only HEAD^ HEAD | grep "^platform/postgresql/"; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "PostgreSQL files changed"
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get server IP
+        id: server-ip
+        run: |
+          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
+            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
+          else
+            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
+            if [ -z "$SERVER_IP" ]; then
+              echo "❌ Error: Could not resolve server IP"
+              exit 1
+            fi
+            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy PostgreSQL
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            if ! command -v docker &> /dev/null; then
+              echo "❌ Docker is not available"
+              exit 1
+            fi
+
+            sudo mkdir -p /opt/postgresql
+            sudo chown ubuntu:ubuntu /opt/postgresql
+            cd /opt/postgresql
+
+            cat > .env << 'EOF'
+            POSTGRES_ADMIN_PASSWORD=${{ secrets.POSTGRES_ADMIN_PASSWORD }}
+            POSTGRES_RUBY_PASSWORD=${{ secrets.POSTGRES_RUBY_PASSWORD }}
+            POSTGRES_TS_PASSWORD=${{ secrets.POSTGRES_TS_PASSWORD }}
+            POSTGRES_PYTHON_PASSWORD=${{ secrets.POSTGRES_PYTHON_PASSWORD }}
+            POSTGRES_GO_PASSWORD=${{ secrets.POSTGRES_GO_PASSWORD }}
+            EOF
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o docker-compose.yml \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/docker-compose.yml
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o postgresql.conf \
+                 https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/postgresql.conf
+
+            mkdir -p init-scripts
+
+            echo "📥 Downloading PostgreSQL initialization scripts..."
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o init-scripts/01-create-databases.sql \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/01-create-databases.sql" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o init-scripts/02-create-users.sql \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/02-create-users.sql" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o init-scripts/03-grant-permissions.sql \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/03-grant-permissions.sql" &
+
+            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+                 -H "Accept: application/vnd.github.v3.raw" \
+                 -o init-scripts/04-enable-extensions.sql \
+                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/04-enable-extensions.sql" &
+
+            wait  # Wait for all downloads to complete
+            echo "✅ All PostgreSQL configuration files downloaded"
+
+            # Replace placeholders in SQL scripts with actual environment variables
+            sed -i "s/\${POSTGRES_RUBY_PASSWORD}/${{ secrets.POSTGRES_RUBY_PASSWORD }}/g" init-scripts/02-create-users.sql
+            sed -i "s/\${POSTGRES_TS_PASSWORD}/${{ secrets.POSTGRES_TS_PASSWORD }}/g" init-scripts/02-create-users.sql
+            sed -i "s/\${POSTGRES_PYTHON_PASSWORD}/${{ secrets.POSTGRES_PYTHON_PASSWORD }}/g" init-scripts/02-create-users.sql
+            sed -i "s/\${POSTGRES_GO_PASSWORD}/${{ secrets.POSTGRES_GO_PASSWORD }}/g" init-scripts/02-create-users.sql
+
+            sudo docker compose down 2>/dev/null || true
+            sudo docker compose up -d --remove-orphans
+            echo "✅ PostgreSQL deployed successfully"
+
   platform-monitoring:
     name: 'Deploy Monitoring'
     runs-on: ubuntu-latest
-    needs: [infrastructure, platform-traefik]
+    needs: [infrastructure, platform-traefik, platform-postgresql]
     if: always() && !cancelled() && !failure()
 
     steps:

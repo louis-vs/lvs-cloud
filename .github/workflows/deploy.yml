@@ -14,6 +14,11 @@ on:
         required: false
         type: boolean
         default: false
+      deploy_apps_only:
+        description: 'Force deploy applications only (skip infrastructure/platform)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -622,8 +627,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [platform-registry, platform-watchtower]
     if: |
-      always() && !cancelled() && !failure() &&
-      (inputs.deploy_everything == 'true' || needs.infrastructure.outputs.changed == 'true')
+      always() && !cancelled() &&
+      (inputs.deploy_everything == 'true' || inputs.deploy_apps_only == 'true' || needs.infrastructure.outputs.changed == 'true')
     strategy:
       matrix:
         app: ["ruby-demo-app"]

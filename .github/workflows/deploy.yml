@@ -635,6 +635,16 @@ jobs:
       fail-fast: false
 
     steps:
+      - name: Debug inputs and conditions
+        run: |
+          echo "deploy_everything: '${{ inputs.deploy_everything }}'"
+          echo "deploy_apps_only: '${{ inputs.deploy_apps_only }}'"
+          echo "infrastructure changed: '${{ needs.infrastructure.outputs.changed }}'"
+          echo "Condition parts:"
+          echo "  inputs.deploy_everything == 'true': ${{ inputs.deploy_everything == 'true' }}"
+          echo "  inputs.deploy_apps_only == 'true': ${{ inputs.deploy_apps_only == 'true' }}"
+          echo "  needs.infrastructure.outputs.changed == 'true': ${{ needs.infrastructure.outputs.changed == 'true' }}"
+
       - name: Checkout
         uses: actions/checkout@v4
 

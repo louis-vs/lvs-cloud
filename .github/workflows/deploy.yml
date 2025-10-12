@@ -700,7 +700,7 @@ jobs:
             # Create app directory and move files
             sudo mkdir -p "$APP_DIR"
             sudo chown -R ubuntu:ubuntu "$APP_DIR"
-            sudo cp -r "/tmp/deploy-$APP_NAME/"* "$APP_DIR/"
+            sudo cp -rf "/tmp/deploy-$APP_NAME/"* "$APP_DIR/"
             sudo chown -R ubuntu:ubuntu "$APP_DIR"
             cd "$APP_DIR"
 

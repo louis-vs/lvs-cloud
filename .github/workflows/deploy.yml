@@ -628,7 +628,7 @@ jobs:
     needs: [infrastructure, platform-registry, platform-watchtower]
     if: |
       always() && !cancelled() && !failure() &&
-      (inputs.deploy_everything == 'true' || inputs.deploy_apps_only == 'true' || needs.infrastructure.outputs.changed == 'true')
+      (inputs.deploy_everything == true || inputs.deploy_apps_only == true || needs.infrastructure.outputs.changed == 'true')
     strategy:
       matrix:
         app: ["ruby-demo-app"]

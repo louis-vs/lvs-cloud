@@ -1,13 +1,43 @@
 # Deployment Guide
 
+## Deployment Architecture
+
+LVS Cloud uses **GitOps deployment pattern** - all services are self-contained with their own deployment scripts.
+
+**Key Principle**: Push configuration files to Git → Services deploy themselves using their own `deploy.sh` scripts.
+
+### Directory Structure
+
+```plaintext
+├── platform/              # Platform services (Traefik, Monitoring, PostgreSQL, etc.)
+│   ├── traefik/
+│   │   ├── deploy.sh          # Self-contained deployment script
+│   │   ├── docker-compose.yml
+│   │   └── traefik.yml
+│   ├── monitoring/
+│   │   ├── deploy.sh
+│   │   └── ... all config files
+│   └── postgresql/
+│       ├── deploy.sh
+│       └── ... all config and init scripts
+├── applications/          # User applications
+│   └── your-app/
+│       ├── deploy.sh          # Self-contained deployment script
+│       ├── .env.template      # Template for environment variables
+│       ├── Dockerfile
+│       └── docker-compose.prod.yml
+```
+
 ## Adding New Apps
 
 ### App Structure Required
 
 ```plaintext
 applications/your-app/
+├── deploy.sh                # Deployment automation script
+├── .env.template            # Environment variable template
 ├── Dockerfile
-├── docker-compose.prod.yml  # Required for deployment
+├── docker-compose.prod.yml  # Production compose file
 ├── your app code...
 ```
 
@@ -112,14 +142,70 @@ db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 | Python API | `python_api` | `python_user` | `POSTGRES_PYTHON_PASSWORD` |
 | Go Service | `go_service` | `go_user` | `POSTGRES_GO_PASSWORD` |
 
+### deploy.sh Template
+
+Every application needs a `deploy.sh` script. See `applications/ruby-demo-app/deploy.sh` for a complete example.
+
+```bash
+#!/bin/bash
+set -e
+
+echo "🚀 Starting deployment..."
+
+# 1. Verify environment variables (if needed)
+if [ -z "$SOME_REQUIRED_VAR" ]; then
+    echo "❌ Error: SOME_REQUIRED_VAR must be set"
+    exit 1
+fi
+
+# 2. Build the Docker image
+docker build -t registry.lvs.me.uk/your-app:latest .
+
+# 3. Push to registry
+docker push registry.lvs.me.uk/your-app:latest
+
+# 4. Deploy with Docker Compose
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+# 5. Verify deployment
+if docker compose -f docker-compose.prod.yml ps --services --filter "status=running" | grep -q "your-app"; then
+    echo "✅ Deployment successful"
+else
+    echo "❌ Deployment failed"
+    exit 1
+fi
+```
+
+### .env.template Pattern
+
+Use `.env.template` with placeholders for secrets:
+
+```bash
+# .env.template
+DATABASE_URL=postgresql://user:${POSTGRES_YOUR_APP_PASSWORD}@postgresql:5432/your_db
+API_KEY=${YOUR_API_KEY}
+```
+
+GitHub Actions will substitute these automatically before deployment.
+
 ### Current Deployment Flow
 
+**Applications:**
+
 1. **Push code** → `applications/your-app/**`
-2. **Workflow detects** changed apps automatically
-3. **Builds Docker image** with multi-arch support (amd64/arm64)
-4. **Pushes to registry** → registry.lvs.me.uk/your-app:latest
-5. **SSH deploys** directly to server with health checks
-6. **Zero downtime** deployment via Docker Compose
+2. **Workflow detects** changed app automatically
+3. **Generates .env** from `.env.template` with GitHub secrets
+4. **Uploads directory** via SCP to `/tmp/deploy-your-app`
+5. **Runs deploy.sh** which builds, pushes, and deploys
+6. **Watchtower** monitors for future image updates
+
+**Platform Services:**
+
+1. **Push config** → `platform/service/**`
+2. **Workflow detects** changed service
+3. **Uploads directory** via SCP to `/tmp/deploy-service`
+4. **Runs deploy.sh** with required environment variables
+5. **Service deploys** itself to `/opt/service`
 
 ## Infrastructure Changes
 

@@ -191,7 +191,17 @@ jobs:
             echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy Traefik
+      - name: Upload Traefik deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "platform/traefik/*"
+          target: "/tmp/deploy-traefik"
+          strip_components: 2
+
+      - name: Execute Traefik deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.server-ip.outputs.server_ip }}
@@ -199,35 +209,16 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            echo "⏳ Waiting for system setup to complete..."
-            sudo cloud-init status --wait || {
-              echo "❌ Cloud-init failed or timed out"
-              exit 1
-            }
+            cd /tmp/deploy-traefik
 
-            if ! command -v docker &> /dev/null; then
-              echo "❌ Docker is not available"
-              exit 1
-            fi
+            # Make deploy script executable and run it
+            chmod +x deploy.sh
+            ./deploy.sh
 
-            sudo mkdir -p /opt/traefik
-            sudo mkdir -p /etc/traefik
-            sudo chown ubuntu:ubuntu /opt/traefik
-            cd /opt/traefik
+            # Cleanup
+            rm -rf /tmp/deploy-traefik
 
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/traefik/docker-compose.yml
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o /tmp/traefik.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/traefik/traefik.yml
-
-            sudo cp /tmp/traefik.yml /etc/traefik/traefik.yml
-            sudo docker compose up -d --remove-orphans
-            echo "✅ Traefik deployed successfully"
+            echo "🎉 Traefik deployment completed"
 
   platform-registry:
     name: 'Deploy Registry'
@@ -278,35 +269,37 @@ jobs:
             echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy Registry
+      - name: Upload Registry deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "platform/registry/*"
+          target: "/tmp/deploy-registry"
+          strip_components: 2
+
+      - name: Execute Registry deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.server-ip.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: REGISTRY_USERNAME,REGISTRY_PASSWORD
           script: |
             set -e
-            if ! command -v docker &> /dev/null; then
-              echo "❌ Docker is not available"
-              exit 1
-            fi
+            cd /tmp/deploy-registry
 
-            sudo mkdir -p /opt/registry
-            sudo mkdir -p /etc/docker/registry/auth
-            sudo chown ubuntu:ubuntu /opt/registry
-            cd /opt/registry
+            # Make deploy script executable and run it
+            chmod +x deploy.sh
+            export REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
+            export REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
+            ./deploy.sh
 
-            # Generate htpasswd file for registry authentication
-            echo "🔐 Creating registry authentication..."
-            sudo htpasswd -Bbn "${{ secrets.REGISTRY_USERNAME }}" "${{ secrets.REGISTRY_PASSWORD }}" | sudo tee /etc/docker/registry/auth/htpasswd
+            # Cleanup
+            rm -rf /tmp/deploy-registry
 
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/registry/docker-compose.yml
-
-            sudo docker compose up -d --remove-orphans
-            echo "✅ Registry deployed successfully"
+            echo "🎉 Registry deployment completed"
 
   platform-watchtower:
     name: 'Deploy Watchtower'
@@ -357,44 +350,37 @@ jobs:
             echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy Watchtower
+      - name: Upload Watchtower deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "platform/watchtower/*"
+          target: "/tmp/deploy-watchtower"
+          strip_components: 2
+
+      - name: Execute Watchtower deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.server-ip.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: REGISTRY_USERNAME,REGISTRY_PASSWORD
           script: |
             set -e
-            if ! command -v docker &> /dev/null; then
-              echo "❌ Docker is not available"
-              exit 1
-            fi
+            cd /tmp/deploy-watchtower
 
-            sudo mkdir -p /opt/watchtower
-            sudo mkdir -p /etc/watchtower/config
-            sudo chown ubuntu:ubuntu /opt/watchtower
-            cd /opt/watchtower
+            # Make deploy script executable and run it
+            chmod +x deploy.sh
+            export REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
+            export REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
+            ./deploy.sh
 
-            # Create registry authentication config for Watchtower
-            echo "🔐 Creating registry authentication for Watchtower..."
-            AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
-            sudo tee /etc/watchtower/config/config.json > /dev/null << EOF
-            {
-              "auths": {
-                "registry.lvs.me.uk": {
-                  "auth": "$AUTH_STRING"
-                }
-              }
-            }
-            EOF
+            # Cleanup
+            rm -rf /tmp/deploy-watchtower
 
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/watchtower/docker-compose.yml
-
-            sudo docker compose up -d --remove-orphans
-            echo "✅ Watchtower deployed successfully"
+            echo "🎉 Watchtower deployment completed"
 
   platform-postgresql:
     name: 'Deploy PostgreSQL'
@@ -445,7 +431,17 @@ jobs:
             echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy PostgreSQL
+      - name: Upload PostgreSQL deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "platform/postgresql/*"
+          target: "/tmp/deploy-postgresql"
+          strip_components: 2
+
+      - name: Execute PostgreSQL deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.server-ip.outputs.server_ip }}
@@ -453,69 +449,21 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            if ! command -v docker &> /dev/null; then
-              echo "❌ Docker is not available"
-              exit 1
-            fi
+            cd /tmp/deploy-postgresql
 
-            sudo mkdir -p /opt/postgresql
-            sudo chown ubuntu:ubuntu /opt/postgresql
-            cd /opt/postgresql
+            # Make deploy script executable and run it
+            chmod +x deploy.sh
+            export POSTGRES_ADMIN_PASSWORD="${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
+            export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
+            export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
+            export POSTGRES_PYTHON_PASSWORD="${{ secrets.POSTGRES_PYTHON_PASSWORD }}"
+            export POSTGRES_GO_PASSWORD="${{ secrets.POSTGRES_GO_PASSWORD }}"
+            ./deploy.sh
 
-            cat > .env << 'EOF'
-            POSTGRES_ADMIN_PASSWORD=${{ secrets.POSTGRES_ADMIN_PASSWORD }}
-            POSTGRES_RUBY_PASSWORD=${{ secrets.POSTGRES_RUBY_PASSWORD }}
-            POSTGRES_TS_PASSWORD=${{ secrets.POSTGRES_TS_PASSWORD }}
-            POSTGRES_PYTHON_PASSWORD=${{ secrets.POSTGRES_PYTHON_PASSWORD }}
-            POSTGRES_GO_PASSWORD=${{ secrets.POSTGRES_GO_PASSWORD }}
-            EOF
+            # Cleanup
+            rm -rf /tmp/deploy-postgresql
 
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/docker-compose.yml
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o postgresql.conf \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/postgresql.conf
-
-            mkdir -p init-scripts
-
-            echo "📥 Downloading PostgreSQL initialization scripts..."
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o init-scripts/01-create-databases.sql \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/01-create-databases.sql" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o init-scripts/02-create-users.sql \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/02-create-users.sql" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o init-scripts/03-grant-permissions.sql \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/03-grant-permissions.sql" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o init-scripts/04-enable-extensions.sql \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/postgresql/init-scripts/04-enable-extensions.sql" &
-
-            wait  # Wait for all downloads to complete
-            echo "✅ All PostgreSQL configuration files downloaded"
-
-            # Replace placeholders in SQL scripts with actual environment variables
-            sed -i "s/\${POSTGRES_RUBY_PASSWORD}/${{ secrets.POSTGRES_RUBY_PASSWORD }}/g" init-scripts/02-create-users.sql
-            sed -i "s/\${POSTGRES_TS_PASSWORD}/${{ secrets.POSTGRES_TS_PASSWORD }}/g" init-scripts/02-create-users.sql
-            sed -i "s/\${POSTGRES_PYTHON_PASSWORD}/${{ secrets.POSTGRES_PYTHON_PASSWORD }}/g" init-scripts/02-create-users.sql
-            sed -i "s/\${POSTGRES_GO_PASSWORD}/${{ secrets.POSTGRES_GO_PASSWORD }}/g" init-scripts/02-create-users.sql
-
-            sudo docker compose down 2>/dev/null || true
-            sudo docker compose up -d --remove-orphans
-            echo "✅ PostgreSQL deployed successfully"
+            echo "🎉 PostgreSQL deployment completed"
 
   platform-monitoring:
     name: 'Deploy Monitoring'
@@ -541,7 +489,17 @@ jobs:
             echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy Monitoring
+      - name: Upload Monitoring deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "platform/monitoring/*"
+          target: "/tmp/deploy-monitoring"
+          strip_components: 2
+
+      - name: Execute Monitoring deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.server-ip.outputs.server_ip }}
@@ -549,78 +507,18 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            if ! command -v docker &> /dev/null; then
-              echo "❌ Docker is not available"
-              exit 1
-            fi
+            cd /tmp/deploy-monitoring
 
-            sudo mkdir -p /opt/monitoring-stack
-            sudo chown ubuntu:ubuntu /opt/monitoring-stack
-            cd /opt/monitoring-stack
+            # Make deploy script executable and run it
+            chmod +x deploy.sh
+            export GRAFANA_ADMIN_USER="admin"
+            export GRAFANA_ADMIN_PASS="${{ secrets.GRAFANA_ADMIN_PASS }}"
+            ./deploy.sh
 
-            cat > .env << 'EOF'
-            GRAFANA_ADMIN_USER=admin
-            GRAFANA_ADMIN_PASS=${{ secrets.GRAFANA_ADMIN_PASS }}
-            EOF
+            # Cleanup
+            rm -rf /tmp/deploy-monitoring
 
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o docker-compose.yml \
-                 https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/docker-compose.prod.yml
-
-            mkdir -p grafana/provisioning/{dashboards,datasources}
-            mkdir -p loki mimir tempo alloy
-
-            echo "📥 Downloading monitoring configuration files..."
-
-            # Download all config files in parallel
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o mimir/mimir.yml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/mimir/mimir.yml" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o tempo/tempo.yml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/tempo/tempo.yml" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o loki/local-config.yaml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/loki/local-config.yaml" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o grafana/provisioning/datasources/datasources.yml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/datasources/datasources.yml" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o grafana/provisioning/dashboards/dashboards.yml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/dashboards.yml" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o grafana/provisioning/dashboards/system-overview.json \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/system-overview.json" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o grafana/provisioning/dashboards/application-metrics.json \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/grafana/provisioning/dashboards/application-metrics.json" &
-
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o alloy/config.alloy \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/platform/monitoring/alloy/config.alloy" &
-
-            wait  # Wait for all downloads to complete
-            echo "✅ All configuration files downloaded"
-
-            sudo docker compose down 2>/dev/null || true
-            sudo docker network rm monitoring 2>/dev/null || true
-            sudo docker compose up -d --remove-orphans
-            echo "✅ Monitoring stack deployed successfully"
+            echo "🎉 Monitoring deployment completed"
 
   initial-app-deploy:
     name: 'Deploy Application'

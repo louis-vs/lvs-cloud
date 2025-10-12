@@ -4,23 +4,12 @@
 # It is executed on the production server after the directory is uploaded
 
 set -e  # Exit on any error
-set -u  # Exit on undefined variables
 
 echo "🚀 Starting Ruby Demo App deployment..."
 
-# Verify required environment variables
-if [ -z "${POSTGRES_RUBY_PASSWORD:-}" ]; then
-    echo "❌ Error: POSTGRES_RUBY_PASSWORD environment variable is not set"
-    exit 1
-fi
-
-# Create .env file from template
-echo "🔐 Creating environment file from template..."
-envsubst < .env.template > .env
-
-# Verify .env was created successfully
+# Verify .env file exists (created by GitHub Actions before upload)
 if [ ! -f .env ]; then
-    echo "❌ Error: Failed to create .env file"
+    echo "❌ Error: .env file not found - should have been created by GitHub Actions"
     exit 1
 fi
 

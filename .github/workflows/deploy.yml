@@ -623,9 +623,9 @@ jobs:
             echo "✅ Monitoring stack deployed successfully"
 
   initial-app-deploy:
-    name: 'Initial Application Deployment'
+    name: 'Deploy Application'
     runs-on: ubuntu-latest
-    needs: [infrastructure, platform-registry, platform-watchtower]
+    needs: [infrastructure, platform-registry, platform-watchtower, platform-postgresql]
     if: |
       always() && !cancelled() && !failure() &&
       (inputs.deploy_everything == true || inputs.deploy_apps_only == true || needs.infrastructure.outputs.changed == 'true')
@@ -646,57 +646,74 @@ jobs:
           else
             SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
             if [ -z "$SERVER_IP" ]; then
-              echo "❌ Error: Could not resolve server IP from app.lvs.me.uk"
+              echo "❌ Error: Could not resolve server IP"
               exit 1
             fi
             echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
-            echo "✅ Server IP: $SERVER_IP"
           fi
 
-      - name: Deploy application
+      - name: Prepare deployment directory
+        run: |
+          cd applications/${{ matrix.app }}
+
+          # Install envsubst if not available
+          if ! command -v envsubst &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y gettext-base
+          fi
+
+          # Generate .env from template with secrets
+          export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
+          envsubst < .env.template > .env
+
+          # Verify .env was created
+          if [ ! -f .env ]; then
+            echo "❌ Error: Failed to create .env file"
+            exit 1
+          fi
+
+          echo "✅ Environment file created successfully"
+
+      - name: Deploy application via SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.server-ip.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "applications/${{ matrix.app }}/*"
+          target: "/tmp/deploy-${{ matrix.app }}"
+          strip_components: 2
+
+      - name: Execute deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.server-ip.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: POSTGRES_RUBY_PASSWORD,REGISTRY_PASSWORD,REGISTRY_USERNAME
           script: |
             set -e
             APP_NAME="${{ matrix.app }}"
             APP_DIR="/opt/apps/$APP_NAME"
-            echo "🚀 Initial deployment for application: $APP_NAME"
 
+            echo "🚀 Deploying $APP_NAME..."
+
+            # Create app directory and move files
             sudo mkdir -p "$APP_DIR"
-            sudo chown ubuntu:ubuntu "$APP_DIR"
+            sudo chown -R ubuntu:ubuntu "$APP_DIR"
+            sudo cp -r "/tmp/deploy-$APP_NAME/"* "$APP_DIR/"
+            sudo chown -R ubuntu:ubuntu "$APP_DIR"
             cd "$APP_DIR"
 
-            echo "📥 Downloading docker-compose.prod.yml..."
-            curl -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                 -H "Accept: application/vnd.github.v3.raw" \
-                 -o docker-compose.yml \
-                 "https://api.github.com/repos/${{ github.repository }}/contents/applications/$APP_NAME/docker-compose.prod.yml"
-
-            echo "🔐 Creating environment file..."
-            cat > .env << 'EOF'
-            POSTGRES_RUBY_PASSWORD=${{ secrets.POSTGRES_RUBY_PASSWORD }}
-            EOF
-
-            echo "🔑 Logging into container registry..."
-            echo "${{ secrets.REGISTRY_PASSWORD }}" | sudo docker login ${{ env.REGISTRY_URL }} \
+            # Login to registry
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login registry.lvs.me.uk \
                 -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
 
-            echo "📦 Pulling latest container image..."
-            sudo docker compose pull
+            # Make deploy script executable and run it
+            chmod +x deploy.sh
+            export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
+            ./deploy.sh
 
-            echo "🔄 Deploying application..."
-            sudo docker compose up -d --remove-orphans
+            # Cleanup
+            rm -rf "/tmp/deploy-$APP_NAME"
 
-            sleep 5
-            if sudo docker compose ps --services --filter "status=running" | grep -q .; then
-              echo "✅ Application $APP_NAME deployed successfully"
-            else
-              echo "❌ Application $APP_NAME deployment failed"
-              sudo docker compose logs
-              exit 1
-            fi
-
-            echo "🎉 Initial deployment completed for $APP_NAME"
+            echo "🎉 Deployment completed for $APP_NAME"

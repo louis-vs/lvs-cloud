@@ -627,7 +627,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [platform-registry, platform-watchtower]
     if: |
-      always() && !cancelled() &&
+      always() && !cancelled() && !failure() &&
       (inputs.deploy_everything == 'true' || inputs.deploy_apps_only == 'true' || needs.infrastructure.outputs.changed == 'true')
     strategy:
       matrix:

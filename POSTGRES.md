@@ -46,61 +46,130 @@ ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec -it postgresql psql -U postg
 
 ### Adding a New Application Database
 
-1. **Update initialization scripts** in `platform/postgresql/init-scripts/`:
+**All PostgreSQL init scripts are idempotent** - they can be run multiple times safely. This means you can add new databases and users without recreating the entire PostgreSQL setup.
+
+#### Step 1: Update Initialization Scripts
+
+Add to `platform/postgresql/init-scripts/01-create-databases.sql`:
 
 ```sql
--- Add to 01-create-databases.sql
-CREATE DATABASE new_app
+-- New App Database (idempotent)
+SELECT 'CREATE DATABASE new_app
     WITH
     OWNER = postgres
-    ENCODING = 'UTF8'
-    LC_COLLATE = 'en_US.utf8'
-    LC_CTYPE = 'en_US.utf8'
+    ENCODING = ''UTF8''
+    LC_COLLATE = ''en_US.utf8''
+    LC_CTYPE = ''en_US.utf8''
     TABLESPACE = pg_default
-    CONNECTION LIMIT = -1;
+    CONNECTION LIMIT = -1'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'new_app')\gexec
 
-COMMENT ON DATABASE new_app IS 'Database for new application';
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM pg_database WHERE datname = 'new_app') THEN
+        EXECUTE 'COMMENT ON DATABASE new_app IS ''Database for new application''';
+    END IF;
+END
+$$;
 ```
 
-```sql
--- Add to 02-create-users.sql
-CREATE USER new_app_user WITH
-    PASSWORD '${POSTGRES_NEW_APP_PASSWORD}'
-    NOSUPERUSER
-    NOCREATEDB
-    NOCREATEROLE
-    NOINHERIT
-    LOGIN
-    NOREPLICATION
-    NOBYPASSRLS
-    CONNECTION LIMIT -1;
+Add to `platform/postgresql/init-scripts/02-create-users.sql`:
 
-COMMENT ON ROLE new_app_user IS 'Application user for new app';
+```sql
+-- New App User (idempotent - creates or updates password)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'new_app_user') THEN
+        CREATE USER new_app_user WITH
+            PASSWORD '${POSTGRES_NEW_APP_PASSWORD}'
+            NOSUPERUSER
+            NOCREATEDB
+            NOCREATEROLE
+            NOINHERIT
+            LOGIN
+            NOREPLICATION
+            NOBYPASSRLS
+            CONNECTION LIMIT -1;
+        COMMENT ON ROLE new_app_user IS 'Application user for new app';
+    ELSE
+        -- Update password if user already exists
+        ALTER USER new_app_user WITH PASSWORD '${POSTGRES_NEW_APP_PASSWORD}';
+    END IF;
+END
+$$;
 ```
 
+Add to `platform/postgresql/init-scripts/03-grant-permissions.sql`:
+
 ```sql
--- Add to 03-grant-permissions.sql
+-- New App Permissions (idempotent - GRANT statements don't error if permission exists)
+\c new_app
 GRANT CONNECT ON DATABASE new_app TO new_app_user;
-GRANT USAGE, CREATE ON SCHEMA public TO new_app_user;
+GRANT ALL ON SCHEMA public TO new_app_user;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO new_app_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO new_app_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO new_app_user;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO new_app_user;
 ```
 
+Add to `platform/postgresql/init-scripts/04-enable-extensions.sql`:
+
 ```sql
--- Add to 04-enable-extensions.sql
 \c new_app
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-\c postgres
 ```
 
-1. **Add GitHub Secret** for `POSTGRES_NEW_APP_PASSWORD`
+#### Step 2: Add GitHub Secrets
 
-1. **Update GitHub Actions** workflow to include new password in deployment
+Add `POSTGRES_NEW_APP_PASSWORD` to GitHub repository secrets.
 
-1. **Deploy changes** by pushing to Git
+#### Step 3: Update GitHub Actions Workflow
+
+Add to `.github/workflows/deploy.yml` in the PostgreSQL deployment section:
+
+```bash
+# In the cat > .env << 'EOF' section
+POSTGRES_NEW_APP_PASSWORD=${{ secrets.POSTGRES_NEW_APP_PASSWORD }}
+
+# In the sed commands section
+sed -i "s/\${POSTGRES_NEW_APP_PASSWORD}/${{ secrets.POSTGRES_NEW_APP_PASSWORD }}/g" init-scripts/02-create-users.sql
+```
+
+#### Step 4: Run Init Scripts Manually
+
+Since the database already exists, the init scripts won't run automatically. Run them manually:
+
+```bash
+# SSH to server
+ssh ubuntu@$(dig +short app.lvs.me.uk)
+
+# Go to PostgreSQL directory
+cd /opt/postgresql
+
+# Run the updated init scripts
+docker exec -i postgresql psql -U postgres < init-scripts/01-create-databases.sql
+docker exec -i postgresql psql -U postgres < init-scripts/02-create-users.sql
+docker exec -i postgresql psql -U postgres < init-scripts/03-grant-permissions.sql
+docker exec -i postgresql psql -U postgres -d new_app < init-scripts/04-enable-extensions.sql
+```
+
+#### Step 5: Verify
+
+```bash
+# Check database was created
+docker exec postgresql psql -U postgres -c "\l" | grep new_app
+
+# Check user was created
+docker exec postgresql psql -U postgres -c "\du" | grep new_app_user
+
+# Test connection
+docker exec postgresql psql -U new_app_user -d new_app -c "SELECT 1"
+```
+
+#### Alternative: Automated via GitHub Actions
+
+Push changes to Git to trigger the PostgreSQL deployment workflow, which will download the updated init scripts. Then manually run them as shown in Step 4.
 
 ### User & Permissions Management
 

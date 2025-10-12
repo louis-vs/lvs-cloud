@@ -625,7 +625,7 @@ jobs:
   initial-app-deploy:
     name: 'Initial Application Deployment'
     runs-on: ubuntu-latest
-    needs: [platform-registry, platform-watchtower]
+    needs: [infrastructure, platform-registry, platform-watchtower]
     if: |
       always() && !cancelled() && !failure() &&
       (inputs.deploy_everything == 'true' || inputs.deploy_apps_only == 'true' || needs.infrastructure.outputs.changed == 'true')

@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     environment:
       - RACK_ENV=production
+      - DATABASE_URL=postgresql://ruby_demo_user:${POSTGRES_RUBY_PASSWORD}@postgresql:5432/ruby_demo
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.ruby-demo-app.rule=Host(`app.lvs.me.uk`)'

@@ -675,6 +675,11 @@ jobs:
                  -o docker-compose.yml \
                  "https://api.github.com/repos/${{ github.repository }}/contents/applications/$APP_NAME/docker-compose.prod.yml"
 
+            echo "🔐 Creating environment file..."
+            cat > .env << 'EOF'
+            POSTGRES_RUBY_PASSWORD=${{ secrets.POSTGRES_RUBY_PASSWORD }}
+            EOF
+
             echo "🔑 Logging into container registry..."
             echo "${{ secrets.REGISTRY_PASSWORD }}" | sudo docker login ${{ env.REGISTRY_URL }} \
                 -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin

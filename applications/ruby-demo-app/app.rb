@@ -11,6 +11,8 @@ require 'opentelemetry/instrumentation/sinatra'
 require 'opentelemetry/instrumentation/http'
 require 'prometheus/client'
 require 'prometheus/client/formats/text'
+require 'pg'
+require 'connection_pool'
 
 # Structured logging configuration
 class StructuredLogger
@@ -51,6 +53,51 @@ end
 START_TIME = Time.now
 
 APP_LOGGER = StructuredLogger.new
+
+# Database connection setup
+DATABASE_URL = ENV.fetch('DATABASE_URL', 'postgresql://ruby_demo_user:changeme@postgresql:5432/ruby_demo')
+
+def setup_database
+  conn = PG.connect(DATABASE_URL)
+
+  # Create visits table if it doesn't exist
+  conn.exec <<-SQL
+    CREATE TABLE IF NOT EXISTS visits (
+      id SERIAL PRIMARY KEY,
+      endpoint VARCHAR(255) NOT NULL,
+      visited_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      user_agent TEXT,
+      ip_address VARCHAR(45)
+    )
+  SQL
+
+  # Create index on endpoint
+  conn.exec <<-SQL
+    CREATE INDEX IF NOT EXISTS idx_visits_endpoint ON visits(endpoint)
+  SQL
+
+  APP_LOGGER.info('Database schema initialized successfully')
+  conn.close
+rescue PG::Error => e
+  APP_LOGGER.error('Failed to initialize database schema', error: e.message)
+  raise
+end
+
+# Initialize database schema on startup
+setup_database
+
+# Database connection pool for concurrent requests
+DB_POOL = ConnectionPool.new(size: 5, timeout: 5) do
+  PG.connect(DATABASE_URL)
+end
+
+# Helper method to execute database queries
+def with_db(&)
+  DB_POOL.with(&)
+rescue PG::Error => e
+  APP_LOGGER.error('Database query failed', error: e.message)
+  raise
+end
 
 # Prometheus metrics configuration
 prometheus = Prometheus::Client.registry
@@ -315,6 +362,83 @@ get '/info' do
     uptime: Time.now - START_TIME
   }.to_json
 end
+
+# Database test endpoint
+# rubocop:disable Metrics/BlockLength
+get '/db/test' do
+  content_type :json
+
+  tracer.in_span('db_test') do |span|
+    span.set_attribute('service.name', 'ruby-demo-app')
+
+    # Insert a new visit record
+    with_db do |conn|
+      conn.exec_params(
+        'INSERT INTO visits (endpoint, user_agent, ip_address) VALUES ($1, $2, $3)',
+        ['/db/test', request.user_agent, request.ip]
+      )
+    end
+
+    # Get total visit count
+    total_visits = with_db do |conn|
+      result = conn.exec('SELECT COUNT(*) FROM visits')
+      result[0]['count'].to_i
+    end
+
+    # Get visits for this endpoint
+    endpoint_visits = with_db do |conn|
+      result = conn.exec_params(
+        'SELECT COUNT(*) FROM visits WHERE endpoint = $1',
+        ['/db/test']
+      )
+      result[0]['count'].to_i
+    end
+
+    # Get recent visits (last 10)
+    recent_visits = with_db do |conn|
+      result = conn.exec_params(
+        'SELECT endpoint, visited_at, ip_address FROM visits ORDER BY visited_at DESC LIMIT 10',
+        []
+      )
+      result.map do |row|
+        {
+          endpoint: row['endpoint'],
+          visited_at: row['visited_at'],
+          ip_address: row['ip_address']
+        }
+      end
+    end
+
+    span.set_attribute('db.total_visits', total_visits)
+    span.set_attribute('db.endpoint_visits', endpoint_visits)
+
+    APP_LOGGER.info('Database test completed',
+                    total_visits: total_visits,
+                    endpoint_visits: endpoint_visits)
+
+    {
+      status: 'success',
+      message: 'Database connection working!',
+      database: 'ruby_demo',
+      statistics: {
+        total_visits: total_visits,
+        endpoint_visits: endpoint_visits
+      },
+      recent_visits: recent_visits,
+      timestamp: Time.now.iso8601
+    }.to_json
+  end
+rescue PG::Error => e
+  status 500
+  APP_LOGGER.error('Database test failed', error: e.message)
+  {
+    status: 'error',
+    message: 'Database connection failed',
+    error: e.message,
+    timestamp: Time.now.iso8601
+  }.to_json
+end
+# rubocop:enable Metrics/BlockLength
 
 # 404 handler
 not_found do

@@ -3,7 +3,7 @@ FROM ruby:3.3-alpine
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache curl build-base
+RUN apk add --no-cache curl build-base postgresql-dev postgresql-client
 
 # Configure bundler for production
 ENV BUNDLE_WITHOUT="development test"

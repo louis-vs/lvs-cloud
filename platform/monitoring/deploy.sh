@@ -19,18 +19,7 @@ if [ -z "$GRAFANA_ADMIN_USER" ] || [ -z "$GRAFANA_ADMIN_PASS" ]; then
     exit 1
 fi
 
-# Create main directory
-sudo mkdir -p /opt/monitoring-stack
-sudo chown ubuntu:ubuntu /opt/monitoring-stack
-cd /opt/monitoring-stack
-
-# Create .env file
-cat > .env << EOF
-GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
-GRAFANA_ADMIN_PASS=${GRAFANA_ADMIN_PASS}
-EOF
-
-# Verify all required files are present
+# Verify all required files are present in current directory (uploaded by SCP)
 echo "📁 Verifying configuration files..."
 REQUIRED_FILES=(
     "docker-compose.prod.yml"
@@ -52,6 +41,21 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 
 echo "✅ All configuration files present"
+
+# Create main directory and move files there
+sudo mkdir -p /opt/monitoring-stack
+sudo chown ubuntu:ubuntu /opt/monitoring-stack
+
+# Copy all files from current directory to /opt/monitoring-stack
+echo "📦 Copying files to /opt/monitoring-stack..."
+cp -rf ./* /opt/monitoring-stack/
+cd /opt/monitoring-stack
+
+# Create .env file
+cat > .env << EOF
+GRAFANA_ADMIN_USER=${GRAFANA_ADMIN_USER}
+GRAFANA_ADMIN_PASS=${GRAFANA_ADMIN_PASS}
+EOF
 
 # Clean up any existing deployment
 echo "🧹 Cleaning up existing deployment..."

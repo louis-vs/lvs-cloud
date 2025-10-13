@@ -7,12 +7,13 @@
     "ui": "@/components/ui",
     "utils": "@/lib/utils"
   },
+  "iconLibrary": "lucide",
   "rsc": false,
   "style": "new-york",
   "tailwind": {
-    "baseColor": "neutral",
+    "baseColor": "zinc",
     "config": "",
-    "css": "app/styles/app.css",
+    "css": "src/styles.css",
     "cssVariables": true,
     "prefix": ""
   },

@@ -637,7 +637,7 @@ jobs:
           host: ${{ steps.server-ip.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: POSTGRES_RUBY_PASSWORD,REGISTRY_PASSWORD,REGISTRY_USERNAME
+          envs: POSTGRES_RUBY_PASSWORD,POSTGRES_TS_PASSWORD,REGISTRY_PASSWORD,REGISTRY_USERNAME
           script: |
             set -e
             APP_NAME="${{ matrix.app }}"
@@ -651,6 +651,14 @@ jobs:
             sudo cp -rf "/tmp/deploy-$APP_NAME/"* "$APP_DIR/"
             sudo chown -R ubuntu:ubuntu "$APP_DIR"
             cd "$APP_DIR"
+
+            # Generate .env from template with secrets (in case it wasn't copied due to .gitignore)
+            if [ ! -f .env ] && [ -f .env.template ]; then
+              export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
+              export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
+              envsubst < .env.template > .env
+              echo "✅ Generated .env file from template"
+            fi
 
             # Login to registry
             echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login registry.lvs.me.uk \

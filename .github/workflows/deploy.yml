@@ -604,8 +604,11 @@ jobs:
             sudo apt-get update && sudo apt-get install -y gettext-base
           fi
 
-          # Generate .env from template with secrets
+          # Export all app database passwords for envsubst
           export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
+          export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
+
+          # Generate .env from template with secrets
           envsubst < .env.template > .env
 
           # Verify .env was created

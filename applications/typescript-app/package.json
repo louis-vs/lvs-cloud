@@ -55,6 +55,7 @@
     "dev": "vite dev --port 3000",
     "format": "prettier",
     "lint": "eslint",
+    "migrate": "bun run app/server/migrate.ts",
     "serve": "vite preview",
     "test": "vitest run"
   },

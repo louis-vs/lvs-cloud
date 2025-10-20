@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
-import pool from './db'
+import pool from '../../src/server/db'
 
 async function runMigrations() {
   console.log('🚀 Running database migrations...')

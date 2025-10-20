@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
-import type { Task } from '@/server/trpc'
+import type { Task } from '@/integrations/trpc/router'
 
 interface TaskListProps {
   tasks: Task[]

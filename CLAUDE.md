@@ -31,9 +31,12 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 
 ## Future Development
 
-- **TypeScript App**: tRPC-based application template
-- **Go App**: Builtin server with Go templates
-- **Python App**: FastAPI application template
+- **Example apps:**
+  - **TypeScript App**: tRPC-based application template
+  - **Go App**: Builtin server with Go templates
+  - **Python App**: FastAPI application template
+- **Authentication server**:
+  - Authelia authentication server that is used to authenticate to all platform services and applications
 
 ## Development Process
 

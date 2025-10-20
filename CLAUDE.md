@@ -25,11 +25,7 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 ├── OPS.md                # Troubleshooting, monitoring, maintenance
 ├── infrastructure/       # Terraform for Hetzner Cloud
 ├── platform/             # Platform services (LGTM, Traefik, Registry)
-│   ├── traefik/          # SSL termination & routing
-│   ├── monitoring/       # LGTM stack (Grafana, Mimir, Loki, Tempo, Alloy)
-│   └── registry/         # Private container registry
 ├── applications/         # User applications
-│   └── ruby-demo-app/    # Demo Ruby/Sinatra app with metrics
 └── .github/workflows/    # CI/CD automation
 ```
 
@@ -40,10 +36,6 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 - **Python App**: FastAPI application template
 
 ## Development Process
-
-- Create a detailed plan before writing any code
-- Commit and push changes once you complete a request.
-- Use TodoWrite tool to track complex tasks and give visibility to progress
 
 ### Database Development
 
@@ -59,4 +51,4 @@ Infrastructure deployments require approval. Provide approval by replying "LGTM"
 
 ## Important Instructions
 
-Keep documentation concise and to the point. Never worry about backwards compatibility.
+Keep documentation concise and to the point. NEVER worry about backwards compatibility. Be frugal with tokens.

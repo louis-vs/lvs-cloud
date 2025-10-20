@@ -527,7 +527,7 @@ jobs:
     if: always() && !cancelled() && !failure()
     strategy:
       matrix:
-        app: ["ruby-demo-app"]
+        app: ["ruby-demo-app", "typescript-app"]
       fail-fast: false
 
     steps:

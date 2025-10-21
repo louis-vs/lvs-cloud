@@ -140,6 +140,7 @@ runcmd:
 
   # Create networks
   - docker network create web 2>/dev/null || true
+  - docker network create postgresql 2>/dev/null || true
   # Note: monitoring network will be created by docker-compose when services start
 
   # Start Traefik (must be started first)

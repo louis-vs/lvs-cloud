@@ -30,4 +30,4 @@ networks:
     external: true
   postgresql:
     name: postgresql
-    driver: bridge
+    external: true

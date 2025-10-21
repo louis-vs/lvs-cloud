@@ -499,6 +499,7 @@ jobs:
             # Make deploy script executable and run it
             chmod +x deploy.sh
             export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
+            export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
             ./deploy.sh
 
             # Cleanup

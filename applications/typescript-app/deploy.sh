@@ -4,9 +4,17 @@ set -e
 
 echo "🚀 Starting Typescript App deployment..."
 
-# Verify .env file exists (created by GitHub Actions before upload)
+# Regenerate .env from template with current environment variables
+if [ -f .env.template ]; then
+    echo "🔧 Regenerating .env from template..."
+    envsubst < .env.template > .env
+else
+    echo "⚠️ Warning: .env.template not found, using existing .env"
+fi
+
+# Verify .env file exists
 if [ ! -f .env ]; then
-    echo "❌ Error: .env file not found - should have been created by GitHub Actions"
+    echo "❌ Error: .env file not found"
     exit 1
 fi
 

@@ -18,8 +18,6 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV NITRO_HOST=0.0.0.0
-ENV NITRO_PORT=3000
 
 # Copy built application
 COPY --from=builder /app/.output ./.output

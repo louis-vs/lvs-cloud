@@ -34,15 +34,66 @@ env:
   REGISTRY_URL: registry.lvs.me.uk
 
 jobs:
+  changes:
+    name: 'Detect Changes'
+    runs-on: ubuntu-latest
+    outputs:
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      traefik: ${{ steps.filter.outputs.traefik }}
+      registry: ${{ steps.filter.outputs.registry }}
+      monitoring: ${{ steps.filter.outputs.monitoring }}
+      postgresql: ${{ steps.filter.outputs.postgresql }}
+      watchtower: ${{ steps.filter.outputs.watchtower }}
+      applications: ${{ steps.filter.outputs.applications }}
+      server_ip: ${{ steps.server-ip.outputs.ip }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check path changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            infrastructure:
+              - 'infrastructure/**'
+            traefik:
+              - 'platform/traefik/**'
+            registry:
+              - 'platform/registry/**'
+            monitoring:
+              - 'platform/monitoring/**'
+            postgresql:
+              - 'platform/postgresql/**'
+            watchtower:
+              - 'platform/watchtower/**'
+            applications:
+              - 'applications/**'
+
+      - name: Get server IP
+        id: server-ip
+        run: |
+          SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
+          if [ -z "$SERVER_IP" ]; then
+            echo "⚠️ Warning: Could not resolve server IP, infrastructure may not be deployed yet"
+            echo "ip=" >> $GITHUB_OUTPUT
+          else
+            echo "ip=$SERVER_IP" >> $GITHUB_OUTPUT
+          fi
+
   infrastructure:
     name: 'Deploy Infrastructure'
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: |
+      needs.changes.outputs.infrastructure == 'true' ||
+      (github.event_name == 'workflow_dispatch' && inputs.deploy_everything == true)
     permissions:
       issues: write
       contents: read
     outputs:
       server_ip: ${{ steps.terraform-output.outputs.server_ip }}
-      changed: ${{ steps.check-changes.outputs.changed }}
 
     defaults:
       run:
@@ -57,28 +108,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for infrastructure changes
-        id: check-changes
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
-              echo "changed=true" >> $GITHUB_OUTPUT
-              echo "Manual deployment of everything requested"
-            else
-              echo "changed=false" >> $GITHUB_OUTPUT
-            fi
-            exit 0
-          fi
-
-          # Check if infrastructure files changed
-          git diff --name-only HEAD^ HEAD | grep "^infrastructure/" || {
-            echo "changed=false" >> $GITHUB_OUTPUT
-            exit 0
-          }
-          echo "changed=true" >> $GITHUB_OUTPUT
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -147,58 +176,21 @@ jobs:
   platform-traefik:
     name: 'Deploy Traefik'
     runs-on: ubuntu-latest
-    needs: [infrastructure]
-    if: always() && !cancelled() && !failure()
-    outputs:
-      changed: ${{ steps.check-changes.outputs.changed }}
+    needs: [changes, infrastructure]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (needs.changes.outputs.traefik == 'true' ||
+       needs.changes.outputs.infrastructure == 'true' ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy_everything == true))
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for changes
-        id: check-changes
-        run: |
-          if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Manual deployment of everything requested, redeploying Traefik"
-            exit 0
-          fi
-
-          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Infrastructure changed, redeploying Traefik"
-            exit 0
-          fi
-
-          # Check if traefik files changed
-          if git diff --name-only HEAD^ HEAD | grep "^platform/traefik/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Traefik files changed"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get server IP
-        id: server-ip
-        run: |
-          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
-            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
-          else
-            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
-            if [ -z "$SERVER_IP" ]; then
-              echo "❌ Error: Could not resolve server IP"
-              exit 1
-            fi
-            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
-          fi
 
       - name: Upload Traefik deployment files
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "platform/traefik/*"
@@ -208,77 +200,35 @@ jobs:
       - name: Execute Traefik deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
             cd /tmp/deploy-traefik
-
-            # Make deploy script executable and run it
             chmod +x deploy.sh
             ./deploy.sh
-
-            # Cleanup
             rm -rf /tmp/deploy-traefik
-
             echo "🎉 Traefik deployment completed"
 
   platform-registry:
     name: 'Deploy Registry'
     runs-on: ubuntu-latest
-    needs: [infrastructure, platform-traefik]
-    if: always() && !cancelled() && !failure()
-    outputs:
-      changed: ${{ steps.check-changes.outputs.changed }}
+    needs: [changes, infrastructure, platform-traefik]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (needs.changes.outputs.registry == 'true' ||
+       needs.changes.outputs.infrastructure == 'true' ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy_everything == true))
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for changes
-        id: check-changes
-        run: |
-          if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Manual deployment of everything requested, redeploying Registry"
-            exit 0
-          fi
-
-          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Infrastructure changed, redeploying Registry"
-            exit 0
-          fi
-
-          # Check if registry files changed
-          if git diff --name-only HEAD^ HEAD | grep "^platform/registry/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Registry files changed"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get server IP
-        id: server-ip
-        run: |
-          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
-            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
-          else
-            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
-            if [ -z "$SERVER_IP" ]; then
-              echo "❌ Error: Could not resolve server IP"
-              exit 1
-            fi
-            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
-          fi
 
       - name: Upload Registry deployment files
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "platform/registry/*"
@@ -288,221 +238,38 @@ jobs:
       - name: Execute Registry deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: REGISTRY_USERNAME,REGISTRY_PASSWORD
           script: |
             set -e
             cd /tmp/deploy-registry
-
-            # Make deploy script executable and run it
             chmod +x deploy.sh
             export REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
             export REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
             ./deploy.sh
-
-            # Cleanup
             rm -rf /tmp/deploy-registry
-
             echo "🎉 Registry deployment completed"
-
-  platform-watchtower:
-    name: 'Deploy Watchtower'
-    runs-on: ubuntu-latest
-    needs: [infrastructure, platform-monitoring, platform-registry]
-    if: always() && !cancelled() && !failure()
-    outputs:
-      changed: ${{ steps.check-changes.outputs.changed }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for changes
-        id: check-changes
-        run: |
-          if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Manual deployment of everything requested, redeploying Watchtower"
-            exit 0
-          fi
-
-          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Infrastructure changed, redeploying Watchtower"
-            exit 0
-          fi
-
-          # Check if watchtower files changed
-          if git diff --name-only HEAD^ HEAD | grep "^platform/watchtower/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Watchtower files changed"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get server IP
-        id: server-ip
-        run: |
-          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
-            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
-          else
-            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
-            if [ -z "$SERVER_IP" ]; then
-              echo "❌ Error: Could not resolve server IP"
-              exit 1
-            fi
-            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload Watchtower deployment files
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "platform/watchtower/*"
-          target: "/tmp/deploy-watchtower"
-          strip_components: 2
-
-      - name: Execute Watchtower deployment script
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: REGISTRY_USERNAME,REGISTRY_PASSWORD
-          script: |
-            set -e
-            cd /tmp/deploy-watchtower
-
-            # Make deploy script executable and run it
-            chmod +x deploy.sh
-            export REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
-            export REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
-            ./deploy.sh
-
-            # Cleanup
-            rm -rf /tmp/deploy-watchtower
-
-            echo "🎉 Watchtower deployment completed"
-
-  platform-postgresql:
-    name: 'Deploy PostgreSQL'
-    runs-on: ubuntu-latest
-    needs: [infrastructure, platform-traefik, platform-monitoring]
-    if: always() && !cancelled() && !failure()
-    outputs:
-      changed: ${{ steps.check-changes.outputs.changed }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      - name: Check for changes
-        id: check-changes
-        run: |
-          if [[ "${{ inputs.deploy_everything }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Manual deployment of everything requested, redeploying PostgreSQL"
-            exit 0
-          fi
-
-          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "Infrastructure changed, redeploying PostgreSQL"
-            exit 0
-          fi
-
-          # Check if postgresql files changed
-          if git diff --name-only HEAD^ HEAD | grep "^platform/postgresql/"; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "PostgreSQL files changed"
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get server IP
-        id: server-ip
-        run: |
-          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
-            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
-          else
-            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
-            if [ -z "$SERVER_IP" ]; then
-              echo "❌ Error: Could not resolve server IP"
-              exit 1
-            fi
-            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Upload PostgreSQL deployment files
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "platform/postgresql/*"
-          target: "/tmp/deploy-postgresql"
-          strip_components: 2
-
-      - name: Execute PostgreSQL deployment script
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            cd /tmp/deploy-postgresql
-
-            # Make deploy script executable and run it
-            chmod +x deploy.sh
-            export POSTGRES_ADMIN_PASSWORD="${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
-            export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
-            export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
-            export POSTGRES_PYTHON_PASSWORD="${{ secrets.POSTGRES_PYTHON_PASSWORD }}"
-            export POSTGRES_GO_PASSWORD="${{ secrets.POSTGRES_GO_PASSWORD }}"
-            ./deploy.sh
-
-            # Cleanup
-            rm -rf /tmp/deploy-postgresql
-
-            echo "🎉 PostgreSQL deployment completed"
 
   platform-monitoring:
     name: 'Deploy Monitoring'
     runs-on: ubuntu-latest
-    needs: [infrastructure, platform-traefik]
-    if: always() && !cancelled() && !failure()
+    needs: [changes, infrastructure, platform-traefik]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (needs.changes.outputs.monitoring == 'true' ||
+       needs.changes.outputs.infrastructure == 'true' ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy_everything == true))
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get server IP
-        id: server-ip
-        run: |
-          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
-            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
-          else
-            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
-            if [ -z "$SERVER_IP" ]; then
-              echo "❌ Error: Could not resolve server IP"
-              exit 1
-            fi
-            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
-          fi
-
       - name: Upload Monitoring deployment files
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "platform/monitoring/*"
@@ -512,29 +279,112 @@ jobs:
       - name: Execute Monitoring deployment script
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
             cd /tmp/deploy-monitoring
-
-            # Make deploy script executable and run it
             chmod +x deploy.sh
             export GRAFANA_ADMIN_USER="admin"
             export GRAFANA_ADMIN_PASS="${{ secrets.GRAFANA_ADMIN_PASS }}"
             ./deploy.sh
-
-            # Cleanup
             rm -rf /tmp/deploy-monitoring
-
             echo "🎉 Monitoring deployment completed"
+
+  platform-postgresql:
+    name: 'Deploy PostgreSQL'
+    runs-on: ubuntu-latest
+    needs: [changes, infrastructure, platform-traefik, platform-monitoring]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (needs.changes.outputs.postgresql == 'true' ||
+       needs.changes.outputs.infrastructure == 'true' ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy_everything == true))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload PostgreSQL deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "platform/postgresql/*"
+          target: "/tmp/deploy-postgresql"
+          strip_components: 2
+
+      - name: Execute PostgreSQL deployment script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /tmp/deploy-postgresql
+            chmod +x deploy.sh
+            export POSTGRES_ADMIN_PASSWORD="${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
+            export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
+            export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
+            export POSTGRES_PYTHON_PASSWORD="${{ secrets.POSTGRES_PYTHON_PASSWORD }}"
+            export POSTGRES_GO_PASSWORD="${{ secrets.POSTGRES_GO_PASSWORD }}"
+            ./deploy.sh
+            rm -rf /tmp/deploy-postgresql
+            echo "🎉 PostgreSQL deployment completed"
+
+  platform-watchtower:
+    name: 'Deploy Watchtower'
+    runs-on: ubuntu-latest
+    needs: [changes, infrastructure, platform-monitoring, platform-registry]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (needs.changes.outputs.watchtower == 'true' ||
+       needs.changes.outputs.infrastructure == 'true' ||
+       (github.event_name == 'workflow_dispatch' && inputs.deploy_everything == true))
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload Watchtower deployment files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "platform/watchtower/*"
+          target: "/tmp/deploy-watchtower"
+          strip_components: 2
+
+      - name: Execute Watchtower deployment script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: REGISTRY_USERNAME,REGISTRY_PASSWORD
+          script: |
+            set -e
+            cd /tmp/deploy-watchtower
+            chmod +x deploy.sh
+            export REGISTRY_USERNAME="${{ secrets.REGISTRY_USERNAME }}"
+            export REGISTRY_PASSWORD="${{ secrets.REGISTRY_PASSWORD }}"
+            ./deploy.sh
+            rm -rf /tmp/deploy-watchtower
+            echo "🎉 Watchtower deployment completed"
 
   initial-app-deploy:
     name: 'Deploy Application'
     runs-on: ubuntu-latest
-    needs: [infrastructure, platform-registry, platform-watchtower, platform-postgresql]
-    if: always() && !cancelled() && !failure()
+    needs: [changes, infrastructure, platform-registry, platform-watchtower, platform-postgresql]
+    if: |
+      always() && !cancelled() && !failure() &&
+      (needs.changes.outputs.applications == 'true' ||
+       needs.changes.outputs.infrastructure == 'true' ||
+       (github.event_name == 'workflow_dispatch' && (inputs.deploy_everything == true || inputs.deploy_apps_only == true)))
     strategy:
       matrix:
         app: ["ruby-demo-app", "typescript-app"]
@@ -570,7 +420,7 @@ jobs:
           fi
 
           # Check if infrastructure changed (initial deployment scenario)
-          if [[ "${{ needs.infrastructure.outputs.changed }}" == "true" ]]; then
+          if [[ "${{ needs.changes.outputs.infrastructure }}" == "true" ]]; then
             echo "changed=true" >> $GITHUB_OUTPUT
             echo "Infrastructure changed, deploying $APP_NAME"
             exit 0
@@ -578,21 +428,6 @@ jobs:
 
           echo "changed=false" >> $GITHUB_OUTPUT
           echo "No changes detected for $APP_NAME, skipping deployment"
-
-      - name: Get server IP
-        if: steps.check-changes.outputs.changed == 'true'
-        id: server-ip
-        run: |
-          if [[ -n "${{ needs.infrastructure.outputs.server_ip }}" ]]; then
-            echo "server_ip=${{ needs.infrastructure.outputs.server_ip }}" >> $GITHUB_OUTPUT
-          else
-            SERVER_IP=$(dig +short app.lvs.me.uk | head -1)
-            if [ -z "$SERVER_IP" ]; then
-              echo "❌ Error: Could not resolve server IP"
-              exit 1
-            fi
-            echo "server_ip=$SERVER_IP" >> $GITHUB_OUTPUT
-          fi
 
       - name: Prepare deployment directory
         if: steps.check-changes.outputs.changed == 'true'
@@ -623,7 +458,7 @@ jobs:
         if: steps.check-changes.outputs.changed == 'true'
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "applications/${{ matrix.app }}/*"
@@ -634,7 +469,7 @@ jobs:
         if: steps.check-changes.outputs.changed == 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ steps.server-ip.outputs.server_ip }}
+          host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: POSTGRES_RUBY_PASSWORD,POSTGRES_TS_PASSWORD,REGISTRY_PASSWORD,REGISTRY_USERNAME

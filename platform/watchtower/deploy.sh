@@ -36,8 +36,12 @@ sudo tee /etc/watchtower/config/config.json > /dev/null << EOF
 }
 EOF
 
-# Verify docker-compose file is present
+# Copy all files from current directory to /opt/watchtower
+echo "📦 Copying files to /opt/watchtower..."
+cp -rf ./* /opt/watchtower/
 cd /opt/watchtower
+
+# Verify docker-compose file is present
 if [ ! -f "docker-compose.yml" ]; then
     echo "❌ docker-compose.yml not found"
     exit 1

@@ -33,8 +33,12 @@ sudo chown ubuntu:ubuntu /opt/registry
 echo "🔐 Creating registry authentication..."
 sudo htpasswd -Bbn "$REGISTRY_USERNAME" "$REGISTRY_PASSWORD" | sudo tee /etc/docker/registry/auth/htpasswd > /dev/null
 
-# Deploy with Docker Compose
+# Copy all files from current directory to /opt/registry
+echo "📦 Copying files to /opt/registry..."
+cp -rf ./* /opt/registry/
 cd /opt/registry
+
+# Deploy with Docker Compose
 docker compose -f docker-compose.yml up -d --remove-orphans
 
 # Verify deployment

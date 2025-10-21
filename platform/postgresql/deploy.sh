@@ -23,6 +23,10 @@ fi
 # Create directories
 sudo mkdir -p /opt/postgresql
 sudo chown ubuntu:ubuntu /opt/postgresql
+
+# Copy all files from current directory to /opt/postgresql
+echo "📦 Copying files to /opt/postgresql..."
+cp -rf ./* /opt/postgresql/
 cd /opt/postgresql
 
 # Create .env file

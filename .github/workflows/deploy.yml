@@ -330,7 +330,6 @@ jobs:
             chmod +x deploy.sh
             export POSTGRES_ADMIN_PASSWORD="${{ secrets.POSTGRES_ADMIN_PASSWORD }}"
             export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
-            export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
             export POSTGRES_PYTHON_PASSWORD="${{ secrets.POSTGRES_PYTHON_PASSWORD }}"
             export POSTGRES_GO_PASSWORD="${{ secrets.POSTGRES_GO_PASSWORD }}"
             ./deploy.sh
@@ -389,7 +388,7 @@ jobs:
        (github.event_name == 'workflow_dispatch' && (inputs.deploy_everything == true || inputs.deploy_apps_only == true)))
     strategy:
       matrix:
-        app: ["ruby-demo-app", "typescript-app"]
+        app: ["ruby-demo-app"]
       fail-fast: false
 
     steps:
@@ -443,7 +442,6 @@ jobs:
 
           # Export all app database passwords for envsubst
           export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
-          export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
 
           # Generate .env from template with secrets
           envsubst < .env.template > .env
@@ -474,7 +472,7 @@ jobs:
           host: ${{ needs.infrastructure.outputs.server_ip || needs.changes.outputs.server_ip }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: POSTGRES_RUBY_PASSWORD,POSTGRES_TS_PASSWORD,REGISTRY_PASSWORD,REGISTRY_USERNAME
+          envs: POSTGRES_RUBY_PASSWORD,REGISTRY_PASSWORD,REGISTRY_USERNAME
           script: |
             set -e
             APP_NAME="${{ matrix.app }}"
@@ -499,7 +497,6 @@ jobs:
             # Make deploy script executable and run it
             chmod +x deploy.sh
             export POSTGRES_RUBY_PASSWORD="${{ secrets.POSTGRES_RUBY_PASSWORD }}"
-            export POSTGRES_TS_PASSWORD="${{ secrets.POSTGRES_TS_PASSWORD }}"
             ./deploy.sh
 
             # Cleanup

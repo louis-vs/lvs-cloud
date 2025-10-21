@@ -14,8 +14,7 @@ fi
 
 # Verify required environment variables
 if [ -z "$POSTGRES_ADMIN_PASSWORD" ] || [ -z "$POSTGRES_RUBY_PASSWORD" ] || \
-   [ -z "$POSTGRES_TS_PASSWORD" ] || [ -z "$POSTGRES_PYTHON_PASSWORD" ] || \
-   [ -z "$POSTGRES_GO_PASSWORD" ]; then
+   [ -z "$POSTGRES_PYTHON_PASSWORD" ] || [ -z "$POSTGRES_GO_PASSWORD" ]; then
     echo "❌ Error: All PostgreSQL password environment variables must be set"
     exit 1
 fi
@@ -33,7 +32,6 @@ cd /opt/postgresql
 cat > .env << EOF
 POSTGRES_ADMIN_PASSWORD=${POSTGRES_ADMIN_PASSWORD}
 POSTGRES_RUBY_PASSWORD=${POSTGRES_RUBY_PASSWORD}
-POSTGRES_TS_PASSWORD=${POSTGRES_TS_PASSWORD}
 POSTGRES_PYTHON_PASSWORD=${POSTGRES_PYTHON_PASSWORD}
 POSTGRES_GO_PASSWORD=${POSTGRES_GO_PASSWORD}
 EOF
@@ -61,7 +59,6 @@ echo "✅ All configuration files present"
 # Substitute password placeholders in user creation script
 echo "🔐 Configuring database user passwords..."
 sed -i "s/\${POSTGRES_RUBY_PASSWORD}/${POSTGRES_RUBY_PASSWORD}/g" init-scripts/02-create-users.sql
-sed -i "s/\${POSTGRES_TS_PASSWORD}/${POSTGRES_TS_PASSWORD}/g" init-scripts/02-create-users.sql
 sed -i "s/\${POSTGRES_PYTHON_PASSWORD}/${POSTGRES_PYTHON_PASSWORD}/g" init-scripts/02-create-users.sql
 sed -i "s/\${POSTGRES_GO_PASSWORD}/${POSTGRES_GO_PASSWORD}/g" init-scripts/02-create-users.sql
 
@@ -111,7 +108,7 @@ if docker compose ps --services --filter "status=running" | grep -q "postgresql"
     # Show database info
     echo ""
     echo "📊 Database Status:"
-    docker exec postgresql psql -U postgres -c "\l" | grep -E "ruby_demo|typescript_app|python_api|go_service" || echo "Databases not yet initialized (will be created on first start)"
+    docker exec postgresql psql -U postgres -c "\l" | grep -E "ruby_demo|python_api|go_service" || echo "Databases not yet initialized (will be created on first start)"
 else
     echo "❌ Deployment failed - container is not running"
     echo "📋 Container logs:"

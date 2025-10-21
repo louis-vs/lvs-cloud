@@ -24,27 +24,6 @@ BEGIN
 END
 $$;
 
--- TypeScript App User
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'typescript_user') THEN
-        CREATE USER typescript_user WITH
-            PASSWORD '${POSTGRES_TS_PASSWORD}'
-            NOSUPERUSER
-            NOCREATEDB
-            NOCREATEROLE
-            NOINHERIT
-            LOGIN
-            NOREPLICATION
-            NOBYPASSRLS
-            CONNECTION LIMIT -1;
-        COMMENT ON ROLE typescript_user IS 'Application user for TypeScript tRPC app';
-    ELSE
-        ALTER USER typescript_user WITH PASSWORD '${POSTGRES_TS_PASSWORD}';
-    END IF;
-END
-$$;
-
 -- Python FastAPI App User
 DO $$
 BEGIN

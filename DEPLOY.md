@@ -138,7 +138,6 @@ db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
 | App Type | Database | User | Password Secret |
 |----------|----------|------|-----------------|
 | Ruby Demo | `ruby_demo` | `ruby_demo_user` | `POSTGRES_RUBY_PASSWORD` |
-| TypeScript | `typescript_app` | `typescript_user` | `POSTGRES_TS_PASSWORD` |
 | Python API | `python_api` | `python_user` | `POSTGRES_PYTHON_PASSWORD` |
 | Go Service | `go_service` | `go_user` | `POSTGRES_GO_PASSWORD` |
 
@@ -278,7 +277,6 @@ REGISTRY_PASSWORD=xxx       # From .env file
 GRAFANA_ADMIN_PASS=xxx      # Grafana admin password
 POSTGRES_ADMIN_PASSWORD=xxx # PostgreSQL admin password
 POSTGRES_RUBY_PASSWORD=xxx  # Ruby app database password
-POSTGRES_TS_PASSWORD=xxx    # TypeScript app database password
 POSTGRES_PYTHON_PASSWORD=xxx # Python app database password
 POSTGRES_GO_PASSWORD=xxx    # Go app database password
 ```

@@ -8,13 +8,6 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Connect to typescript_app database
-\c typescript_app
-
--- Enable UUID extension for TypeScript app
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
 -- Connect to python_api database
 \c python_api
 

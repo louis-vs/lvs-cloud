@@ -87,7 +87,6 @@ cd infrastructure && terraform destroy -auto-approve && terraform apply -auto-ap
 
 ## Future Development
 
-- **TypeScript App**: tRPC-based application template for modern web apps
 - **Go App**: Builtin server template with Go templates for backend services
 - **Python App**: FastAPI application template for API development
 - **Additional Templates**: More language/framework templates as needed

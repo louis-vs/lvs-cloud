@@ -21,25 +21,6 @@ BEGIN
 END
 $$;
 
--- TypeScript App Database
-SELECT 'CREATE DATABASE typescript_app
-    WITH
-    OWNER = postgres
-    ENCODING = ''UTF8''
-    LC_COLLATE = ''en_US.utf8''
-    LC_CTYPE = ''en_US.utf8''
-    TABLESPACE = pg_default
-    CONNECTION LIMIT = -1'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'typescript_app')\gexec
-
-DO $$
-BEGIN
-    IF EXISTS (SELECT FROM pg_database WHERE datname = 'typescript_app') THEN
-        EXECUTE 'COMMENT ON DATABASE typescript_app IS ''Database for TypeScript tRPC application''';
-    END IF;
-END
-$$;
-
 -- Python FastAPI App Database
 SELECT 'CREATE DATABASE python_api
     WITH

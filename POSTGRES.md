@@ -10,9 +10,6 @@ PostgreSQL database server for LVS Cloud applications with per-app databases and
 # Ruby Demo App
 DATABASE_URL=postgresql://ruby_demo_user:${POSTGRES_RUBY_PASSWORD}@postgresql:5432/ruby_demo
 
-# TypeScript App
-DATABASE_URL=postgresql://typescript_user:${POSTGRES_TS_PASSWORD}@postgresql:5432/typescript_app
-
 # Python API
 DATABASE_URL=postgresql://python_user:${POSTGRES_PYTHON_PASSWORD}@postgresql:5432/python_api
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useTRPC } from '@/integrations/trpc/react'
+import { trpc } from '@/integrations/trpc/react'
 import { TaskList } from '@/components/TaskList'
 import { TaskForm } from '@/components/TaskForm'
 import { Button } from '@/components/ui/button'
@@ -9,23 +9,20 @@ import { Plus, Search } from 'lucide-react'
 import type { Task } from '@/integrations/trpc/router'
 
 export const Route = createFileRoute('/')({
-  loader: async ({ context }) => {
-    // Use tRPC context for SSR data fetching
-    const tasks = await context.trpc.tasks.list.fetch()
-    return { tasks }
-  },
   component: TaskManager,
 })
 
 function TaskManager() {
-  const { tasks: initialTasks } = Route.useLoaderData()
+  const { data: initialTasks = [] } = trpc.tasks.list.useQuery()
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [searchQuery, setSearchQuery] = useState('')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
 
-  // Get tRPC utilities for mutations
-  const utils = useTRPC()
+  // Get tRPC mutations
+  const createTask = trpc.tasks.create.useMutation()
+  const updateTask = trpc.tasks.update.useMutation()
+  const deleteTask = trpc.tasks.delete.useMutation()
 
   const filteredTasks = tasks.filter(
     (task) =>
@@ -34,14 +31,14 @@ function TaskManager() {
   )
 
   const handleCreateTask = async (data: { title: string; description?: string }) => {
-    const newTask = await utils.tasks.create.mutate(data)
+    const newTask = await createTask.mutateAsync(data)
     setTasks([newTask, ...tasks])
   }
 
   const handleUpdateTask = async (data: { title: string; description?: string }) => {
     if (!editingTask) return
 
-    const updatedTask = await utils.tasks.update.mutate({
+    const updatedTask = await updateTask.mutateAsync({
       id: editingTask.id,
       title: data.title,
       description: data.description,
@@ -52,12 +49,12 @@ function TaskManager() {
   }
 
   const handleToggleComplete = async (id: number, completed: boolean) => {
-    const updatedTask = await utils.tasks.update.mutate({ id, completed })
+    const updatedTask = await updateTask.mutateAsync({ id, completed })
     setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
   }
 
   const handleDelete = async (id: number) => {
-    await utils.tasks.delete.mutate({ id })
+    await deleteTask.mutateAsync({ id })
     setTasks(tasks.filter((t) => t.id !== id))
   }
 

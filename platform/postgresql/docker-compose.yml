@@ -16,6 +16,7 @@ services:
     command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
     networks:
       - monitoring
+      - postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
@@ -27,3 +28,6 @@ networks:
   monitoring:
     name: monitoring
     external: true
+  postgresql:
+    name: postgresql
+    driver: bridge

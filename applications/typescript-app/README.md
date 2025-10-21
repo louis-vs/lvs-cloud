@@ -2,6 +2,23 @@
 
 Welcome to your new TanStack app!
 
+## Database Setup
+
+This application requires a PostgreSQL database. The database must be created manually before deployment.
+
+**Database credentials:**
+
+- Host: `postgresql` (in Docker network)
+- User: `typescript_user`
+- Password: Set via `POSTGRES_TS_PASSWORD` secret
+- Database: `ts_app`
+
+**Manual setup on server:**
+
+```bash
+docker exec -it postgresql psql -U postgres -c "CREATE DATABASE ts_app OWNER typescript_user;"
+```
+
 ## Getting Started
 
 To run this application:

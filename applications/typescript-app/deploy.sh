@@ -8,6 +8,8 @@ echo "🚀 Starting Typescript App deployment..."
 if [ -f .env.template ]; then
     echo "🔧 Regenerating .env from template..."
     envsubst < .env.template > .env
+    echo "📝 Generated .env contents (passwords masked):"
+    sed 's/\(PASSWORD=\).*/\1***/' .env
 else
     echo "⚠️ Warning: .env.template not found, using existing .env"
 fi

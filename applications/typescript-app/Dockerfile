@@ -20,7 +20,7 @@ ENV NODE_ENV=production
 ENV PORT=3000
 
 # Copy built application
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/.output ./.output
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/migrations ./migrations
@@ -35,4 +35,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD bun run -e 'fetch("http://localhost:3000/api/health").then(r => r.ok ? process.exit(0) : process.exit(1))' || exit 1
 
 # Run migrations and start application
-CMD ["sh", "-c", "bun run migrate && bun run serve"]
+CMD ["sh", "-c", "bun run migrate && bun run .output/server/index.mjs"]

@@ -10,8 +10,10 @@ repos:
       - id: check-yaml
         args: ['--allow-multiple-documents']
       - id: check-json
+        exclude: 'tsconfig.*\.json$'
       - id: pretty-format-json
         args: ['--autofix']
+        exclude: 'tsconfig.*\.json$'
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
 

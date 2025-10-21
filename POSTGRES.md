@@ -24,7 +24,7 @@ DATABASE_URL=postgresql://go_user:${POSTGRES_GO_PASSWORD}@postgresql:5432/go_ser
 
 ```bash
 # Connect to PostgreSQL admin console
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec -it postgresql psql -U postgres'
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec -i postgresql psql -U postgres'
 
 # List all databases
 \l

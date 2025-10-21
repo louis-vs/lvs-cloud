@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    expose:
+      - "3000"
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.typescript-app.rule=Host(`typescript-app.lvs.me.uk`)'

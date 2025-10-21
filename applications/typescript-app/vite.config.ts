@@ -16,6 +16,9 @@ const config = defineConfig({
     nitro(),
     viteReact(),
   ],
+  ssr: {
+    external: ['pg', 'pg-native'],
+  },
 })
 
 export default config

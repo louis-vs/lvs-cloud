@@ -7,7 +7,7 @@ services:
       - .env
     labels:
       - 'traefik.enable=true'
-      - 'traefik.http.routers.typescript-app.rule=Host(`app.lvs.me.uk`)'
+      - 'traefik.http.routers.typescript-app.rule=Host(`typescript-app.lvs.me.uk`)'
       - 'traefik.http.routers.typescript-app.entrypoints=websecure'
       - 'traefik.http.routers.typescript-app.tls.certresolver=letsencrypt'
       - 'traefik.http.services.typescript-app.loadbalancer.server.port=3000'

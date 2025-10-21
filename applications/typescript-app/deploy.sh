@@ -4,21 +4,14 @@ set -e
 
 echo "🚀 Starting Typescript App deployment..."
 
-# Regenerate .env from template with current environment variables
-if [ -f .env.template ]; then
-    echo "🔧 Regenerating .env from template..."
-    envsubst < .env.template > .env
-    echo "📝 Generated .env contents (passwords masked):"
-    sed 's/\(PASSWORD=\).*/\1***/' .env
-else
-    echo "⚠️ Warning: .env.template not found, using existing .env"
-fi
-
-# Verify .env file exists
+# Verify .env file exists (created by GitHub Actions before upload)
 if [ ! -f .env ]; then
-    echo "❌ Error: .env file not found"
+    echo "❌ Error: .env file not found - should have been created by GitHub Actions"
     exit 1
 fi
+
+echo "📝 Using .env file (passwords masked):"
+sed 's/\(PASSWORD=\).*/\1***/' .env
 
 # Use the production compose file
 COMPOSE_FILE="docker-compose.prod.yml"

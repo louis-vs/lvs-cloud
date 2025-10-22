@@ -3,3 +3,4 @@ default: true
 # disable rules I don't agree with
 MD012: false # Multiple consecutive blank lines
 MD013: false # Line length
+MD040: false # Fenced code blocks should have a language specified

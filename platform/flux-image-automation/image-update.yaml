@@ -1,0 +1,22 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: monorepo-auto
+  namespace: flux-system
+spec:
+  interval: 1m
+  sourceRef:
+    kind: GitRepository
+    name: monorepo
+  git:
+    checkout:
+      ref:
+        branch: master
+    commit:
+      authorName: flux-bot
+      authorEmail: ci@lvs.me.uk
+      messageTemplate: "chore: update images"
+    push:
+      branch: master
+  update:
+    strategy: Setters

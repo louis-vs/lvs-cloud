@@ -1,0 +1,127 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: postgresql
+  namespace: default
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: postgresql
+      version: ">=15.5.0"
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: flux-system
+  values:
+    fullnameOverride: postgresql
+
+    auth:
+      existingSecret: postgresql-auth
+      username: "ruby_demo_user"
+      database: "ruby_demo"
+      secretKeys:
+        adminPasswordKey: postgres-password
+        userPasswordKey: user-password
+
+    primary:
+      persistence:
+        enabled: true
+        storageClass: longhorn
+        size: 50Gi
+        annotations:
+          longhorn.io/recurring-jobs: |
+            [
+              {"name":"daily-snap","task":"snapshot","cron":"0 2 * * *","retain":7,"concurrency":1,"labels":{"app":"postgresql"}},
+              {"name":"weekly-bak","task":"backup","cron":"0 3 * * 0","retain":4,"concurrency":1,"labels":{"app":"postgresql"}}
+            ]
+
+      resources:
+        requests:
+          cpu: "300m"
+          memory: "512Mi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+
+      # Custom PostgreSQL configuration
+      extendedConfiguration: |
+        # Memory Configuration
+        shared_buffers = 256MB
+        effective_cache_size = 1GB
+        maintenance_work_mem = 64MB
+        work_mem = 4MB
+
+        # Connection Settings
+        max_connections = 100
+
+        # WAL Configuration
+        wal_buffers = 8MB
+        min_wal_size = 80MB
+        max_wal_size = 1GB
+
+        # Query Tuning
+        random_page_cost = 1.1
+        effective_io_concurrency = 200
+
+        # Logging
+        logging_collector = on
+        log_destination = 'stderr'
+        log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+        log_statement = 'none'
+        log_min_duration_statement = 1000
+
+      # Init containers to set up users and databases
+      initContainers:
+        - name: init-databases
+          image: postgres:16
+          command:
+            - /bin/sh
+            - -c
+            - |
+              until pg_isready -h localhost -U postgres; do
+                echo "Waiting for PostgreSQL to be ready..."
+                sleep 2
+              done
+
+              echo "Creating databases and users..."
+
+              # Ruby demo app
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -tc \
+                "SELECT 1 FROM pg_database WHERE datname = 'ruby_demo'" | grep -q 1 || \
+                PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -c \
+                "CREATE DATABASE ruby_demo"
+
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -tc \
+                "SELECT 1 FROM pg_user WHERE usename = 'ruby_demo_user'" | grep -q 1 || \
+                PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -c \
+                "CREATE USER ruby_demo_user WITH PASSWORD '$POSTGRES_RUBY_PASSWORD'"
+
+              PGPASSWORD=$POSTGRES_PASSWORD psql -h localhost -U postgres -c \
+                "GRANT ALL PRIVILEGES ON DATABASE ruby_demo TO ruby_demo_user"
+
+              echo "Database initialization complete"
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-auth
+                  key: postgres-password
+            - name: POSTGRES_RUBY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-auth
+                  key: ruby-password
+
+    service:
+      type: ClusterIP
+      ports:
+        postgresql: 5432
+
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: false
+
+    volumePermissions:
+      enabled: true

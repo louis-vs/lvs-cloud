@@ -1,0 +1,21 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: ruby-demo-app
+  namespace: flux-system
+spec:
+  image: registry.lvs.me.uk/ruby-demo-app
+  interval: 1m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: ruby-demo-app
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: ruby-demo-app
+  policy:
+    semver:
+      range: ">=1.0.0"

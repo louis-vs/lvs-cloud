@@ -1,0 +1,60 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pgdump-s3
+  namespace: default
+spec:
+  schedule: "0 1 * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          volumes:
+            - name: dump
+              emptyDir: {}
+          initContainers:
+            - name: dump
+              image: docker.io/bitnami/postgresql:16
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgresql-auth
+                      key: postgres-password
+              command: ["/bin/bash","-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  TS=$(date -u +%Y%m%dT%H%M%SZ)
+                  FILE="/dump/pgdumpall-$TS.sql.gz"
+                  pg_dumpall -h postgresql.default.svc.cluster.local -U postgres | gzip -9 > "$FILE"
+                  ls -lh /dump
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump
+          containers:
+            - name: upload
+              image: quay.io/minio/mc:latest
+              envFrom:
+                - secretRef:
+                    name: pg-backup-s3
+              command: ["/bin/sh","-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  mc alias set hetzner "${S3_ENDPOINT}" "${S3_ACCESS_KEY}" "${S3_SECRET_KEY}"
+                  mc mb -p "hetzner/${S3_BUCKET}" || true
+                  mc cp /dump/*.gz "hetzner/${S3_BUCKET}/$(date -u +%Y)/$(date -u +%m)/"
+              volumeMounts:
+                - name: dump
+                  mountPath: /dump
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"

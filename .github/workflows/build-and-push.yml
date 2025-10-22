@@ -1,0 +1,125 @@
+name: Build and Push Images
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'applications/**'
+      - '!applications/**/chart/**'
+      - '!applications/**/helmrelease.yaml'
+      - '!applications/**/values.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY_URL: registry.lvs.me.uk
+
+jobs:
+  detect-changes:
+    name: Detect Changed Applications
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.detect.outputs.apps }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed apps
+        id: detect
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual trigger: build all apps
+            APPS=$(find applications -mindepth 1 -maxdepth 1 -type d -exec basename {} \; | jq -R -s -c 'split("\n")[:-1]')
+          else
+            # Auto trigger: build only changed apps
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD | grep '^applications/' || true)
+            if [ -z "$CHANGED_FILES" ]; then
+              echo "apps=[]" >> $GITHUB_OUTPUT
+              echo "No application changes detected"
+              exit 0
+            fi
+
+            # Extract app names from changed paths
+            APPS=$(echo "$CHANGED_FILES" | cut -d'/' -f2 | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          fi
+
+          echo "apps=$APPS" >> $GITHUB_OUTPUT
+          echo "Detected apps: $APPS"
+
+  build-push:
+    name: Build ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.apps != '[]'
+    strategy:
+      matrix:
+        app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check if app has Dockerfile
+        id: check
+        run: |
+          if [ -f "applications/${{ matrix.app }}/Dockerfile" ]; then
+            echo "has_dockerfile=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_dockerfile=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No Dockerfile found for ${{ matrix.app }}, skipping"
+          fi
+
+      - name: Login to registry
+        if: steps.check.outputs.has_dockerfile == 'true'
+        run: |
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.REGISTRY_URL }} \
+            -u robot_user --password-stdin
+
+      - name: Generate version tag
+        if: steps.check.outputs.has_dockerfile == 'true'
+        id: version
+        run: |
+          # Use git commit SHA as version
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION="1.0.${GITHUB_RUN_NUMBER}-${SHORT_SHA}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Build and push
+        if: steps.check.outputs.has_dockerfile == 'true'
+        run: |
+          cd applications/${{ matrix.app }}
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Build image
+          docker build -t ${{ env.REGISTRY_URL }}/${{ matrix.app }}:${VERSION} .
+
+          # Tag as latest
+          docker tag ${{ env.REGISTRY_URL }}/${{ matrix.app }}:${VERSION} \
+                     ${{ env.REGISTRY_URL }}/${{ matrix.app }}:latest
+
+          # Push both tags
+          docker push ${{ env.REGISTRY_URL }}/${{ matrix.app }}:${VERSION}
+          docker push ${{ env.REGISTRY_URL }}/${{ matrix.app }}:latest
+
+          echo "✅ Pushed ${{ matrix.app }}:${VERSION}"
+
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-push]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Apps detected:** ${{ needs.detect-changes.outputs.apps }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Flux will automatically detect and deploy new images." >> $GITHUB_STEP_SUMMARY

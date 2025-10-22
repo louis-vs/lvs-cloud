@@ -1,180 +1,354 @@
-# Operations & Troubleshooting
+# Operations & Troubleshooting (Kubernetes)
 
-## Monitoring
+## Access Points
 
-### Access Points
+**Internet-accessible:**
 
-**Internet-accessible services:**
+- **Grafana**: <https://grafana.lvs.me.uk> (admin/password)
+- **Registry**: <https://registry.lvs.me.uk> (robot_user/password)
+- **SSH**: `ssh ubuntu@$(dig +short app.lvs.me.uk)`
 
-- **Grafana**: <https://grafana.lvs.me.uk> (admin/[secure-password])
-- **Registry**: <https://registry.lvs.me.uk> (see .env for credentials)
-- **Server SSH**: `ssh ubuntu@$(dig +short app.lvs.me.uk)`
+**Cluster-internal:**
 
-**Internal services** (access via Grafana or SSH):
+- **PostgreSQL**: `postgresql.default.svc.cluster.local:5432`
+- **Longhorn UI**: `http://longhorn-frontend.longhorn-system`
 
-- **PostgreSQL**: `postgresql:5432` (database server)
-- **Mimir**: `http://mimir:8080` (metrics storage & query)
-- **Tempo**: `http://tempo:3200` (distributed tracing)
-- **Loki**: `http://loki:3100` (log aggregation)
+## Common Commands
 
-## Common Issues
-
-### Services Down
+### Cluster Status
 
 ```bash
-# Check all containers
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker ps -a'
+# Check nodes
+kubectl get nodes
 
-# Restart specific service
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'cd /opt/monitoring-stack && docker compose restart grafana'
+# Check all pods
+kubectl get pods -A
+
+# Check specific namespace
+kubectl get pods -n default
+
+# Check resource usage
+kubectl top nodes
+kubectl top pods -A
+```
+
+### Flux Status
+
+```bash
+# All Flux resources
+flux get all
+
+# GitRepository
+flux get sources git
+
+# Kustomizations
+flux get kustomizations
+
+# HelmReleases
+flux get helmreleases
+
+# Image automation
+flux get images all
+```
+
+### Application Logs
+
+```bash
+# Tail logs
+kubectl logs -f -l app.kubernetes.io/name=ruby-demo-app
+
+# Previous pod logs (if crashed)
+kubectl logs -p ruby-demo-app-<pod-id>
+
+# All containers in pod
+kubectl logs ruby-demo-app-<pod-id> --all-containers
+
+# Follow logs from multiple pods
+kubectl logs -f -l app=ruby-demo-app --max-log-requests=10
+```
+
+### Database Operations
+
+```bash
+# Connect to PostgreSQL
+kubectl exec -it postgresql-0 -- psql -U postgres
+
+# List databases
+kubectl exec -it postgresql-0 -- psql -U postgres -c '\l'
+
+# Check connections
+kubectl exec -it postgresql-0 -- psql -U postgres -c \
+  "SELECT datname, usename, client_addr FROM pg_stat_activity WHERE state = 'active';"
+
+# Backup database
+kubectl exec postgresql-0 -- pg_dumpall -U postgres > backup.sql
+
+# Restore database
+kubectl exec -i postgresql-0 -- psql -U postgres < backup.sql
+```
+
+## Troubleshooting
+
+### Pod Not Starting
+
+```bash
+# Check pod status
+kubectl get pods
+
+# Describe pod for events
+kubectl describe pod <pod-name>
 
 # Check logs
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker logs grafana'
+kubectl logs <pod-name>
+
+# Check previous logs if crashed
+kubectl logs -p <pod-name>
+
+# Check resource constraints
+kubectl top pod <pod-name>
+kubectl describe node
 ```
 
-### SSL Certificate Problems
+### Flux Not Syncing
 
 ```bash
-# Check Traefik logs
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker logs traefik | grep -i acme'
+# Check GitRepository
+flux get sources git monorepo
+
+# Check for errors
+flux logs --all-namespaces --level=error
+
+# Force reconcile
+flux reconcile source git monorepo
+flux reconcile kustomization apps
+
+# Check Git credentials
+kubectl -n flux-system get secret flux-git-ssh
+
+# Check Flux controllers
+kubectl -n flux-system get pods
+kubectl -n flux-system logs deploy/source-controller
+```
+
+### Image Not Updating
+
+```bash
+# Check ImageRepository
+flux get images repository
+
+# Check ImagePolicy
+flux get images policy
+
+# Force image scan
+flux reconcile image repository ruby-demo-app
+
+# Check ImageUpdateAutomation
+flux get images update
+
+# View automation logs
+kubectl -n flux-system logs deploy/image-automation-controller -f
+
+# Verify Flux can commit
+git log --oneline --author="flux-bot" -5
+```
+
+### HelmRelease Failing
+
+```bash
+# Check status
+flux get helmrelease ruby-demo-app
+
+# Describe for events
+kubectl describe helmrelease ruby-demo-app
+
+# Check Helm controller logs
+kubectl -n flux-system logs deploy/helm-controller -f
+
+# Manually render chart
+helm template applications/ruby-demo-app/chart \
+  -f applications/ruby-demo-app/values.yaml
+```
+
+### Ingress/TLS Issues
+
+```bash
+# Check ingresses
+kubectl get ingresses
+
+# Describe ingress
+kubectl describe ingress ruby-demo-app
+
+# Check cert-manager certificates
+kubectl get certificates
+
+# Describe certificate
+kubectl describe certificate ruby-demo-app-tls
+
+# Check cert-manager logs
+kubectl -n cert-manager logs deploy/cert-manager -f
 
 # Force certificate renewal
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker restart traefik'
+kubectl delete certificate ruby-demo-app-tls
 ```
 
-### App Not Updating
+### Longhorn Issues
 
 ```bash
-# Check GitHub Actions workflow status
-gh run list --repo $(gh repo view --json nameWithOwner -q .nameWithOwner)
+# Check volumes
+kubectl -n longhorn-system get volumes
 
-# Force app deployment
-gh workflow run "Deploy Infrastructure & Applications" -f app_name=ruby-demo-app
+# Check Longhorn manager logs
+kubectl -n longhorn-system logs deploy/longhorn-manager -f
 
-# Check app container status
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'cd /opt/apps/ruby-demo-app && docker compose ps'
+# Access Longhorn UI
+kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
+# Open http://localhost:8080
 
-# Force manual update
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'cd /opt/apps/ruby-demo-app && docker compose pull && docker compose up -d'
-```
-
-### PostgreSQL Issues
-
-```bash
-# Check PostgreSQL status
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker logs postgresql'
-
-# Test database connectivity
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec postgresql pg_isready -U postgres'
-
-# Connect to PostgreSQL admin console
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec -it postgresql psql -U postgres'
-
-# Check database connections
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec postgresql psql -U postgres -c "SELECT datname, usename, client_addr FROM pg_stat_activity WHERE state = '\''active'\'';"'
-
-# View database sizes
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec postgresql psql -U postgres -c "SELECT datname, pg_size_pretty(pg_database_size(datname)) FROM pg_database;"'
-
-# Restart PostgreSQL service
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'cd /opt/postgresql && docker compose restart'
+# Check node disk status
+kubectl -n longhorn-system get nodes.longhorn.io
 ```
 
 ### Registry Issues
 
 ```bash
-# Test registry login
-echo "$REGISTRY_PASS" | docker login registry.lvs.me.uk -u admin --password-stdin
+# Test registry from cluster
+kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- sh
+curl -u robot_user:<password> https://registry.lvs.me.uk/v2/_catalog
 
-# Check registry logs
+# Test registry from host
+ssh ubuntu@$(dig +short app.lvs.me.uk) \
+  'docker pull registry.lvs.me.uk/ruby-demo-app:latest'
+
+# Check Caddy logs (registry frontend)
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'journalctl -u caddy -f'
+
+# Check Docker registry container
 ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker logs registry'
 ```
 
 ## Maintenance
 
-### Resource Usage
+### Resource Monitoring
 
 ```bash
-# Check disk space (including block storage)
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'df -h'
+# Node resources
+kubectl top node
 
-# Check persistent data usage
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'du -sh /mnt/data/*'
+# Pod resources
+kubectl top pods -A --sort-by=memory
+kubectl top pods -A --sort-by=cpu
 
-# PostgreSQL data usage specifically
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'du -sh /mnt/data/postgresql'
+# Persistent volume usage
+kubectl get pv
 
-# Check memory usage
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'free -h'
-
-# Container resource usage
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker stats --no-stream'
-```
-
-### Database Backups
-
-```bash
-# Backup all databases
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec postgresql pg_dumpall -U postgres > /tmp/lvs-cloud-backup-$(date +%Y%m%d).sql'
-
-# Backup specific database
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec postgresql pg_dump -U postgres ruby_demo > /tmp/ruby-demo-backup-$(date +%Y%m%d).sql'
-
-# Download backup to local machine
-scp ubuntu@$(dig +short app.lvs.me.uk):/tmp/lvs-cloud-backup-*.sql ./
-
-# Restore from backup (DESTRUCTIVE)
-# scp ./backup.sql ubuntu@$(dig +short app.lvs.me.uk):/tmp/
-# ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker exec -i postgresql psql -U postgres < /tmp/backup.sql'
+# Longhorn volume sizes
+kubectl -n longhorn-system get volumes \
+  -o custom-columns=NAME:.metadata.name,SIZE:.spec.size,ACTUAL:.status.actualSize
 ```
 
 ### Log Cleanup
 
 ```bash
-# Docker log cleanup (logs can get large)
+# Old pods
+kubectl delete pod --field-selector status.phase=Succeeded -A
+kubectl delete pod --field-selector status.phase=Failed -A
+
+# Docker logs (on host)
 ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker system prune -f'
 ```
 
-### Updates
+### Certificate Renewal
 
-- **OS updates**: Handled automatically by cloud-init
-- **Container updates**: Watchtower checks every 5 minutes
-- **SSL renewal**: Automatic via Traefik
-- **Metrics collection**: Grafana Alloy scrapes every 15s
+Automatic via cert-manager. Certificates renew 30 days before expiry.
+
+```bash
+# Check certificate expiry
+kubectl get certificates
+
+# Force renewal
+kubectl delete certificate <cert-name>
+# cert-manager recreates automatically
+```
+
+### Backing Up
+
+**Longhorn volumes**: Weekly backups to Hetzner S3 (automatic)
+
+**PostgreSQL**: Daily pg_dump to S3 (CronJob)
+
+**Manual backup:**
+
+```bash
+# Backup PostgreSQL
+kubectl exec postgresql-0 -- pg_dumpall -U postgres | gzip > backup-$(date +%Y%m%d).sql.gz
+
+# Download to local machine
+scp ubuntu@$(dig +short app.lvs.me.uk):~/backup-*.sql.gz ./
+
+# Backup Grafana dashboards (persisted to Longhorn PVC)
+kubectl cp -n monitoring grafana-<pod-id>:/var/lib/grafana/grafana.db ./grafana.db
+```
+
+### Upgrading
+
+**k3s**: Automatic weekly upgrades (Sundays 03:00 via systemd timer)
+
+**Platform services**: Managed by Flux (update chart versions in HelmReleases)
+
+**Applications**: Automatic via Flux Image Automation
+
+**Manual k3s upgrade:**
+
+```bash
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'sudo /usr/local/sbin/k3s-upgrade.sh'
+```
 
 ## Debugging Workflows
 
 ### GitHub Actions Failing
 
 ```bash
-# Check workflow status
-gh run list --repo your-username/lvs-cloud
+# List recent workflow runs
+gh run list
 
-# View specific run logs
+# View specific run
 gh run view <run-id> --log
-```
 
-### Terraform State Issues
-
-```bash
-# View current state
-cd infrastructure && terraform show
-
-# Refresh state
-terraform refresh
-
-# If corrupted, reimport resources
-terraform import hcloud_server.main <server-id>
+# Re-run failed workflow
+gh run rerun <run-id>
 ```
 
 ### Network Issues
 
 ```bash
-# Check Docker networks
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker network ls'
+# Test pod-to-pod connectivity
+kubectl run -it --rm debug --image=busybox --restart=Never -- sh
+wget -O- http://postgresql:5432
 
-# Recreate web network if needed
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker network create web'
+# Test pod-to-internet
+kubectl run -it --rm debug --image=curlimages/curl --restart=Never -- sh
+curl https://example.com
+
+# Check k3s networking
+kubectl get pods -n kube-system -l k8s-app=kube-dns
+kubectl logs -n kube-system -l k8s-app=kube-dns
+```
+
+### Disk Space Issues
+
+```bash
+# Check host disk
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'df -h'
+
+# Check /srv/data usage
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'du -sh /srv/data/*'
+
+# Check container images
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker images'
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker system df'
+
+# Cleanup unused images
+ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker image prune -a -f'
 ```
 
 ## Security
@@ -182,21 +356,65 @@ ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker network create web'
 ### Current Measures
 
 - SSH key authentication only
-- Firewall rules (HTTP/HTTPS/SSH only)
-- Registry authentication
-- SSL everywhere
-- Container isolation
+- Firewall: ports 22, 80, 443 only
+- Registry: Basic auth over HTTPS
+- k3s API: Not exposed (localhost only)
+- TLS everywhere via cert-manager
+- Container isolation via k8s namespaces
 
 ### Regular Checks
 
-- Monitor failed SSH attempts: `ssh ubuntu@$(dig +short app.lvs.me.uk) 'grep "Failed password" /var/log/auth.log'`
-- Check open ports: `nmap app.lvs.me.uk`
+```bash
+# Check failed SSH attempts
+ssh ubuntu@$(dig +short app.lvs.me.uk) "grep 'Failed password' /var/log/auth.log | tail -20"
+
+# Check open ports
+nmap app.lvs.me.uk
+
+# Check for pods running as root
+kubectl get pods -A -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.securityContext.runAsUser}{"\n"}{end}'
+```
 
 ## Cost Tracking
 
-- Hetzner cx22: €4.90/month
-- Object Storage (Terraform state): €4.99/month
+- **Hetzner cx22**: €4.90/month
+- **Object Storage** (Terraform state + backups): €4.99/month
 - **Total**: €9.89/month
-- Domain costs excluded
 
-**Monitor**: Check Hetzner Console for unexpected usage spikes.
+**Monitor**: Hetzner Console for usage spikes
+
+## Emergency Procedures
+
+### Complete Cluster Restart
+
+```bash
+ssh ubuntu@$(dig +short app.lvs.me.uk)
+sudo systemctl restart k3s
+kubectl get pods -A -w
+```
+
+### Force Flux Resync
+
+```bash
+flux suspend kustomization --all
+flux resume kustomization --all
+flux reconcile source git monorepo --with-source
+```
+
+### Rollback Application
+
+```bash
+# Via Flux (revert Git commit)
+git revert HEAD
+git push
+
+# Manual (emergency)
+kubectl rollout undo deployment/ruby-demo-app
+```
+
+## Useful Links
+
+- [Kubernetes Docs](https://kubernetes.io/docs/)
+- [Flux Docs](https://fluxcd.io/docs/)
+- [Longhorn Docs](https://longhorn.io/docs/)
+- [cert-manager Docs](https://cert-manager.io/docs/)

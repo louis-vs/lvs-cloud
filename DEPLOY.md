@@ -1,342 +1,349 @@
-# Deployment Guide
+# Deployment Guide (Kubernetes + Flux)
 
-## Deployment Architecture
+## Overview
 
-LVS Cloud uses **GitOps deployment pattern** - all services are self-contained with their own deployment scripts.
+LVS Cloud uses **Flux GitOps** - all deployments are managed by pushing to Git. Changes are automatically detected and applied.
 
-**Key Principle**: Push configuration files to Git → Services deploy themselves using their own `deploy.sh` scripts.
+## Adding a New Application
 
-### Directory Structure
-
-```plaintext
-├── platform/              # Platform services (Traefik, Monitoring, PostgreSQL, etc.)
-│   ├── traefik/
-│   │   ├── deploy.sh          # Self-contained deployment script
-│   │   ├── docker-compose.yml
-│   │   └── traefik.yml
-│   ├── monitoring/
-│   │   ├── deploy.sh
-│   │   └── ... all config files
-│   └── postgresql/
-│       ├── deploy.sh
-│       └── ... all config and init scripts
-├── applications/          # User applications
-│   └── your-app/
-│       ├── deploy.sh          # Self-contained deployment script
-│       ├── .env.template      # Template for environment variables
-│       ├── Dockerfile
-│       └── docker-compose.prod.yml
-```
-
-## Adding New Apps
-
-### App Structure Required
-
-```plaintext
-applications/your-app/
-├── deploy.sh                # Deployment automation script
-├── .env.template            # Environment variable template
-├── Dockerfile
-├── docker-compose.prod.yml  # Production compose file
-├── your app code...
-```
-
-### docker-compose.prod.yml Template
-
-```yaml
-services:
-  your-app:
-    image: registry.lvs.me.uk/your-app:latest
-    container_name: your-app
-    restart: unless-stopped
-    environment:
-      - YOUR_ENV=production
-    labels:
-      - 'traefik.enable=true'
-      - 'traefik.http.routers.your-app.rule=Host(`your-app.lvs.me.uk`)'
-      - 'traefik.http.routers.your-app.entrypoints=websecure'
-      - 'traefik.http.routers.your-app.tls.certresolver=letsencrypt'
-      - 'traefik.http.services.your-app.loadbalancer.server.port=8080'
-    networks:
-      - web
-      - monitoring # Connect to monitoring for metrics
-
-networks:
-  web:
-    name: web
-    external: true
-  monitoring:
-    name: monitoring
-    external: true
-```
-
-### DNS Setup
-
-Add A record: `your-app.lvs.me.uk → server-ip`
-
-### Database-Enabled Apps
-
-LVS Cloud provides a shared PostgreSQL server for all applications. Each app gets its own database and user.
-
-#### Environment Variables
-
-Add these to your `docker-compose.prod.yml`:
-
-```yaml
-environment:
-  - DATABASE_URL=postgresql://your_app_user:${POSTGRES_YOUR_APP_PASSWORD}@postgresql:5432/your_app_db
-  # Alternative format:
-  - DB_HOST=postgresql
-  - DB_PORT=5432
-  - DB_NAME=your_app_db
-  - DB_USER=your_app_user
-  - DB_PASSWORD=${POSTGRES_YOUR_APP_PASSWORD}
-```
-
-#### Connection Examples
-
-**Ruby (using pg gem):**
-
-```ruby
-require 'pg'
-conn = PG.connect(ENV['DATABASE_URL'])
-```
-
-**TypeScript (using pg or Prisma):**
-
-```typescript
-// Using pg
-import { Pool } from 'pg'
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-
-// Using Prisma
-// DATABASE_URL in .env file
-```
-
-**Python (using psycopg2 or SQLAlchemy):**
-
-```python
-import psycopg2
-conn = psycopg2.connect(os.environ['DATABASE_URL'])
-
-# SQLAlchemy
-from sqlalchemy import create_engine
-engine = create_engine(os.environ['DATABASE_URL'])
-```
-
-**Go (using lib/pq):**
-
-```go
-import "database/sql"
-import _ "github.com/lib/pq"
-
-db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
-```
-
-#### Available Databases
-
-| App Type | Database | User | Password Secret |
-|----------|----------|------|-----------------|
-| Ruby Demo | `ruby_demo` | `ruby_demo_user` | `POSTGRES_RUBY_PASSWORD` |
-| Python API | `python_api` | `python_user` | `POSTGRES_PYTHON_PASSWORD` |
-| Go Service | `go_service` | `go_user` | `POSTGRES_GO_PASSWORD` |
-
-### deploy.sh Template
-
-Every application needs a `deploy.sh` script. See `applications/ruby-demo-app/deploy.sh` for a complete example.
+### 1. Create Helm Chart
 
 ```bash
-#!/bin/bash
-set -e
-
-echo "🚀 Starting deployment..."
-
-# 1. Verify environment variables (if needed)
-if [ -z "$SOME_REQUIRED_VAR" ]; then
-    echo "❌ Error: SOME_REQUIRED_VAR must be set"
-    exit 1
-fi
-
-# 2. Build the Docker image
-docker build -t registry.lvs.me.uk/your-app:latest .
-
-# 3. Push to registry
-docker push registry.lvs.me.uk/your-app:latest
-
-# 4. Deploy with Docker Compose
-docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-# 5. Verify deployment
-if docker compose -f docker-compose.prod.yml ps --services --filter "status=running" | grep -q "your-app"; then
-    echo "✅ Deployment successful"
-else
-    echo "❌ Deployment failed"
-    exit 1
-fi
+mkdir -p applications/my-app/chart/templates
 ```
 
-### .env.template Pattern
+**Chart.yaml:**
 
-Use `.env.template` with placeholders for secrets:
+```yaml
+apiVersion: v2
+name: my-app
+description: My application
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+```
+
+**chart/values.yaml** (defaults):
+
+```yaml
+replicaCount: 2
+
+image:
+  repository: registry.lvs.me.uk/my-app
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: my-app.lvs.me.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: my-app-tls
+      hosts:
+        - my-app.lvs.me.uk
+
+resources:
+  requests: { cpu: "200m", memory: "256Mi" }
+  limits: { cpu: "1", memory: "1Gi" }
+
+readinessProbe:
+  httpGet: { path: /healthz, port: http }
+  initialDelaySeconds: 5
+livenessProbe:
+  httpGet: { path: /healthz, port: http }
+  initialDelaySeconds: 10
+
+env: []
+```
+
+**chart/templates/deployment.yaml**, **service.yaml**, **ingress.yaml** - copy from `applications/ruby-demo-app/chart/templates/`
+
+### 2. Production Values with Flux Setters
+
+**values.yaml** (root of app directory):
+
+```yaml
+image:
+  repository: registry.lvs.me.uk/my-app   # {"$imagepolicy": "flux-system:my-app:name"}
+  tag: "1.0.0"                             # {"$imagepolicy": "flux-system:my-app:tag"}
+
+env:
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: my-app-db
+        key: url
+```
+
+### 3. HelmRelease
+
+**helmrelease.yaml:**
+
+```yaml
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: my-app
+  namespace: default
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./applications/my-app/chart
+      sourceRef:
+        kind: GitRepository
+        name: monorepo
+        namespace: flux-system
+  valuesFiles:
+    - ./applications/my-app/values.yaml
+```
+
+### 4. Flux Image Automation
+
+**platform/flux-image-automation/my-app.yaml:**
+
+```yaml
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: my-app
+  namespace: flux-system
+spec:
+  image: registry.lvs.me.uk/my-app
+  interval: 1m
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: my-app
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: my-app
+  policy:
+    semver:
+      range: ">=1.0.0"
+```
+
+### 5. Register App
+
+Update `applications/kustomization.yaml`:
+
+```yaml
+resources:
+  - ruby-demo-app/helmrelease.yaml
+  - my-app/helmrelease.yaml
+```
+
+Update `platform/flux-image-automation/kustomization.yaml`:
+
+```yaml
+resources:
+  - image-update.yaml
+  - ruby-demo-app.yaml
+  - my-app.yaml
+```
+
+### 6. Push to Deploy
 
 ```bash
-# .env.template
-DATABASE_URL=postgresql://user:${POSTGRES_YOUR_APP_PASSWORD}@postgresql:5432/your_db
-API_KEY=${YOUR_API_KEY}
+git add applications/my-app platform/flux-image-automation/my-app.yaml
+git commit -m "feat(my-app): add new application"
+git push
 ```
 
-GitHub Actions will substitute these automatically before deployment.
+**Flux will:**
 
-### Current Deployment Flow
+1. Detect new HelmRelease
+2. Pull chart from Git
+3. Render templates
+4. Deploy to cluster
+5. Monitor for new images
 
-**Applications:**
+## Database-Enabled Apps
 
-1. **Push code** → `applications/your-app/**`
-2. **Workflow detects** changed app automatically
-3. **Generates .env** from `.env.template` with GitHub secrets
-4. **Uploads directory** via SCP to `/tmp/deploy-your-app`
-5. **Runs deploy.sh** which builds, pushes, and deploys
-6. **Watchtower** monitors for future image updates
+### Add Database Secret
 
-**Platform Services:**
+**platform/postgresql-new/secret-auth.yaml** - add your password key:
 
-1. **Push config** → `platform/service/**`
-2. **Workflow detects** changed service
-3. **Uploads directory** via SCP to `/tmp/deploy-service`
-4. **Runs deploy.sh** with required environment variables
-5. **Service deploys** itself to `/opt/service`
+```yaml
+stringData:
+  postgres-password: "${POSTGRES_ADMIN_PASSWORD}"
+  my-app-password: "${POSTGRES_MY_APP_PASSWORD}"
+```
+
+### Create Database
+
+SSH to server and run:
+
+```bash
+kubectl exec -it postgresql-0 -- psql -U postgres -c \
+  "CREATE DATABASE my_app_db"
+kubectl exec -it postgresql-0 -- psql -U postgres -c \
+  "CREATE USER my_app_user WITH PASSWORD '<password>'"
+kubectl exec -it postgresql-0 -- psql -U postgres -c \
+  "GRANT ALL PRIVILEGES ON DATABASE my_app_db TO my_app_user"
+```
+
+### App Connection
+
+**In your app's values.yaml:**
+
+```yaml
+env:
+  - name: DATABASE_URL
+    value: postgresql://my_app_user:PASSWORD@postgresql:5432/my_app_db
+```
+
+Or use a Secret:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-app-db
+stringData:
+  url: postgresql://my_app_user:${POSTGRES_MY_APP_PASSWORD}@postgresql:5432/my_app_db
+---
+# In HelmRelease values:
+envFrom:
+  - secretRef:
+      name: my-app-db
+```
+
+## DNS Setup
+
+Add A record: `my-app.lvs.me.uk → server-ip`
+
+cert-manager will automatically obtain Let's Encrypt certificate.
+
+## Monitoring Deployment
+
+```bash
+# Watch Flux reconciliation
+flux get helmreleases -w
+
+# Watch pods
+kubectl get pods -l app.kubernetes.io/name=my-app -w
+
+# Check pod logs
+kubectl logs -f -l app.kubernetes.io/name=my-app
+
+# Check events
+kubectl get events --sort-by='.lastTimestamp'
+
+# Force reconcile
+flux reconcile helmrelease my-app
+```
+
+## Troubleshooting
+
+### HelmRelease Stuck
+
+```bash
+# Check HelmRelease status
+flux get helmrelease my-app
+
+# Describe for events
+kubectl describe helmrelease my-app
+
+# Check Helm controller logs
+kubectl -n flux-system logs deploy/helm-controller -f
+
+# Manually render chart
+helm template applications/my-app/chart -f applications/my-app/values.yaml
+```
+
+### Image Not Updating
+
+```bash
+# Check ImageRepository
+flux get images repository my-app
+
+# Check ImagePolicy
+flux get images policy my-app
+
+# Force scan
+flux reconcile image repository my-app
+
+# Check commits from Flux
+git log --oneline -5
+```
+
+### Pod CrashLooping
+
+```bash
+# Check logs
+kubectl logs my-app-<pod-id>
+
+# Describe pod
+kubectl describe pod my-app-<pod-id>
+
+# Check resource limits
+kubectl top pod my-app-<pod-id>
+
+# Check probes
+kubectl get pod my-app-<pod-id> -o yaml | grep -A 10 Probe
+```
 
 ## Infrastructure Changes
 
-### Terraform Changes
+### Terraform Updates
 
-**REQUIRES APPROVAL** - Can destroy/recreate server
+1. Edit `infrastructure/main.tf`
+2. Push to GitHub
+3. Workflow runs `terraform plan`
+4. Reply "LGTM" to approval issue
+5. Terraform applies changes
 
-```bash
-# Make changes to infrastructure/
-git add infrastructure/
-git commit -m "infra: update server config"
-git push origin master
+**Note**: Infrastructure changes recreate the server. Longhorn data persists, but pods restart.
 
-# Manually approve in GitHub Actions
-# OR force run: gh workflow run "Deploy Infrastructure & Applications"
-```
+### Adding New Platform Services
 
-### What Triggers Infrastructure Deploy
+1. Create manifests in `platform/<service>/`
+2. Add kustomization.yaml
+3. Update `platform/kustomization.yaml`
+4. Push to Git → Flux deploys
 
-- `infrastructure/**` - Terraform changes
-- `platform/traefik/**` - SSL/routing changes
-- `platform/monitoring/**` - Monitoring changes
-- `platform/registry/**` - Registry changes
-- `platform/postgresql/**` - Database changes
+## Quick Reference
 
-**Note**: User apps in `applications/` trigger the applications job in the unified workflow
-
-## Storage Architecture
-
-### Block Storage (Persistent)
-
-- **Volume**: 50GB Hetzner block storage mounted at `/mnt/data`
-- **Persistent data**: All service data stored on block storage for durability
-- **Paths**:
-  - `/mnt/data/grafana` - Grafana dashboards, users, settings
-  - `/mnt/data/mimir` - Metrics storage (replaces Prometheus data)
-  - `/mnt/data/tempo` - Distributed tracing data
-  - `/mnt/data/loki` - Log aggregation data
-  - `/mnt/data/registry` - Container images
-  - `/mnt/data/postgresql` - PostgreSQL databases and data
-
-### VM Storage (Ephemeral)
-
-- **Configuration files**: Service configs stored in VM (reproducible via Git)
-- **Logs**: Docker container logs (managed by Docker daemon)
-
-### Permissions
-
-Services run with unique UIDs for security isolation:
-
-- Grafana: `472:472`
-- Mimir: `10001:10001`
-- Tempo: `10002:10002`
-- Loki: `10003:10003`
-- Registry: `1000:1000`
-- PostgreSQL: `10004:10004`
-
-## Secrets Management
-
-GitHub Repository Secrets:
+**Build & push image:**
 
 ```bash
-HCLOUD_TOKEN_RO=xxx         # Read-only Hetzner API
-HCLOUD_TOKEN_RW=xxx         # Read-write Hetzner API
-S3_ACCESS_KEY=xxx           # Object Storage access
-S3_SECRET_KEY=xxx           # Object Storage secret
-SSH_PRIVATE_KEY=xxx         # Server access
-REGISTRY_USERNAME=admin     # From .env file
-REGISTRY_PASSWORD=xxx       # From .env file
-GRAFANA_ADMIN_PASS=xxx      # Grafana admin password
-POSTGRES_ADMIN_PASSWORD=xxx # PostgreSQL admin password
-POSTGRES_RUBY_PASSWORD=xxx  # Ruby app database password
-POSTGRES_PYTHON_PASSWORD=xxx # Python app database password
-POSTGRES_GO_PASSWORD=xxx    # Go app database password
+cd applications/my-app
+docker build -t registry.lvs.me.uk/my-app:1.2.3 .
+echo "$PASSWORD" | docker login registry.lvs.me.uk -u robot_user --password-stdin
+docker push registry.lvs.me.uk/my-app:1.2.3
 ```
 
-## First Time Setup
+**Flux automatically detects and deploys.**
 
-### 1. Hetzner Setup
-
-- Create API tokens (RO + RW)
-- Create Object Storage bucket: `lvs-cloud-terraform-state`
-- Get S3 credentials for bucket
-
-### 2. Environment Setup
+**Check deployment:**
 
 ```bash
-cp .env.example .env
-# Edit .env with your values
-source .env
+kubectl get pods -l app.kubernetes.io/name=my-app
+kubectl logs -f -l app.kubernetes.io/name=my-app
 ```
 
-### 3. Terraform State Setup
+**Access app:**
 
-```bash
-cd infrastructure
-terraform init  # Uses S3 backend automatically
-terraform apply # Creates server + initial setup
-```
+`https://my-app.lvs.me.uk` (TLS automatic)
 
-### 4. DNS Setup
+## Next Steps
 
-Point these A records to your server IP:
-
-- `app.lvs.me.uk`
-- `grafana.lvs.me.uk`
-- `registry.lvs.me.uk`
-
-**Note**: Mimir, Tempo, and Loki are internal-only services (not exposed to internet)
-
-### 5. GitHub Secrets
-
-Add all secrets listed above to repository settings.
-
-## Disaster Recovery
-
-### Complete Rebuild
-
-```bash
-# 1. Destroy everything
-cd infrastructure && terraform destroy -auto-approve
-
-# 2. Recreate
-terraform apply -auto-approve
-
-# 3. Wait ~10 minutes for services to start
-# SSL certs will regenerate automatically
-```
-
-### State Recovery
-
-If you lose terraform state:
-
-1. Import existing server: `terraform import hcloud_server.main <server-id>`
-2. Or destroy and recreate (faster)
+- [OPS.md](OPS.md) - Operations & troubleshooting
+- [docs/migration/APPS.md](docs/migration/APPS.md) - Detailed Helm chart guide
+- [docs/migration/FLUX_SETUP.md](docs/migration/FLUX_SETUP.md) - Flux configuration

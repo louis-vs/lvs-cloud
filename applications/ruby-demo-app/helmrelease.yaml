@@ -1,0 +1,16 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ruby-demo-app
+  namespace: default
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: ./applications/ruby-demo-app/chart
+      sourceRef:
+        kind: GitRepository
+        name: monorepo
+        namespace: flux-system
+  valuesFiles:
+    - ./applications/ruby-demo-app/values.yaml

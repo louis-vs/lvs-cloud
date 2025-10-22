@@ -1,0 +1,13 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: monorepo
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: ssh://git@github.com/louisjmorgan/lvs-cloud.git
+  ref:
+    branch: master
+  secretRef:
+    name: flux-git-ssh

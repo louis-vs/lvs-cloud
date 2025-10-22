@@ -1,0 +1,239 @@
+#cloud-config
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_key}
+      - ${github_actions_ssh_key}
+
+package_update: true
+packages:
+  - docker.io
+  - caddy
+  - curl
+  - wget
+  - git
+  - htop
+
+write_files:
+  # k3s registry authentication
+  - path: /etc/rancher/k3s/registries.yaml
+    owner: root:root
+    permissions: '0644'
+    content: |
+      mirrors:
+        "registry.lvs.me.uk":
+          endpoint:
+            - "https://registry.lvs.me.uk"
+      configs:
+        "registry.lvs.me.uk":
+          auth:
+            username: robot_user
+            password: "${registry_pass}"
+
+  # Caddyfile for external registry
+  - path: /etc/caddy/Caddyfile
+    owner: root:root
+    permissions: '0644'
+    content: |
+      registry.lvs.me.uk {
+        encode zstd gzip
+        tls letsencrypt@lvs.me.uk
+
+        @v2 {
+          path_regexp v2 ^/v2/.*$
+        }
+
+        basicauth @v2 {
+          robot_user ${registry_htpasswd}
+        }
+
+        reverse_proxy localhost:5000
+      }
+
+  # Weekly k3s upgrade script
+  - path: /usr/local/sbin/k3s-upgrade.sh
+    owner: root:root
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      NODE="$(hostname)"
+      kubectl cordon "$NODE" || true
+
+      INSTALL_K3S_CHANNEL="stable" \
+      curl -sfL https://get.k3s.io | sh -s - --force-reinstall
+
+      sleep 10
+      kubectl uncordon "$NODE" || true
+
+  # Weekly k3s upgrade systemd service
+  - path: /etc/systemd/system/k3s-upgrade.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Weekly k3s upgrade
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/sbin/k3s-upgrade.sh
+
+  # Weekly k3s upgrade systemd timer
+  - path: /etc/systemd/system/k3s-upgrade.timer
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Run k3s-upgrade weekly (Sun 03:00)
+
+      [Timer]
+      OnCalendar=Sun *-*-* 03:00:00
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+  # Flux Git SSH key (placeholder, will be replaced by Terraform)
+  - path: /var/lib/flux/id_ed25519
+    owner: root:root
+    permissions: '0600'
+    content: |
+      ${flux_ssh_key}
+
+  # GitHub known_hosts for Flux
+  - path: /var/lib/flux/known_hosts
+    owner: root:root
+    permissions: '0644'
+    content: |
+      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+
+  # Flux bootstrap manifest (GitRepository)
+  - path: /root/flux/gitrepository.yaml
+    owner: root:root
+    permissions: '0644'
+    content: |
+      ---
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: flux-git-ssh
+        namespace: flux-system
+      type: Opaque
+      stringData:
+        identity: |
+          ${flux_ssh_key}
+        known_hosts: |
+          github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+      ---
+      apiVersion: source.toolkit.fluxcd.io/v1
+      kind: GitRepository
+      metadata:
+        name: monorepo
+        namespace: flux-system
+      spec:
+        interval: 1m
+        url: ssh://git@github.com/louisjmorgan/lvs-cloud.git
+        ref:
+          branch: master
+        secretRef:
+          name: flux-git-ssh
+
+  # Flux bootstrap manifest (Kustomization)
+  - path: /root/flux/kustomization.yaml
+    owner: root:root
+    permissions: '0644'
+    content: |
+      apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: cluster
+        namespace: flux-system
+      spec:
+        interval: 10m
+        sourceRef:
+          kind: GitRepository
+          name: monorepo
+        path: ./clusters/prod
+        prune: true
+        wait: false
+        timeout: 5m
+
+runcmd:
+  # Wait for volume to be attached
+  - sleep 10
+  - mkdir -p /srv/data
+
+  # Mount volume
+  - |
+    for i in {1..30}; do
+      if [ -e /dev/sdb ]; then
+        echo "Volume found at /dev/sdb"
+        break
+      fi
+      echo "Waiting for volume... ($i/30)"
+      sleep 2
+    done
+
+  # Format volume if needed
+  - |
+    if ! blkid /dev/sdb; then
+      echo "Formatting volume with ext4"
+      mkfs.ext4 /dev/sdb
+    fi
+
+  # Mount volume
+  - mount /dev/sdb /srv/data
+  - echo '/dev/sdb /srv/data ext4 defaults 0 2' >> /etc/fstab
+
+  # Create data directories
+  - mkdir -p /srv/data/longhorn /srv/data/registry
+  - chown -R root:root /srv/data
+
+  # Start Docker registry
+  - systemctl enable docker
+  - systemctl start docker
+  - |
+    docker run -d \
+      --name registry \
+      --restart unless-stopped \
+      -p 127.0.0.1:5000:5000 \
+      -e REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry \
+      -v /srv/data/registry:/var/lib/registry \
+      registry:2
+
+  # Start Caddy (will obtain Let's Encrypt cert for registry)
+  - systemctl enable caddy
+  - systemctl start caddy
+
+  # Install k3s (keep Traefik ingress controller)
+  - |
+    curl -sfL https://get.k3s.io | sh -s - \
+      --write-kubeconfig-mode 644
+
+  # Wait for k3s to be ready
+  - sleep 30
+  - kubectl wait --for=condition=ready node --all --timeout=300s
+
+  # Install Flux
+  - |
+    curl -s https://fluxcd.io/install.sh | bash
+    kubectl apply -f https://github.com/fluxcd/flux2/releases/latest/download/install.yaml
+
+  # Wait for Flux controllers
+  - sleep 30
+  - kubectl -n flux-system wait --for=condition=ready pod --all --timeout=300s
+
+  # Bootstrap Flux with Git
+  - kubectl apply -f /root/flux/gitrepository.yaml
+  - kubectl apply -f /root/flux/kustomization.yaml
+
+  # Enable weekly k3s upgrades
+  - systemctl enable k3s-upgrade.timer
+
+  # Setup complete
+  - echo "K3s + Flux + Registry setup complete" > /var/log/lvs-cloud-setup.log
+  - date >> /var/log/lvs-cloud-setup.log

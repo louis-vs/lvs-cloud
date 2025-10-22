@@ -46,14 +46,14 @@ variable "domain" {
   default     = "lvs.me.uk"
 }
 
-variable "registry_user" {
-  description = "Docker registry username"
+variable "registry_pass" {
+  description = "Docker registry password (plaintext for k3s registries.yaml)"
   type        = string
-  default     = "admin"
+  sensitive   = true
 }
 
-variable "registry_pass" {
-  description = "Docker registry password"
+variable "registry_htpasswd" {
+  description = "Docker registry bcrypt password hash for Caddy (generate with: caddy hash-password)"
   type        = string
   sensitive   = true
 }
@@ -183,11 +183,12 @@ resource "hcloud_server" "main" {
     role    = "main"
   }
 
-  user_data = templatefile("${path.module}/cloud-init.yml", {
+  user_data = templatefile("${path.module}/cloud-init-k3s.yml", {
     ssh_key                = trimspace(file("${path.module}/lvs-cloud.pub"))
     github_actions_ssh_key = trimspace(file("${path.module}/github-actions-key.pub"))
-    registry_user          = var.registry_user
     registry_pass          = var.registry_pass
+    registry_htpasswd      = var.registry_htpasswd
+    flux_ssh_key           = trimspace(file("${path.module}/flux-deploy-key"))
   })
 }
 
@@ -217,4 +218,8 @@ output "volume_id" {
 
 output "volume_device_path" {
   value = "/dev/disk/by-id/scsi-0HC_Volume_${hcloud_volume.data.id}"
+}
+
+output "k3s_info" {
+  value = "SSH to server: ssh ubuntu@${hcloud_server.main.ipv4_address} | kubeconfig: /etc/rancher/k3s/k3s.yaml"
 }

@@ -1,0 +1,123 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'infrastructure/**'
+      - '.github/workflows/infrastructure.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: infrastructure-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TF_VAR_project_name: 'lvs-cloud'
+  TF_VAR_domain: 'lvs.me.uk'
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+  AWS_EC2_METADATA_DISABLED: true
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  terraform:
+    name: Terraform Plan & Apply
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    defaults:
+      run:
+        working-directory: infrastructure
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.9.0'
+
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Terraform Init
+        run: terraform init
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Terraform Validate
+        run: terraform validate
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -input=false -out=tfplan -detailed-exitcode
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
+          TF_VAR_registry_pass: ${{ secrets.REGISTRY_PASSWORD }}
+          TF_VAR_registry_htpasswd: ${{ secrets.REGISTRY_HTPASSWD }}
+        continue-on-error: true
+
+      - name: Show Plan
+        run: terraform show tfplan
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Request Approval
+        if: steps.plan.outputs.exitcode == '2'
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.token }}
+          approvers: ${{ github.actor }}
+          minimum-approvals: 1
+          issue-title: 'Infrastructure Deployment Approval Required'
+          issue-body: |
+            **Infrastructure changes detected!**
+
+            Review the Terraform plan above and reply **LGTM** to approve.
+
+            **WARNING**: This will recreate the k3s cluster. All data in Longhorn volumes will be preserved, but Pods will restart.
+
+            - **Branch**: `${{ github.ref_name }}`
+            - **Commit**: `${{ github.sha }}`
+            - **Triggered by**: ${{ github.event_name }}
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/master' && (steps.plan.outputs.exitcode == '0' || steps.plan.outputs.exitcode == '2')
+        run: terraform apply -auto-approve tfplan
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
+          TF_VAR_registry_pass: ${{ secrets.REGISTRY_PASSWORD }}
+          TF_VAR_registry_htpasswd: ${{ secrets.REGISTRY_HTPASSWD }}
+
+      - name: Get Outputs
+        id: outputs
+        run: |
+          echo "server_ip=$(terraform output -raw server_ip)" >> $GITHUB_OUTPUT
+        env:
+          TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RO }}
+
+      - name: Summary
+        run: |
+          echo "## Infrastructure Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Server IP:** ${{ steps.outputs.outputs.server_ip }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**What happens next:**" >> $GITHUB_STEP_SUMMARY
+          echo "1. k3s is installed and running" >> $GITHUB_STEP_SUMMARY
+          echo "2. Flux is bootstrapped and syncing from Git" >> $GITHUB_STEP_SUMMARY
+          echo "3. Platform services (Longhorn, cert-manager, PostgreSQL) are deploying" >> $GITHUB_STEP_SUMMARY
+          echo "4. Applications will deploy automatically" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Monitor deployment:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "ssh ubuntu@${{ steps.outputs.outputs.server_ip }}" >> $GITHUB_STEP_SUMMARY
+          echo "kubectl get pods -A" >> $GITHUB_STEP_SUMMARY
+          echo "flux get all" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

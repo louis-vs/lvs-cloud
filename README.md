@@ -1,120 +1,155 @@
-# LVS Cloud - Private Cloud Infrastructure
+# LVS Cloud - Kubernetes Private Cloud
 
-**Personal private cloud platform** that scales while being maintainable by a single developer. Enterprise-grade monitoring with automatic deployments at startup costs.
+**Kubernetes-native private cloud** running on a single k3s node with enterprise GitOps patterns. Push code → Flux automatically deploys.
 
 ## Quick Status
 
 | Service | URL | Status |
 |---------|-----|--------|
 | **Grafana** | <https://grafana.lvs.me.uk> | ✅ (admin/secure-pass) |
-| **Registry** | <https://registry.lvs.me.uk> | ✅ (see .env) |
+| **Registry** | <https://registry.lvs.me.uk> | ✅ (robot_user) |
 | **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
-
-**Internal Services** (accessible via Grafana):
-
-- **Mimir**: Metrics storage & querying
-- **Tempo**: Distributed tracing
-- **Loki**: Log aggregation
-- **Grafana Alloy**: Metrics & log collection agent
 
 **Infrastructure:** Hetzner cx22 (2 vCPU, 4GB RAM) + 50GB block storage
 **Total Cost:** €9.89/month (€4.90 server + €4.99 Object Storage)
 
-## Consolidated DevOps Architecture
+## Architecture
 
-**Two Control Points:**
-
-- **GitHub**: CI/CD pipeline, infrastructure deployments, code management
-- **Grafana**: Monitoring, dashboards, logs, traces, metrics - everything observability
-
-```plaintext
-GitHub Push → Actions → Registry → Watchtower → Live
-     ↓           ↓         ↓          ↓         ↓
-   Code      Build    Push Image  Auto-update  Running
-                                               ↓
-                                        PostgreSQL ← Apps
-                                               ↓
-                                        Grafana Alloy
-                                               ↓
-                                        LGTM Stack
-                                               ↓
-                                        Grafana Dashboards
+```
+Developer → Git Push
+         ↓
+   GitHub Actions (build + push image)
+         ↓
+   registry.lvs.me.uk/app:1.2.3
+         ↓
+   Flux CD (detects new tag)
+         ↓
+   Updates values.yaml → commits
+         ↓
+   k3s deploys with rolling update
+         ↓
+   Live app with TLS cert
 ```
 
-**Platform Services:**
+**Stack:**
 
-- **Traefik**: SSL termination & automatic routing
-- **Registry**: Private container registry (registry.lvs.me.uk)
-- **PostgreSQL**: Shared database server with per-app databases and users
-- **LGTM Stack**: Loki + Grafana + Tempo + Mimir (full observability)
-- **Grafana Alloy**: Automatic metrics & log collection from all containers
-- **Persistent Dashboards**: All Grafana data persisted for custom dashboard development
+- **k3s**: Lightweight Kubernetes (weekly auto-upgrades)
+- **Flux CD**: GitOps operator with image automation
+- **Longhorn**: Distributed storage with S3 backups (Hetzner)
+- **cert-manager**: Automated TLS certificates
+- **PostgreSQL**: Bitnami Helm chart (Longhorn PVCs)
+- **LGTM**: Loki + Grafana + Tempo + Mimir (observability)
+- **External Registry**: Docker + Caddy (outside cluster)
 
 ## Quick Commands
 
 ```bash
-# Deploy everything (requires approval for infrastructure changes)
-gh workflow run "Deploy Infrastructure & Applications"
+# SSH to server
+ssh ubuntu@$(dig +short app.lvs.me.uk)
 
-# Deploy specific app only
-gh workflow run "Deploy Infrastructure & Applications" -f app_name=ruby-demo-app
+# Check cluster status
+kubectl get nodes
+kubectl get pods -A
 
-# Deploy all apps and platform services
-gh workflow run "Deploy Infrastructure & Applications" -f deploy_everything=true
+# Monitor Flux
+flux get all
+flux logs --all-namespaces --follow
 
-# Check service status
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker ps'
+# Force reconciliation
+flux reconcile source git monorepo
+flux reconcile kustomization apps
 
-# View logs
-ssh ubuntu@$(dig +short app.lvs.me.uk) 'docker logs grafana'
+# View application logs
+kubectl logs -f -l app.kubernetes.io/name=ruby-demo-app
 
-# Emergency rebuild
-cd infrastructure && terraform destroy -auto-approve && terraform apply -auto-approve
+# Port-forward to services
+kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
 ```
+
+## Deployment Flow
+
+**Code changes:**
+
+1. Edit code in `applications/ruby-demo-app/`
+2. Push to `master`
+3. GitHub Actions builds image → pushes as `1.0.X`
+4. Flux detects new tag
+5. Updates `applications/ruby-demo-app/values.yaml`
+6. Commits change → triggers Helm reconcile
+7. K8s rolls out new pods with probes
+
+**Infrastructure changes:**
+
+1. Edit Terraform in `infrastructure/`
+2. Push to `master`
+3. GitHub Actions runs `terraform plan`
+4. Reply "LGTM" to approval issue
+5. Terraform recreates server with k3s + Flux
+6. Flux deploys everything from Git
 
 ## Current Status
 
-- [x] **GitOps**: Apps and platform services deploy automatically on ANY file changes ✅
-- [x] **Self-Contained Deployments**: Every service has its own `deploy.sh` script ✅
-- [x] **Security**: All services use secure credentials from GitHub secrets ✅
-- [x] **Structure**: Clean separation - platform/ for services, applications/ for apps ✅
-- [x] **Scalability**: Dynamic app detection supports unlimited apps via matrix strategy ✅
-- [x] **Storage**: Persistent data on 50GB block storage, configs in Git for reproducibility ✅
-- [x] **Monitoring**: LGTM stack with persistent dashboards, app metrics collection working ✅
-- [x] **Consolidated DevOps**: GitHub for CI/CD, Grafana for all observability ✅
+- [x] **k3s cluster**: Single node, weekly auto-upgrades ✅
+- [x] **Flux GitOps**: Automatic image updates + deployments ✅
+- [x] **Longhorn storage**: PVCs with S3 backups ✅
+- [x] **cert-manager**: Automated TLS for apps ✅
+- [x] **PostgreSQL**: Shared database server with per-app DBs ✅
+- [x] **LGTM stack**: Full observability (Grafana dashboards persist) ✅
+- [x] **External registry**: Docker + Caddy with Let's Encrypt ✅
+- [x] **Helm charts**: Apps packaged with values + image setters ✅
 
-**System Status**: ✅ Production ready - full GitOps pattern implemented, dashboards working, metrics collecting
+**System Status**: ✅ Production ready - Full Kubernetes + GitOps
 
-## Future Development
+## Documentation
 
-- **Go App**: Builtin server template with Go templates for backend services
-- **Python App**: FastAPI application template for API development
-- **Additional Templates**: More language/framework templates as needed
+- **[DEPLOY.md](DEPLOY.md)**: Adding apps, database setup, deployment patterns
+- **[OPS.md](OPS.md)**: Troubleshooting, monitoring, maintenance
+- **[POSTGRES.md](POSTGRES.md)**: Database management (kept for reference)
 
-## Development Guidelines
+### Migration Guides (docs/migration/)
 
-### Commit Message Format
+- **[ARCHITECTURE.md](docs/migration/ARCHITECTURE.md)**: New architecture overview
+- **[K3S_SETUP.md](docs/migration/K3S_SETUP.md)**: k3s installation & config
+- **[FLUX_SETUP.md](docs/migration/FLUX_SETUP.md)**: Flux GitOps & image automation
+- **[REGISTRY.md](docs/migration/REGISTRY.md)**: External registry setup
+- **[STORAGE.md](docs/migration/STORAGE.md)**: Longhorn + S3 backups
+- **[APPS.md](docs/migration/APPS.md)**: Converting apps to Helm charts
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/) with **optional scopes**:
+## Commit Message Format
+
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```text
 <type>(<scope>): <description>
 
-[optional body]
+Examples:
+feat(platform): add new monitoring dashboard
+fix(ruby-demo-app): resolve database connection issue
+chore(infrastructure): upgrade k3s version
+docs: update deployment guide
 ```
 
-**Common types:** `feat`, `fix`, `chore`, `docs`, `refactor`, `test`
+## Repository Structure
 
-**Example scopes:**
+```
+lvs-cloud/
+├── clusters/prod/              # Flux entry point
+├── infrastructure/
+│   ├── main.tf                 # Hetzner + k3s
+│   └── longhorn/               # Storage setup
+├── platform/
+│   ├── cert-manager/           # TLS automation
+│   ├── postgresql-new/         # Database server
+│   ├── flux-image-automation/  # Image policies
+│   └── helmrepositories/       # Helm chart sources
+├── applications/
+│   └── ruby-demo-app/
+│       ├── chart/              # Helm chart
+│       ├── values.yaml         # Flux image setters
+│       └── helmrelease.yaml    # Deployment config
+└── docs/migration/             # Migration guides
+```
 
-- `feat(platform)`: New platform service feature
-- `fix(ruby-demo-app)`: Bug fix in Ruby demo app
-- `chore(infrastructure)`: Infrastructure updates
-- `docs`: Documentation updates (no scope needed for repo-wide docs)
-
-Scopes are optional - use them when changes are specific to a component, omit for repository-wide changes.
-
-## Next: Adding Apps
+## Next Steps
 
 See [DEPLOY.md](DEPLOY.md) for adding new applications.
-See [OPS.md](OPS.md) for troubleshooting and maintenance.

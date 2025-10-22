@@ -91,6 +91,29 @@ cd infrastructure && terraform destroy -auto-approve && terraform apply -auto-ap
 - **Python App**: FastAPI application template for API development
 - **Additional Templates**: More language/framework templates as needed
 
+## Development Guidelines
+
+### Commit Message Format
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) with **optional scopes**:
+
+```text
+<type>(<scope>): <description>
+
+[optional body]
+```
+
+**Common types:** `feat`, `fix`, `chore`, `docs`, `refactor`, `test`
+
+**Example scopes:**
+
+- `feat(platform)`: New platform service feature
+- `fix(ruby-demo-app)`: Bug fix in Ruby demo app
+- `chore(infrastructure)`: Infrastructure updates
+- `docs`: Documentation updates (no scope needed for repo-wide docs)
+
+Scopes are optional - use them when changes are specific to a component, omit for repository-wide changes.
+
 ## Next: Adding Apps
 
 See [DEPLOY.md](DEPLOY.md) for adding new applications.

@@ -180,7 +180,7 @@ resource "hcloud_server" "main" {
     role    = "main"
   }
 
-  user_data = templatefile("${path.module}/cloud-init-k3s.yml", {
+  user_data = templatefile("${path.module}/cloud-init.yml", {
     ssh_key           = trimspace(file("${path.module}/lvs-cloud.pub"))
     registry_pass     = var.registry_pass
     registry_htpasswd = var.registry_htpasswd

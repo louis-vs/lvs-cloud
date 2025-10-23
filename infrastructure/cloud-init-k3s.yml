@@ -6,7 +6,6 @@ users:
     shell: /bin/bash
     ssh_authorized_keys:
       - ${ssh_key}
-      - ${github_actions_ssh_key}
 
 package_update: true
 packages:

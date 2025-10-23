@@ -15,8 +15,8 @@ concurrency:
 env:
   TF_VAR_project_name: 'lvs-cloud'
   TF_VAR_domain: 'lvs.me.uk'
-  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.HETZNER_S3_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.HETZNER_S3_SECRET_KEY }}
   AWS_EC2_METADATA_DISABLED: true
   AWS_DEFAULT_REGION: us-east-1
 

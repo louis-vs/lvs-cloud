@@ -59,9 +59,10 @@ variable "registry_htpasswd" {
 }
 
 variable "flux_ssh_key" {
-  description = "Flux GitOps SSH private key for repository access"
+  description = "Flux GitOps SSH private key for repository access (TEMPORARILY DISABLED)"
   type        = string
   sensitive   = true
+  default     = "# TEMPORARILY DISABLED"
 }
 
 variable "server_type" {

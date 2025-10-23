@@ -96,70 +96,70 @@ write_files:
       [Install]
       WantedBy=timers.target
 
-  # Flux Git SSH key (placeholder, will be replaced by Terraform)
-  - path: /var/lib/flux/id_ed25519
-    owner: root:root
-    permissions: '0600'
-    content: |
-      ${flux_ssh_key}
+  # TEMPORARILY DISABLED - Flux Git SSH key
+  # - path: /var/lib/flux/id_ed25519
+  #   owner: root:root
+  #   permissions: '0600'
+  #   content: |
+  #     ${flux_ssh_key}
 
-  # GitHub known_hosts for Flux
-  - path: /var/lib/flux/known_hosts
-    owner: root:root
-    permissions: '0644'
-    content: |
-      github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+  # TEMPORARILY DISABLED - GitHub known_hosts for Flux
+  # - path: /var/lib/flux/known_hosts
+  #   owner: root:root
+  #   permissions: '0644'
+  #   content: |
+  #     github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
 
-  # Flux bootstrap manifest (GitRepository)
-  - path: /root/flux/gitrepository.yaml
-    owner: root:root
-    permissions: '0644'
-    content: |
-      ---
-      apiVersion: v1
-      kind: Secret
-      metadata:
-        name: flux-git-ssh
-        namespace: flux-system
-      type: Opaque
-      stringData:
-        identity: |
-          ${flux_ssh_key}
-        known_hosts: |
-          github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
-      ---
-      apiVersion: source.toolkit.fluxcd.io/v1
-      kind: GitRepository
-      metadata:
-        name: monorepo
-        namespace: flux-system
-      spec:
-        interval: 1m
-        url: ssh://git@github.com/louisjmorgan/lvs-cloud.git
-        ref:
-          branch: master
-        secretRef:
-          name: flux-git-ssh
+  # TEMPORARILY DISABLED - Flux bootstrap manifest (GitRepository)
+  # - path: /root/flux/gitrepository.yaml
+  #   owner: root:root
+  #   permissions: '0644'
+  #   content: |
+  #     ---
+  #     apiVersion: v1
+  #     kind: Secret
+  #     metadata:
+  #       name: flux-git-ssh
+  #       namespace: flux-system
+  #     type: Opaque
+  #     stringData:
+  #       identity: |
+  #         ${flux_ssh_key}
+  #       known_hosts: |
+  #         github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
+  #     ---
+  #     apiVersion: source.toolkit.fluxcd.io/v1
+  #     kind: GitRepository
+  #     metadata:
+  #       name: monorepo
+  #       namespace: flux-system
+  #     spec:
+  #       interval: 1m
+  #       url: ssh://git@github.com/louisjmorgan/lvs-cloud.git
+  #       ref:
+  #         branch: master
+  #       secretRef:
+  #         name: flux-git-ssh
 
-  # Flux bootstrap manifest (Kustomization)
-  - path: /root/flux/kustomization.yaml
-    owner: root:root
-    permissions: '0644'
-    content: |
-      apiVersion: kustomize.toolkit.fluxcd.io/v1
-      kind: Kustomization
-      metadata:
-        name: cluster
-        namespace: flux-system
-      spec:
-        interval: 10m
-        sourceRef:
-          kind: GitRepository
-          name: monorepo
-        path: ./clusters/prod
-        prune: true
-        wait: false
-        timeout: 5m
+  # TEMPORARILY DISABLED - Flux bootstrap manifest (Kustomization)
+  # - path: /root/flux/kustomization.yaml
+  #   owner: root:root
+  #   permissions: '0644'
+  #   content: |
+  #     apiVersion: kustomize.toolkit.fluxcd.io/v1
+  #     kind: Kustomization
+  #     metadata:
+  #       name: cluster
+  #       namespace: flux-system
+  #     spec:
+  #       interval: 10m
+  #       sourceRef:
+  #         kind: GitRepository
+  #         name: monorepo
+  #       path: ./clusters/prod
+  #       prune: true
+  #       wait: false
+  #       timeout: 5m
 
 runcmd:
   # Wait for volume to be attached
@@ -226,9 +226,9 @@ runcmd:
   - sleep 30
   - kubectl -n flux-system wait --for=condition=ready pod --all --timeout=300s
 
-  # Bootstrap Flux with Git
-  - kubectl apply -f /root/flux/gitrepository.yaml
-  - kubectl apply -f /root/flux/kustomization.yaml
+  # TEMPORARILY DISABLED - Bootstrap Flux with Git
+  # - kubectl apply -f /root/flux/gitrepository.yaml
+  # - kubectl apply -f /root/flux/kustomization.yaml
 
   # Enable weekly k3s upgrades
   - systemctl enable k3s-upgrade.timer

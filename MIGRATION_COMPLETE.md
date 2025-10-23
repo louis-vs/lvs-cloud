@@ -193,28 +193,35 @@ caddy hash-password --algorithm bcrypt
 
 **Add GitHub Secrets:**
 
+Required for Terraform (infrastructure workflow):
+
+- `HCLOUD_TOKEN_RO` - Hetzner Cloud read-only API token
+- `HCLOUD_TOKEN_RW` - Hetzner Cloud read-write API token
+- `S3_ACCESS_KEY` - Hetzner S3 access key (for Terraform state)
+- `S3_SECRET_KEY` - Hetzner S3 secret key (for Terraform state)
+- `SSH_PRIVATE_KEY` - SSH private key for server access (if needed by workflows)
 - `REGISTRY_PASSWORD` - Plaintext password for k3s registries.yaml
-- `REGISTRY_HTPASSWD` - Bcrypt hash from above
-- `POSTGRES_ADMIN_PASSWORD`, `POSTGRES_RUBY_PASSWORD`, etc.
-- `HETZNER_S3_ACCESS_KEY`, `HETZNER_S3_SECRET_KEY`
+- `REGISTRY_HTPASSWD` - Bcrypt hash from `htpasswd -nbB robot_user "password" | cut -d: -f2`
 
-**Create Hetzner S3 buckets:**
+Note: PostgreSQL and Longhorn backup secrets are created manually on the cluster after deployment.
 
+**Create Hetzner S3 buckets (via Hetzner Console):**
+
+Hetzner Object Storage is not managed by Terraform (no provider support). Create these buckets manually:
+
+- `lvs-cloud-terraform-state` (for Terraform state - should already exist)
 - `lvs-cloud-longhorn-backups` (for Longhorn volume backups)
 - `lvs-cloud-pg-backups` (for PostgreSQL logical backups)
 
-### 2. Testing Locally
+Region: `nbg1` (Nuremberg)
 
-**Validate manifests:**
+### 2. Testing Locally (Optional)
+
+**Test Helm chart rendering (requires `helm` CLI):**
 
 ```bash
-# Test Helm chart rendering
+# Install helm if needed: brew install helm
 helm template applications/ruby-demo-app/chart -f applications/ruby-demo-app/values.yaml
-
-# Validate Kubernetes manifests
-kubectl apply --dry-run=client -f clusters/prod/
-kubectl apply --dry-run=client -f infrastructure/longhorn/
-kubectl apply --dry-run=client -f platform/
 ```
 
 **Terraform plan:**
@@ -222,8 +229,16 @@ kubectl apply --dry-run=client -f platform/
 ```bash
 cd infrastructure
 terraform init
+
+# Requires TF_VAR_registry_pass and TF_VAR_registry_htpasswd
+export TF_VAR_registry_pass="your-password"
+export TF_VAR_registry_htpasswd="your-bcrypt-hash"
+export TF_VAR_hcloud_token="your-hetzner-token"
+
 terraform plan
 ```
+
+**Note:** You cannot validate Kubernetes manifests with `kubectl` until after the cluster is deployed.
 
 ### 3. Deployment
 
@@ -245,6 +260,7 @@ git push origin master
 **Monitor deployment:**
 
 ```bash
+# SSH to server (kubectl is pre-configured on the server)
 ssh ubuntu@$(dig +short app.lvs.me.uk)
 
 # Check k3s
@@ -257,6 +273,31 @@ flux get all
 # Check applications
 kubectl get pods
 kubectl get ingresses
+```
+
+**Create Kubernetes secrets manually** (after cluster is up):
+
+```bash
+# PostgreSQL secrets
+kubectl create secret generic postgresql-auth -n default \
+  --from-literal=postgres-password='your-admin-password' \
+  --from-literal=user-password='your-ruby-password' \
+  --from-literal=ruby-password='your-ruby-password'
+
+# Longhorn S3 backup credentials
+kubectl create secret generic longhorn-backup -n longhorn-system \
+  --from-literal=AWS_ACCESS_KEY_ID='your-hetzner-s3-key' \
+  --from-literal=AWS_SECRET_ACCESS_KEY='your-hetzner-s3-secret' \
+  --from-literal=AWS_DEFAULT_REGION='nbg1' \
+  --from-literal=AWS_ENDPOINTS='[{"s3":"https://nbg1.your-objectstorage.com"}]'
+
+# PostgreSQL backup S3 credentials
+kubectl create secret generic pg-backup-s3 -n default \
+  --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
+  --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
+  --from-literal=S3_REGION='nbg1' \
+  --from-literal=S3_ACCESS_KEY='your-hetzner-s3-key' \
+  --from-literal=S3_SECRET_KEY='your-hetzner-s3-secret'
 ```
 
 ### 4. First Application Deployment

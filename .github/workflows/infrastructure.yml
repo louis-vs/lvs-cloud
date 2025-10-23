@@ -62,6 +62,7 @@ jobs:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
           TF_VAR_registry_pass: ${{ secrets.REGISTRY_PASSWORD }}
           TF_VAR_registry_htpasswd: ${{ secrets.REGISTRY_HTPASSWD }}
+          TF_VAR_flux_ssh_key: ${{ secrets.FLUX_SSH_PRIVATE_KEY }}
         continue-on-error: true
 
       - name: Show Plan
@@ -95,6 +96,7 @@ jobs:
           TF_VAR_hcloud_token: ${{ secrets.HCLOUD_TOKEN_RW }}
           TF_VAR_registry_pass: ${{ secrets.REGISTRY_PASSWORD }}
           TF_VAR_registry_htpasswd: ${{ secrets.REGISTRY_HTPASSWD }}
+          TF_VAR_flux_ssh_key: ${{ secrets.FLUX_SSH_PRIVATE_KEY }}
 
       - name: Get Outputs
         id: outputs

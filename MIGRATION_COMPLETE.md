@@ -180,10 +180,12 @@ Git Push → GitHub Actions (build image) → Registry
 **Generate SSH deploy key for Flux:**
 
 ```bash
-ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f infrastructure/flux-deploy-key
+ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f flux-deploy-key
 ```
 
-Add `infrastructure/flux-deploy-key.pub` to GitHub as a **Deploy Key** with **write access**.
+1. Add the **public key** (`flux-deploy-key.pub`) to GitHub as a **Deploy Key** with **write access**
+2. Add the **private key** (`flux-deploy-key`) as GitHub Secret `FLUX_SSH_PRIVATE_KEY`
+3. Delete the local keys (don't commit them)
 
 **Generate registry bcrypt password:**
 
@@ -197,9 +199,9 @@ Required for Terraform (infrastructure workflow):
 
 - `HCLOUD_TOKEN_RO` - Hetzner Cloud read-only API token
 - `HCLOUD_TOKEN_RW` - Hetzner Cloud read-write API token
-- `S3_ACCESS_KEY` - Hetzner S3 access key (for Terraform state)
-- `S3_SECRET_KEY` - Hetzner S3 secret key (for Terraform state)
-- `SSH_PRIVATE_KEY` - SSH private key for server access (if needed by workflows)
+- `HETZNER_S3_ACCESS_KEY` - Hetzner S3 access key (for Terraform state backend)
+- `HETZNER_S3_SECRET_KEY` - Hetzner S3 secret key (for Terraform state backend)
+- `FLUX_SSH_PRIVATE_KEY` - Flux deploy key private key (generated above)
 - `REGISTRY_PASSWORD` - Plaintext password for k3s registries.yaml
 - `REGISTRY_HTPASSWD` - Bcrypt hash from `htpasswd -nbB robot_user "password" | cut -d: -f2`
 
@@ -230,10 +232,13 @@ helm template applications/ruby-demo-app/chart -f applications/ruby-demo-app/val
 cd infrastructure
 terraform init
 
-# Requires TF_VAR_registry_pass and TF_VAR_registry_htpasswd
+# Set required environment variables
+export AWS_ACCESS_KEY_ID="your-hetzner-s3-access-key"
+export AWS_SECRET_ACCESS_KEY="your-hetzner-s3-secret-key"
+export TF_VAR_hcloud_token="your-hetzner-token"
 export TF_VAR_registry_pass="your-password"
 export TF_VAR_registry_htpasswd="your-bcrypt-hash"
-export TF_VAR_hcloud_token="your-hetzner-token"
+export TF_VAR_flux_ssh_key="$(cat flux-deploy-key)"
 
 terraform plan
 ```

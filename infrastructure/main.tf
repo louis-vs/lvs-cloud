@@ -58,6 +58,12 @@ variable "registry_htpasswd" {
   sensitive   = true
 }
 
+variable "flux_ssh_key" {
+  description = "Flux GitOps SSH private key for repository access"
+  type        = string
+  sensitive   = true
+}
+
 variable "server_type" {
   description = "Hetzner server type"
   type        = string
@@ -188,7 +194,7 @@ resource "hcloud_server" "main" {
     github_actions_ssh_key = trimspace(file("${path.module}/github-actions-key.pub"))
     registry_pass          = var.registry_pass
     registry_htpasswd      = var.registry_htpasswd
-    flux_ssh_key           = trimspace(file("${path.module}/flux-deploy-key"))
+    flux_ssh_key           = var.flux_ssh_key
   })
 }
 

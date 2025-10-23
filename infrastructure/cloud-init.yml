@@ -101,7 +101,7 @@ packages:
 #  #   owner: root:root
 #  #   permissions: '0600'
 #  #   content: |
-#  #     ${flux_ssh_key}
+#  #
 #
 #  # TEMPORARILY DISABLED - GitHub known_hosts for Flux
 #  # - path: /var/lib/flux/known_hosts
@@ -124,7 +124,7 @@ packages:
 #  #     type: Opaque
 #  #     stringData:
 #  #       identity: |
-#  #         ${flux_ssh_key}
+#  #
 #  #       known_hosts: |
 #  #         github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl
 #  #     ---

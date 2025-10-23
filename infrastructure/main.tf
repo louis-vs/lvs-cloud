@@ -58,13 +58,6 @@ variable "registry_htpasswd" {
   sensitive   = true
 }
 
-variable "flux_ssh_key" {
-  description = "Flux GitOps SSH private key for repository access (TEMPORARILY DISABLED)"
-  type        = string
-  sensitive   = true
-  default     = "# TEMPORARILY DISABLED"
-}
-
 variable "server_type" {
   description = "Hetzner server type"
   type        = string
@@ -184,7 +177,6 @@ resource "hcloud_server" "main" {
     ssh_key           = trimspace(file("${path.module}/lvs-cloud.pub"))
     registry_pass     = var.registry_pass
     registry_htpasswd = var.registry_htpasswd
-    flux_ssh_key      = var.flux_ssh_key
   })
 }
 

@@ -177,16 +177,6 @@ Git Push → GitHub Actions (build image) → Registry
 
 ### 1. Before Applying
 
-**Generate SSH deploy key for Flux:**
-
-```bash
-ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f flux-deploy-key
-```
-
-1. Add the **public key** (`flux-deploy-key.pub`) to GitHub as a **Deploy Key** with **write access**
-2. Add the **private key** (`flux-deploy-key`) as GitHub Secret `FLUX_SSH_PRIVATE_KEY`
-3. Delete the local keys (don't commit them)
-
 **Generate registry bcrypt password:**
 
 ```bash
@@ -201,11 +191,10 @@ Required for Terraform (infrastructure workflow):
 - `HCLOUD_TOKEN_RW` - Hetzner Cloud read-write API token
 - `HETZNER_S3_ACCESS_KEY` - Hetzner S3 access key (for Terraform state backend)
 - `HETZNER_S3_SECRET_KEY` - Hetzner S3 secret key (for Terraform state backend)
-- `FLUX_SSH_PRIVATE_KEY` - Flux deploy key private key (generated above)
 - `REGISTRY_PASSWORD` - Plaintext password for k3s registries.yaml
 - `REGISTRY_HTPASSWD` - Bcrypt hash from `htpasswd -nbB robot_user "password" | cut -d: -f2`
 
-Note: PostgreSQL and Longhorn backup secrets are created manually on the cluster after deployment.
+Note: Flux SSH key, PostgreSQL, and Longhorn backup secrets are created manually on the cluster after deployment.
 
 **Create Hetzner S3 buckets (via Hetzner Console):**
 
@@ -238,7 +227,6 @@ export AWS_SECRET_ACCESS_KEY="your-hetzner-s3-secret-key"
 export TF_VAR_hcloud_token="your-hetzner-token"
 export TF_VAR_registry_pass="your-password"
 export TF_VAR_registry_htpasswd="your-bcrypt-hash"
-export TF_VAR_flux_ssh_key="$(cat flux-deploy-key)"
 
 terraform plan
 ```
@@ -280,9 +268,26 @@ kubectl get pods
 kubectl get ingresses
 ```
 
-**Create Kubernetes secrets manually** (after cluster is up):
+**Bootstrap Flux and create secrets manually** (after cluster is up):
 
 ```bash
+# Generate Flux SSH deploy key
+ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f /tmp/flux-deploy-key
+
+# Add public key to GitHub as Deploy Key with write access
+cat /tmp/flux-deploy-key.pub
+# Go to: https://github.com/louisjmorgan/lvs-cloud/settings/keys/new
+
+# Bootstrap Flux with the generated key
+flux bootstrap git \
+  --url=ssh://git@github.com/louisjmorgan/lvs-cloud.git \
+  --branch=master \
+  --path=clusters/prod \
+  --private-key-file=/tmp/flux-deploy-key
+
+# Clean up temporary key
+rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub
+
 # PostgreSQL secrets
 kubectl create secret generic postgresql-auth -n default \
   --from-literal=postgres-password='your-admin-password' \

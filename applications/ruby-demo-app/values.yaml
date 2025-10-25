@@ -2,9 +2,9 @@
 # Flux image setters will update these values automatically
 
 image:
-  repository: registry.lvs.me.uk/ruby-demo-app   # {"$imagepolicy": "flux-system:ruby-demo-app:name"}
-  tag: "1.0.0"                                    # {"$imagepolicy": "flux-system:ruby-demo-app:tag"}
-  pullPolicy: IfNotPresent
+  repository: registry.lvs.me.uk/ruby-demo-app
+  tag: "latest"
+  pullPolicy: Always
 
 replicaCount: 2
 

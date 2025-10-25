@@ -276,14 +276,27 @@ ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f /tmp/flux-deploy-key
 
 # Add public key to GitHub as Deploy Key with write access
 cat /tmp/flux-deploy-key.pub
-# Go to: https://github.com/louisjmorgan/lvs-cloud/settings/keys/new
+# Go to: https://github.com/louis-vs/lvs-cloud/settings/keys/new
 
 # Bootstrap Flux with the generated key
 flux bootstrap git \
-  --url=ssh://git@github.com/louisjmorgan/lvs-cloud.git \
+  --url=ssh://git@github.com/louis-vs/lvs-cloud.git \
   --branch=master \
   --path=clusters/prod \
   --private-key-file=/tmp/flux-deploy-key
+
+# Create flux-git-ssh secret for monorepo GitRepository
+ssh-keyscan github.com > /tmp/known_hosts
+kubectl create secret generic flux-git-ssh \
+  -n flux-system \
+  --from-file=identity=/tmp/flux-deploy-key \
+  --from-file=known_hosts=/tmp/known_hosts
+
+# Force reconcile to pick up the secret
+flux reconcile source git monorepo
+
+# Wait for infrastructure to deploy (creates namespaces)
+kubectl wait --for=condition=ready kustomization -n flux-system infrastructure --timeout=5m
 
 # Clean up temporary key
 rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub

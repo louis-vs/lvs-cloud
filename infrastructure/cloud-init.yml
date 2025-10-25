@@ -165,6 +165,10 @@ runcmd:
   # Enable weekly k3s upgrades
   - systemctl enable k3s-upgrade.timer
 
+  # Configure kubectl for ubuntu user
+  - echo 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml' >> /home/ubuntu/.bashrc
+  - chown ubuntu:ubuntu /home/ubuntu/.bashrc
+
   # Setup complete (Flux Git bootstrap is manual - see docs)
   - echo "K3s + Flux controllers + Registry setup complete" > /var/log/lvs-cloud-setup.log
   - echo "Run 'flux bootstrap' manually to connect to Git" >> /var/log/lvs-cloud-setup.log

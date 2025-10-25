@@ -28,7 +28,7 @@ spec:
       persistence:
         enabled: true
         storageClass: longhorn
-        size: 20Gi
+        size: 15Gi
         annotations:
           longhorn.io/recurring-jobs: |
             [

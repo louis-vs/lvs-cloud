@@ -30,9 +30,14 @@ ingress:
 
 env:
   - name: DATABASE_URL
-    value: postgresql://ruby_demo_user:CHANGEME@postgresql:5432/ruby_demo
+    value: postgresql://ruby_demo_user:$(POSTGRES_PASSWORD)@postgresql:5432/ruby_demo
   - name: RACK_ENV
     value: production
+  - name: POSTGRES_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-auth
+        key: ruby-password
 
 resources:
   requests:

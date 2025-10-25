@@ -19,12 +19,12 @@ spec:
       defaultClassReplicaCount: 1
 
     defaultSettings:
-      defaultReplicaCount: 1
+      defaultReplicaCount: "1"
       defaultDataPath: /srv/data/longhorn
       backupTarget: s3://lvs-cloud-longhorn-backups@nbg1
       backupTargetCredentialSecret: longhorn-backup
-      concurrentReplicaRebuildPerNodeLimit: 1
-      createDefaultDiskLabeledNodes: false
+      concurrentReplicaRebuildPerNodeLimit: "1"
+      createDefaultDiskLabeledNodes: "false"
 
     longhornManager:
       tolerations:

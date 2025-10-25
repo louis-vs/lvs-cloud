@@ -14,3 +14,7 @@ spec:
         namespace: flux-system
       valuesFiles:
         - ./applications/ruby-demo-app/values.yaml
+  values:
+    image:
+      repository: registry.lvs.me.uk/ruby-demo-app # {"$imagepolicy": "flux-system:ruby-demo-app:name"}
+      tag: "1.0.5" # {"$imagepolicy": "flux-system:ruby-demo-app:tag"}

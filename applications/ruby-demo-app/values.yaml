@@ -29,8 +29,6 @@ ingress:
         - app.lvs.me.uk
 
 env:
-  - name: DATABASE_URL
-    value: postgresql://ruby_demo_user:$(POSTGRES_PASSWORD)@postgresql:5432/ruby_demo
   - name: RACK_ENV
     value: production
   - name: POSTGRES_PASSWORD

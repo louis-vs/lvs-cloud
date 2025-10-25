@@ -55,7 +55,14 @@ START_TIME = Time.now
 APP_LOGGER = StructuredLogger.new
 
 # Database connection setup
-DATABASE_URL = ENV.fetch('DATABASE_URL', 'postgresql://ruby_demo_user:changeme@postgresql:5432/ruby_demo')
+# Construct DATABASE_URL from individual env vars for security
+DB_USER = ENV.fetch('DB_USER', 'ruby_demo_user')
+DB_PASSWORD = ENV.fetch('POSTGRES_PASSWORD', 'changeme')
+DB_HOST = ENV.fetch('DB_HOST', 'postgresql')
+DB_PORT = ENV.fetch('DB_PORT', '5432')
+DB_NAME = ENV.fetch('DB_NAME', 'ruby_demo')
+
+DATABASE_URL = ENV['DATABASE_URL'] || "postgresql://#{DB_USER}:#{DB_PASSWORD}@#{DB_HOST}:#{DB_PORT}/#{DB_NAME}"
 
 def setup_database
   conn = PG.connect(DATABASE_URL)

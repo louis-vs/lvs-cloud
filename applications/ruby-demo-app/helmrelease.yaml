@@ -12,5 +12,5 @@ spec:
         kind: GitRepository
         name: monorepo
         namespace: flux-system
-  valuesFiles:
-    - ./applications/ruby-demo-app/values.yaml
+      valuesFiles:
+        - ./applications/ruby-demo-app/values.yaml

@@ -3,16 +3,13 @@
 
 image:
   repository: registry.lvs.me.uk/ruby-demo-app # {"$imagepolicy": "flux-system:ruby-demo-app:name"}
-  tag: "latest" # {"$imagepolicy": "flux-system:ruby-demo-app:tag"}
+  tag: "1.0.5" # {"$imagepolicy": "flux-system:ruby-demo-app:tag"}
   pullPolicy: Always
-
 replicaCount: 2
-
 service:
   type: ClusterIP
   port: 80
   targetPort: 4567
-
 ingress:
   enabled: true
   className: traefik
@@ -27,7 +24,6 @@ ingress:
     - secretName: ruby-demo-app-tls
       hosts:
         - app.lvs.me.uk
-
 env:
   - name: RACK_ENV
     value: production
@@ -36,7 +32,6 @@ env:
       secretKeyRef:
         name: postgresql-auth
         key: ruby-password
-
 resources:
   requests:
     cpu: "200m"

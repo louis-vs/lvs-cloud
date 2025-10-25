@@ -85,9 +85,8 @@ jobs:
         if: steps.check.outputs.has_dockerfile == 'true'
         id: version
         run: |
-          # Use git commit SHA as version
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          VERSION="1.0.${GITHUB_RUN_NUMBER}-${SHORT_SHA}"
+          # Use run number for clean semver
+          VERSION="1.0.${GITHUB_RUN_NUMBER}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 

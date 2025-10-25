@@ -20,7 +20,4 @@ spec:
     name: ruby-demo-app
   policy:
     semver:
-      range: "^1.0.0"
-  filterTags:
-    pattern: '^1\.0\.\d+-[a-f0-9]+$'
-    extract: '$0'
+      range: ">=1.0.0"

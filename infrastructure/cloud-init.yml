@@ -153,15 +153,6 @@ runcmd:
   - sleep 30
   - kubectl wait --for=condition=ready node --all --timeout=300s
 
-  # Install Flux
-  - |
-    curl -s https://fluxcd.io/install.sh | bash
-    kubectl apply -f https://github.com/fluxcd/flux2/releases/latest/download/install.yaml
-
-  # Wait for Flux controllers
-  - sleep 30
-  - kubectl -n flux-system wait --for=condition=ready pod --all --timeout=300s
-
   # Enable weekly k3s upgrades
   - systemctl enable k3s-upgrade.timer
 
@@ -169,7 +160,7 @@ runcmd:
   - echo 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml' >> /home/ubuntu/.bashrc
   - chown ubuntu:ubuntu /home/ubuntu/.bashrc
 
-  # Setup complete (Flux Git bootstrap is manual - see docs)
-  - echo "K3s + Flux controllers + Registry setup complete" > /var/log/lvs-cloud-setup.log
-  - echo "Run 'flux bootstrap' manually to connect to Git" >> /var/log/lvs-cloud-setup.log
+  # Setup complete (Flux bootstrap is manual - see docs/BOOTSTRAP.md)
+  - echo "K3s + Registry setup complete" > /var/log/lvs-cloud-setup.log
+  - echo "Next: SSH to server and follow docs/BOOTSTRAP.md" >> /var/log/lvs-cloud-setup.log
   - date >> /var/log/lvs-cloud-setup.log

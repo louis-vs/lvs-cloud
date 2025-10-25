@@ -13,8 +13,9 @@ spec:
       ref:
         branch: master
     commit:
-      authorName: flux-bot
-      authorEmail: ci@lvs.me.uk
+      author:
+        name: flux-bot
+        email: ci@lvs.me.uk
       messageTemplate: "chore: update images"
     push:
       branch: master

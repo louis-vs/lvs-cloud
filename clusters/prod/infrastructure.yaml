@@ -11,4 +11,6 @@ spec:
   path: ./infrastructure
   prune: true
   wait: true
-  timeout: 5m
+  timeout: 10m
+  dependsOn:
+    - name: platform

@@ -8,6 +8,11 @@ image:
 
 replicaCount: 2
 
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 4567
+
 env:
   - name: DATABASE_URL
     value: postgresql://ruby_demo_user:CHANGEME@postgresql:5432/ruby_demo

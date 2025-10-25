@@ -93,11 +93,11 @@ flux bootstrap git \
 # You should see: "✔ Flux bootstrap completed"
 ```
 
-### 4. Create Kubernetes Secrets (FROM LOCAL MACHINE)
+### 4. Create Initial Kubernetes Secrets (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel from step 3.**
 
-Flux needs these secrets to deploy platform services:
+Create initial secrets needed for Flux to start deploying:
 
 ```bash
 # Get GitHub SSH host keys
@@ -116,6 +116,45 @@ kubectl create secret generic postgresql-auth -n default \
   --from-literal=user-password='CHANGE_ME_USER_PASSWORD' \
   --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD'
 
+# Create PostgreSQL S3 backup credentials
+kubectl create secret generic pg-backup-s3 -n default \
+  --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
+  --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
+  --from-literal=S3_REGION='nbg1' \
+  --from-literal=S3_ACCESS_KEY='YOUR_HETZNER_S3_ACCESS_KEY' \
+  --from-literal=S3_SECRET_KEY='YOUR_HETZNER_S3_SECRET_KEY'
+```
+
+### 5. Monitor Initial Deployment (FROM LOCAL MACHINE)
+
+**Continue using the same kubectl context and SSH tunnel.**
+
+Flux will now start deploying platform services. Monitor until Longhorn is ready:
+
+```bash
+# Watch Flux reconciliation progress
+watch flux get kustomizations
+
+# Wait for storage-install to show READY True
+# This takes 10-15 minutes
+
+# Expected initial order:
+# 1. flux-system (immediate) - Flux itself
+# 2. helmrepositories (30s) - Helm chart repositories
+# 3. storage-install (10-15m) - Longhorn storage system
+# 4. cert-manager-install (5-10m) - TLS certificate manager
+
+# Wait until storage-install shows READY True, then proceed to step 6
+```
+
+### 6. Create Longhorn Secret (FROM LOCAL MACHINE)
+
+**After storage-install shows READY True**, create the Longhorn backup secret:
+
+```bash
+# Verify longhorn-system namespace exists
+kubectl get namespace longhorn-system
+
 # Create Longhorn S3 backup credentials
 # Replace with your actual Hetzner S3 credentials
 kubectl create secret generic longhorn-backup -n longhorn-system \
@@ -124,33 +163,21 @@ kubectl create secret generic longhorn-backup -n longhorn-system \
   --from-literal=AWS_DEFAULT_REGION='nbg1' \
   --from-literal=AWS_ENDPOINTS='[{"s3":"https://nbg1.your-objectstorage.com"}]'
 
-# Create PostgreSQL S3 backup credentials
-kubectl create secret generic pg-backup-s3 -n default \
-  --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
-  --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
-  --from-literal=S3_REGION='nbg1' \
-  --from-literal=S3_ACCESS_KEY='YOUR_HETZNER_S3_ACCESS_KEY' \
-  --from-literal=S3_SECRET_KEY='YOUR_HETZNER_S3_SECRET_KEY'
-
 # Clean up temporary files
 rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub /tmp/known_hosts /tmp/k3s-kubeconfig.yaml
 ```
 
-### 5. Monitor Deployment (FROM LOCAL MACHINE)
+### 7. Monitor Full Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 
-Flux will now automatically deploy all platform services in the correct order:
+Wait for all remaining services to deploy:
 
 ```bash
 # Watch Flux reconciliation progress
 watch flux get kustomizations
 
-# Expected order (with approximate timing):
-# 1. flux-system (immediate) - Flux itself
-# 2. helmrepositories (30s) - Helm chart repositories
-# 3. storage-install (10-15m) - Longhorn storage system
-# 4. cert-manager-install (5-10m) - TLS certificate manager
+# Remaining deployment order:
 # 5. storage-config (1m) - Longhorn recurring backup jobs
 # 6. cert-manager-config (1m) - Let's Encrypt cluster issuers
 # 7. registry (5m) - Docker registry
@@ -179,7 +206,7 @@ kubectl logs -n <namespace> <pod-name>
 flux reconcile kustomization <name> --with-source
 ```
 
-### 6. Verify Deployment (FROM LOCAL MACHINE)
+### 8. Verify Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 

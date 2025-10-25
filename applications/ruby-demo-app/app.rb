@@ -19,7 +19,7 @@ class StructuredLogger
   def initialize
     @base_fields = {
       service: 'ruby-demo-app',
-      version: '1.2.0',
+      version: '1.3.0',
       environment: ENV.fetch('RACK_ENV', 'production')
     }
   end
@@ -116,7 +116,7 @@ app_info = prometheus.gauge(
   labels: %i[version environment service]
 )
 app_info.set(1,
-             labels: { version: '1.2.0', environment: ENV.fetch('RACK_ENV', 'production'), service: 'ruby-demo-app' })
+             labels: { version: '1.3.0', environment: ENV.fetch('RACK_ENV', 'production'), service: 'ruby-demo-app' })
 
 # Process start time for uptime calculation
 process_start_time = prometheus.gauge(
@@ -142,7 +142,7 @@ http_request_duration = prometheus.histogram(
 # Configure OpenTelemetry
 OpenTelemetry::SDK.configure do |c|
   c.service_name = 'ruby-demo-app'
-  c.service_version = '1.2.0'
+  c.service_version = '1.3.0'
 
   # Add OTLP exporter for metrics and traces
   c.add_span_processor(
@@ -217,7 +217,7 @@ after do
     @span.set_attribute('http.response_size', response.body.length) if response.body
     @span.set_attribute('http.duration', duration)
     @span.set_attribute('service.name', 'ruby-demo-app')
-    @span.set_attribute('service.version', '1.2.0')
+    @span.set_attribute('service.version', '1.3.0')
 
     # Set span status
     @span.status = response.status >= 400 ? OpenTelemetry::Trace::Status.error : OpenTelemetry::Trace::Status.ok
@@ -240,11 +240,11 @@ get '/' do
   content_type :json
   {
     message: 'Ruby Demo Application - Clean Architecture',
-    version: '1.2.0',
+    version: '1.3.0',
     uptime: Time.now - START_TIME,
     timestamp: Time.now.iso8601,
     architecture: 'platform/applications separation',
-    deployment_status: 'json formatting fixed'
+    deployment_status: 'automatic image updates via Flux'
   }.to_json
 end
 

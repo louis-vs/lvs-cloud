@@ -22,7 +22,7 @@ spec:
       database: "ruby_demo"
       secretKeys:
         adminPasswordKey: postgres-password
-        userPasswordKey: user-password
+        userPasswordKey: ruby-password
 
     primary:
       persistence:

@@ -240,7 +240,7 @@ get '/' do
   content_type :json
   {
     message: 'Ruby Demo Application - Clean Architecture',
-    version: '1.1.1',
+    version: '1.2.0',
     uptime: Time.now - START_TIME,
     timestamp: Time.now.iso8601,
     architecture: 'platform/applications separation',

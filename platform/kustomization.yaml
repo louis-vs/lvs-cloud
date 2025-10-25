@@ -4,4 +4,4 @@ resources:
   - helmrepositories
   - cert-manager
   - postgresql-new
-  - flux-image-automation
+  # - flux-image-automation  # Requires flux image-automation-controller (not installed by default)

@@ -41,20 +41,22 @@ git push origin master
 dig +short app.lvs.me.uk
 ```
 
-### 2. SSH to Server
+### 2. Verify Server is Ready
 
 ```bash
-ssh ubuntu@$(dig +short app.lvs.me.uk)
-
-# Verify k3s is running
-kubectl get nodes
+# Wait ~5 minutes for server provisioning, then verify
+ssh ubuntu@$(dig +short app.lvs.me.uk) kubectl get nodes
 # Should show: STATUS Ready
+
+# If successful, exit back to your local machine
 ```
 
-### 3. Bootstrap Flux
+### 3. Bootstrap Flux (FROM LOCAL MACHINE)
+
+**IMPORTANT: Run these commands from your LOCAL machine, NOT on the server.**
 
 ```bash
-# Generate Flux SSH deploy key
+# Generate Flux SSH deploy key (on your local machine)
 ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f /tmp/flux-deploy-key -N ""
 
 # Display public key
@@ -66,7 +68,18 @@ cat /tmp/flux-deploy-key.pub
 # Key: <paste public key>
 # [x] Allow write access
 
-# Bootstrap Flux (installs Flux and connects to Git)
+# Bootstrap Flux (installs Flux on server, run from local machine)
+# First, get the kubeconfig from the server
+ssh ubuntu@$(dig +short app.lvs.me.uk) cat /etc/rancher/k3s/k3s.yaml | \
+  sed "s/127.0.0.1/$(dig +short app.lvs.me.uk)/" > /tmp/k3s-kubeconfig.yaml
+
+# Set kubectl context to use this config
+export KUBECONFIG=/tmp/k3s-kubeconfig.yaml
+
+# Verify connection
+kubectl get nodes
+
+# Bootstrap Flux
 flux bootstrap git \
   --url=ssh://git@github.com/louis-vs/lvs-cloud.git \
   --branch=master \
@@ -77,7 +90,9 @@ flux bootstrap git \
 # You should see: "✔ Flux bootstrap completed"
 ```
 
-### 4. Create Kubernetes Secrets
+### 4. Create Kubernetes Secrets (FROM LOCAL MACHINE)
+
+**Continue using the same kubectl context from step 3.**
 
 Flux needs these secrets to deploy platform services:
 
@@ -115,10 +130,12 @@ kubectl create secret generic pg-backup-s3 -n default \
   --from-literal=S3_SECRET_KEY='YOUR_HETZNER_S3_SECRET_KEY'
 
 # Clean up temporary files
-rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub /tmp/known_hosts
+rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub /tmp/known_hosts /tmp/k3s-kubeconfig.yaml
 ```
 
-### 5. Monitor Deployment
+### 5. Monitor Deployment (FROM LOCAL MACHINE)
+
+**Continue using the same kubectl context.**
 
 Flux will now automatically deploy all platform services in the correct order:
 
@@ -159,7 +176,9 @@ kubectl logs -n <namespace> <pod-name>
 flux reconcile kustomization <name> --with-source
 ```
 
-### 6. Verify Deployment
+### 6. Verify Deployment (FROM LOCAL MACHINE)
+
+**Continue using the same kubectl context.**
 
 Once all kustomizations show `READY True`:
 

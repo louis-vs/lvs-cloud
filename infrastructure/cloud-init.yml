@@ -162,5 +162,5 @@ runcmd:
 
   # Setup complete (Flux bootstrap is manual - see docs/BOOTSTRAP.md)
   - echo "K3s + Registry setup complete" > /var/log/lvs-cloud-setup.log
-  - echo "Next: SSH to server and follow docs/BOOTSTRAP.md" >> /var/log/lvs-cloud-setup.log
+  - echo "SSH to server and follow docs/BOOTSTRAP.md" >> /var/log/lvs-cloud-setup.log
   - date >> /var/log/lvs-cloud-setup.log

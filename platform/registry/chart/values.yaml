@@ -13,7 +13,7 @@ ingress:
   enabled: true
   className: traefik
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/cluster-issuer: letsencrypt
   hosts:
     - host: registry.lvs.me.uk
       paths:

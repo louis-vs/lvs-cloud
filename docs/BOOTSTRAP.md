@@ -69,11 +69,14 @@ cat /tmp/flux-deploy-key.pub
 # [x] Allow write access
 
 # Bootstrap Flux (installs Flux on server, run from local machine)
-# First, get the kubeconfig from the server
-ssh ubuntu@$(dig +short app.lvs.me.uk) cat /etc/rancher/k3s/k3s.yaml | \
-  sed "s/127.0.0.1/$(dig +short app.lvs.me.uk)/" > /tmp/k3s-kubeconfig.yaml
+# First, set up SSH tunnel for k3s API access (run in separate terminal)
+# Leave this running for the entire bootstrap process
+ssh -L 6443:127.0.0.1:6443 ubuntu@$(dig +short app.lvs.me.uk) -N
 
-# Set kubectl context to use this config
+# In your main terminal, get the kubeconfig from the server
+ssh ubuntu@$(dig +short app.lvs.me.uk) cat /etc/rancher/k3s/k3s.yaml > /tmp/k3s-kubeconfig.yaml
+
+# Set kubectl context to use this config (points to localhost:6443 via tunnel)
 export KUBECONFIG=/tmp/k3s-kubeconfig.yaml
 
 # Verify connection
@@ -92,7 +95,7 @@ flux bootstrap git \
 
 ### 4. Create Kubernetes Secrets (FROM LOCAL MACHINE)
 
-**Continue using the same kubectl context from step 3.**
+**Continue using the same kubectl context and SSH tunnel from step 3.**
 
 Flux needs these secrets to deploy platform services:
 
@@ -135,7 +138,7 @@ rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub /tmp/known_hosts /tmp/k3s-kubec
 
 ### 5. Monitor Deployment (FROM LOCAL MACHINE)
 
-**Continue using the same kubectl context.**
+**Continue using the same kubectl context and SSH tunnel.**
 
 Flux will now automatically deploy all platform services in the correct order:
 
@@ -178,7 +181,7 @@ flux reconcile kustomization <name> --with-source
 
 ### 6. Verify Deployment (FROM LOCAL MACHINE)
 
-**Continue using the same kubectl context.**
+**Continue using the same kubectl context and SSH tunnel.**
 
 Once all kustomizations show `READY True`:
 

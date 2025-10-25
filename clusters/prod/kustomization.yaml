@@ -7,5 +7,6 @@ resources:
   - storage-config.yaml
   - cert-manager-install.yaml
   - cert-manager-config.yaml
+  - registry.yaml
   - postgresql.yaml
   - apps.yaml

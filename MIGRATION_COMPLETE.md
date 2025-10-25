@@ -22,7 +22,7 @@ Complete redesign from Docker Compose to Kubernetes-native architecture with ent
 - **Longhorn** distributed storage with S3 backups
 - **cert-manager** for automated TLS
 - **Helm charts** for all applications
-- **External registry** (Docker + Caddy) outside cluster
+- **In-cluster registry** with Longhorn storage and TLS
 
 ## New Architecture
 
@@ -52,6 +52,7 @@ platform/                 # ALL Kubernetes platform services
   ├── storage-config/     # Longhorn recurring jobs
   ├── cert-manager-install/  # cert-manager deployment
   ├── cert-manager-config/   # Let's Encrypt issuers
+  ├── registry/           # Docker Registry v2
   └── postgresql-new/     # PostgreSQL database
 
 applications/             # User applications
@@ -64,6 +65,7 @@ clusters/prod/            # Flux entry point
   ├── storage-config.yaml
   ├── cert-manager-install.yaml
   ├── cert-manager-config.yaml
+  ├── registry.yaml
   ├── postgresql.yaml
   └── apps.yaml
 
@@ -83,8 +85,9 @@ Services deploy in this order with proper dependency management:
 4. **cert-manager-install** - TLS certificate manager (~10 minutes)
 5. **storage-config** - Longhorn recurring backup jobs
 6. **cert-manager-config** - Let's Encrypt cluster issuers
-7. **postgresql** - PostgreSQL database
-8. **apps** - Applications (ruby-demo-app)
+7. **registry** - Docker Registry v2 (~5 minutes)
+8. **postgresql** - PostgreSQL database (~5-10 minutes)
+9. **apps** - Applications (ruby-demo-app)
 
 Total deployment time: **30-45 minutes**
 
@@ -109,13 +112,13 @@ Total deployment time: **30-45 minutes**
 - Single replica (appropriate for single node)
 - Path: `/srv/data/longhorn` on host
 
-### External Registry
+### Docker Registry
 
-- Outside cluster (avoids bootstrap issues)
-- Caddy frontend with HTTP-01 Let's Encrypt
-- Docker Registry backend
-- Basic auth (robot_user)
-- Path: `/srv/data/registry` on host
+- In-cluster deployment via Helm chart
+- Traefik ingress with automated TLS from cert-manager
+- Longhorn PVC for persistent storage (50GB)
+- Basic auth (htpasswd)
+- Daily snapshots + weekly S3 backups
 
 ### cert-manager
 

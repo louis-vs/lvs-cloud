@@ -1,0 +1,2 @@
+auth:
+  htpasswd: "robot_user:$2y$05$T9WqRHOsRM5.vyaYNB834.lrDPyKqIXq.SK5WwhShvmt9RMo2p6Fi"

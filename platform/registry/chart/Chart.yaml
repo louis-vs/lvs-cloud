@@ -1,0 +1,6 @@
+apiVersion: v2
+name: docker-registry
+description: Docker Registry v2 for LVS Cloud
+type: application
+version: 1.0.0
+appVersion: "2.8"

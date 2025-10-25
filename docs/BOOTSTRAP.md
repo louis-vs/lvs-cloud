@@ -49,10 +49,6 @@ ssh ubuntu@$(dig +short app.lvs.me.uk)
 # Verify k3s is running
 kubectl get nodes
 # Should show: STATUS Ready
-
-# Verify registry is accessible
-curl -k https://registry.lvs.me.uk/v2/_catalog
-# Should show: {"repositories":[]}
 ```
 
 ### 3. Bootstrap Flux
@@ -137,8 +133,9 @@ watch flux get kustomizations
 # 4. cert-manager-install (5-10m) - TLS certificate manager
 # 5. storage-config (1m) - Longhorn recurring backup jobs
 # 6. cert-manager-config (1m) - Let's Encrypt cluster issuers
-# 7. postgresql (5-10m) - PostgreSQL database
-# 8. apps (5m) - Ruby demo application
+# 7. registry (5m) - Docker registry
+# 8. postgresql (5-10m) - PostgreSQL database
+# 9. apps (5m) - Ruby demo application
 
 # All should show: READY True
 ```
@@ -177,11 +174,15 @@ kubectl get storageclass
 
 # Check cert-manager certificates
 kubectl get certificates -A
-# Should show: ruby-demo-app-tls Ready
+# Should show: ruby-demo-app-tls, registry-tls Ready
 
 # Check ingresses
 kubectl get ingresses -A
-# Should show: app.lvs.me.uk
+# Should show: app.lvs.me.uk, registry.lvs.me.uk
+
+# Test registry
+curl -u robot_user:PASSWORD https://registry.lvs.me.uk/v2/_catalog
+# Should return: {"repositories":[]}
 
 # Test application
 curl https://app.lvs.me.uk
@@ -212,13 +213,14 @@ helmrepositories (Bitnami, Jetstack, Longhorn Helm repos)
     │       ↓
     │   storage-config (RecurringJobs - requires Longhorn CRDs)
     │       ↓
-    │   postgresql (requires Longhorn StorageClass)
+    │   ├─→ registry (Docker registry with PVC + TLS)
+    │   └─→ postgresql (PostgreSQL with PVC)
     │
     └─→ cert-manager-install (cert-manager HelmRelease)
             ↓
         cert-manager-config (ClusterIssuers - requires cert-manager CRDs)
             ↓
-        apps (requires TLS certificates)
+        registry, apps (require TLS certificates)
 ```
 
 ## Post-Deployment

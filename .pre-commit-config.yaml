@@ -9,7 +9,7 @@ repos:
       - id: check-added-large-files
       - id: check-yaml
         args: ['--allow-multiple-documents']
-        exclude: '^applications/.*/chart/templates/.*\.yaml$'
+        exclude: '^(applications|platform)/.*/chart/templates/.*\.yaml$'
       - id: check-json
         exclude: 'tsconfig.*\.json$'
       - id: pretty-format-json

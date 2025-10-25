@@ -1,0 +1,49 @@
+replicaCount: 1
+
+image:
+  repository: registry
+  tag: "2"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 5000
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+  hosts:
+    - host: registry.lvs.me.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: registry-tls
+      hosts:
+        - registry.lvs.me.uk
+
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 50Gi
+  annotations:
+    longhorn.io/recurring-jobs: |
+      [
+        {"name":"daily-snap","task":"snapshot","cron":"0 2 * * *","retain":7,"concurrency":1,"labels":{"app":"registry"}},
+        {"name":"weekly-bak","task":"backup","cron":"0 3 * * 0","retain":4,"concurrency":1,"labels":{"app":"registry"}}
+      ]
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+auth:
+  enabled: true
+  # htpasswd format: use `htpasswd -nbB robot_user password` to generate
+  htpasswd: ""

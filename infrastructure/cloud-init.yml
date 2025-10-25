@@ -7,15 +7,8 @@ users:
     ssh_authorized_keys:
       - ${ssh_key}
 
-apt:
-  sources:
-    caddy:
-      source: "deb [trusted=yes] https://apt.fury.io/caddy/ /"
-
 package_update: true
 packages:
-  - docker.io
-  - caddy
   - curl
   - wget
   - git
@@ -36,26 +29,6 @@ write_files:
           auth:
             username: robot_user
             password: "${registry_pass}"
-
-  # Caddyfile for external registry
-  - path: /etc/caddy/Caddyfile
-    owner: root:root
-    permissions: '0644'
-    content: |
-      registry.lvs.me.uk {
-        encode zstd gzip
-        tls letsencrypt@lvs.me.uk
-
-        @v2 {
-          path_regexp v2 ^/v2/.*$
-        }
-
-        basicauth @v2 {
-          robot_user ${registry_htpasswd}
-        }
-
-        reverse_proxy localhost:5000
-      }
 
   # Weekly k3s upgrade script
   - path: /usr/local/sbin/k3s-upgrade.sh
@@ -130,24 +103,8 @@ runcmd:
   - echo '/dev/sdb /srv/data ext4 defaults 0 2' >> /etc/fstab
 
   # Create data directories
-  - mkdir -p /srv/data/longhorn /srv/data/registry
+  - mkdir -p /srv/data/longhorn
   - chown -R root:root /srv/data
-
-  # Start Docker registry
-  - systemctl enable docker
-  - systemctl start docker
-  - |
-    docker run -d \
-      --name registry \
-      --restart unless-stopped \
-      -p 127.0.0.1:5000:5000 \
-      -e REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry \
-      -v /srv/data/registry:/var/lib/registry \
-      registry:2
-
-  # Start Caddy (will obtain Let's Encrypt cert for registry)
-  - systemctl enable caddy
-  - systemctl start caddy
 
   # Install k3s (keep Traefik ingress controller)
   - |
@@ -166,6 +123,6 @@ runcmd:
   - chown ubuntu:ubuntu /home/ubuntu/.bashrc
 
   # Setup complete (Flux bootstrap is manual - see docs/BOOTSTRAP.md)
-  - echo "K3s + Registry setup complete" > /var/log/lvs-cloud-setup.log
+  - echo "K3s setup complete" > /var/log/lvs-cloud-setup.log
   - echo "SSH to server and follow docs/BOOTSTRAP.md" >> /var/log/lvs-cloud-setup.log
   - date >> /var/log/lvs-cloud-setup.log

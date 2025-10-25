@@ -13,4 +13,7 @@ spec:
   wait: true
   timeout: 5m
   dependsOn:
-    - name: platform
+    - name: storage-install
+    - name: cert-manager-install
+    - name: postgresql
+    - name: registry

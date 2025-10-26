@@ -15,11 +15,13 @@ spec:
         name: grafana
         namespace: flux-system
   values:
+    # CRITICAL: Deploy in SingleBinary mode
     deploymentMode: SingleBinary
 
     loki:
       auth_enabled: false
 
+      # CRITICAL: Must set replication_factor to 1 for single replica
       commonConfig:
         replication_factor: 1
 
@@ -42,6 +44,7 @@ spec:
               prefix: loki_index_
               period: 24h
 
+    # SingleBinary configuration
     singleBinary:
       replicas: 1
 
@@ -58,24 +61,43 @@ spec:
 
       resources:
         requests:
-          cpu: 50m
+          cpu: 100m
           memory: 256Mi
         limits:
-          cpu: 500m
+          cpu: 300m
           memory: 512Mi
 
-    # Disable unnecessary components
+    # CRITICAL: Disable all distributed mode components
     backend:
       replicas: 0
     read:
       replicas: 0
     write:
       replicas: 0
+    ingester:
+      replicas: 0
+    querier:
+      replicas: 0
+    queryFrontend:
+      replicas: 0
+    queryScheduler:
+      replicas: 0
+    distributor:
+      replicas: 0
+    compactor:
+      replicas: 0
+    indexGateway:
+      replicas: 0
+    bloomCompactor:
+      replicas: 0
+    bloomGateway:
+      replicas: 0
 
+    # Disable gateway
     gateway:
       enabled: false
 
-    # Monitoring
+    # Disable monitoring components
     monitoring:
       selfMonitoring:
         enabled: false
@@ -84,5 +106,12 @@ spec:
       lokiCanary:
         enabled: false
 
+    # Disable test
     test:
+      enabled: false
+
+    # Disable unnecessary result/chunk caches
+    resultsCache:
+      enabled: false
+    chunksCache:
       enabled: false

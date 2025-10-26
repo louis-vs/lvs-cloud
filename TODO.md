@@ -1,6 +1,5 @@
 # TODO
 
-- [ ] can we make our demo ruby app display the correct version that's actually deployed according to the helm chart
 - [ ] we need to restore the LGTM monitoring stack. All the config has been completely erased but you can check the git history to see what it used to look like.
   - [ ] platform/monitoring subfolder
   - [ ] loki, grafana, tempo, mimir

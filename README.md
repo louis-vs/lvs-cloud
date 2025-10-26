@@ -117,9 +117,8 @@ pkill -f 'ssh.*6443:127.0.0.1:6443'
 ## Documentation
 
 - **[infrastructure/bootstrap/BOOTSTRAP.md](infrastructure/bootstrap/BOOTSTRAP.md)**: Bootstrap guide (fresh cluster & server recreation)
-- **[DEPLOY.md](DEPLOY.md)**: Adding apps, database setup, deployment patterns
-- **[OPS.md](OPS.md)**: Troubleshooting, monitoring, maintenance
-- **[POSTGRES.md](POSTGRES.md)**: Database management reference
+- **[APPS.md](APPS.md)**: Adding apps, database setup, debugging
+- **[DISASTER_RECOVERY.md](DISASTER_RECOVERY.md)**: DR procedures and backup strategy
 
 ## Commit Message Format
 

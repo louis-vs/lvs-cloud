@@ -25,6 +25,8 @@ ingress:
 env:
   - name: RACK_ENV
     value: production
+  - name: APP_VERSION
+    value: "{{ .Values.image.tag }}"
   - name: POSTGRES_PASSWORD
     valueFrom:
       secretKeyRef:

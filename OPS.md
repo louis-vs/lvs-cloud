@@ -51,6 +51,22 @@ flux get helmreleases
 flux get images all
 ```
 
+### Image Automation Status
+
+```bash
+# Check image repositories
+flux get images repository
+
+# Check image policies
+flux get images policy
+
+# Check image update automation
+flux get image update
+
+# View recent Flux commits
+git log --oneline --author="flux-bot" -10
+```
+
 ### Application Logs
 
 ```bash
@@ -130,20 +146,32 @@ kubectl -n flux-system get pods
 kubectl -n flux-system logs deploy/source-controller
 ```
 
-### Image Not Updating
+### Image Not Updating Automatically
+
+**Symptoms**: New image pushed but deployment not updating
+
+**Check**:
 
 ```bash
-# Check ImageRepository
-flux get images repository
+# Verify ImageRepository can scan
+flux get images repository <app-name>
+# Should show: READY True, last scan time recent
 
-# Check ImagePolicy
-flux get images policy
+# Check authentication
+kubectl get secret registry-credentials -n flux-system
+# Should exist
 
-# Force image scan
-flux reconcile image repository ruby-demo-app
+# Check ImagePolicy selected correct tag
+flux get images policy <app-name>
+# Should show latest tag
 
-# Check ImageUpdateAutomation
-flux get images update
+# Check ImageUpdateAutomation is running
+flux get image update monorepo-auto
+# Should show: READY True
+
+# Force reconciliation
+flux reconcile image repository <app-name>
+flux reconcile image update monorepo-auto
 
 # View automation logs
 kubectl -n flux-system logs deploy/image-automation-controller -f
@@ -151,6 +179,13 @@ kubectl -n flux-system logs deploy/image-automation-controller -f
 # Verify Flux can commit
 git log --oneline --author="flux-bot" -5
 ```
+
+**Common causes**:
+
+- registry-credentials secret missing
+- ImageRepository secretRef not set
+- Image tag doesn't match semver policy range
+- ImageUpdateAutomation can't push (deploy key permissions)
 
 ### HelmRelease Failing
 

@@ -123,6 +123,14 @@ kubectl create secret generic pg-backup-s3 -n default \
   --from-literal=S3_REGION='nbg1' \
   --from-literal=S3_ACCESS_KEY='YOUR_HETZNER_S3_ACCESS_KEY' \
   --from-literal=S3_SECRET_KEY='YOUR_HETZNER_S3_SECRET_KEY'
+
+# Create registry credentials for Flux Image Automation
+# This allows Flux to scan the private registry for new image tags
+kubectl create secret docker-registry registry-credentials \
+  -n flux-system \
+  --docker-server=registry.lvs.me.uk \
+  --docker-username=robot_user \
+  --docker-password='YOUR_REGISTRY_PASSWORD'
 ```
 
 ### 5. Monitor Initial Deployment (FROM LOCAL MACHINE)
@@ -141,8 +149,9 @@ watch flux get kustomizations
 # Expected initial order:
 # 1. flux-system (immediate) - Flux itself
 # 2. helmrepositories (30s) - Helm chart repositories
-# 3. storage-install (10-15m) - Longhorn storage system
-# 4. cert-manager-install (5-10m) - TLS certificate manager
+# 3. image-automation (1m) - Flux Image Automation resources
+# 4. storage-install (10-15m) - Longhorn storage system
+# 5. cert-manager-install (5-10m) - TLS certificate manager
 
 # Wait until storage-install shows READY True, then proceed to step 6
 ```
@@ -236,6 +245,47 @@ curl -u robot_user:PASSWORD https://registry.lvs.me.uk/v2/_catalog
 # Test application
 curl https://app.lvs.me.uk
 # Should return HTML response
+
+# Verify Flux Image Automation
+flux get images repository
+flux get images policy
+flux get image update
+# Should show:
+# - ruby-demo-app ImageRepository: READY True
+# - ruby-demo-app ImagePolicy: latest tag detected
+# - monorepo-auto ImageUpdateAutomation: READY True
+```
+
+## How Image Automation Works
+
+Once deployed, the system automatically updates applications:
+
+1. **Developer pushes code** → GitHub Actions builds image with tag `1.0.X`
+2. **Flux ImageRepository** scans `registry.lvs.me.uk` every 1 minute
+3. **Flux ImagePolicy** selects latest semver tag matching `>=1.0.0`
+4. **Flux ImageUpdateAutomation** commits change to `helmrelease.yaml`:
+   - Updates `spec.values.image.tag` from `1.0.5` → `1.0.6`
+   - Commits with message "chore: update images"
+   - Pushes to master branch
+5. **Flux Kustomization** detects git change, applies updated HelmRelease
+6. **Kubernetes** performs rolling update with health checks
+
+**Key detail**: Image tag is in `helmrelease.yaml` `spec.values`, NOT in `values.yaml`. This ensures only changes to the specific app trigger reconciliation.
+
+**Viewing automation in action**:
+
+```bash
+# Watch for new images
+watch -n 5 'flux get images repository'
+
+# See what Flux will update
+flux get images policy ruby-demo-app
+
+# Check ImageUpdateAutomation status
+flux get image update monorepo-auto
+
+# View commits from Flux
+git log --oneline --author="flux-bot"
 ```
 
 ## Deployment Timeline
@@ -280,16 +330,20 @@ helmrepositories (Bitnami, Jetstack, Longhorn Helm repos)
 # From your local machine
 cd applications/ruby-demo-app
 
-# Build and push image
+# Build and push image (GitHub Actions does this automatically)
+# For manual testing:
 docker build -t registry.lvs.me.uk/ruby-demo-app:1.0.1 .
 echo "$REGISTRY_PASSWORD" | docker login registry.lvs.me.uk -u robot_user --password-stdin
 docker push registry.lvs.me.uk/ruby-demo-app:1.0.1
 
-# Update values.yaml with new image tag
-# Flux will automatically deploy the new version
-git add applications/ruby-demo-app/values.yaml
-git commit -m "feat(ruby-demo-app): update to v1.0.1"
-git push
+# Image automation will detect the new tag and update helmrelease.yaml automatically
+# No manual git commits needed - Flux handles it!
+
+# To manually update (if automation is disabled):
+# Edit applications/ruby-demo-app/helmrelease.yaml spec.values.image.tag
+# git add applications/ruby-demo-app/helmrelease.yaml
+# git commit -m "feat(ruby-demo-app): update to v1.0.1"
+# git push
 ```
 
 ### Accessing Services

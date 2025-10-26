@@ -1,0 +1,220 @@
+#!/usr/bin/env bash
+# LVS Cloud Bootstrap Script
+# Automates Flux bootstrap and initial secret creation
+# Run this LOCALLY after Terraform provisions the server
+
+set -euo pipefail
+
+# Color output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+
+prompt_password() {
+    local var_name="$1"
+    local prompt_text="$2"
+    local password
+    local password_confirm
+
+    while true; do
+        read -s -p "$prompt_text: " password
+        echo
+        read -s -p "Confirm password: " password_confirm
+        echo
+
+        if [ "$password" = "$password_confirm" ]; then
+            eval "$var_name='$password'"
+            break
+        else
+            warn "Passwords do not match. Try again."
+        fi
+    done
+}
+
+check_prerequisites() {
+    info "Checking prerequisites..."
+
+    command -v flux >/dev/null 2>&1 || error "flux CLI not found. Install: brew install fluxcd/tap/flux"
+    command -v kubectl >/dev/null 2>&1 || error "kubectl not found"
+    command -v ssh-keygen >/dev/null 2>&1 || error "ssh-keygen not found"
+    command -v dig >/dev/null 2>&1 || error "dig not found"
+
+    success "All prerequisites met"
+}
+
+# Main sections
+main() {
+    echo "==================================================="
+    echo "    LVS Cloud Bootstrap Script"
+    echo "==================================================="
+    echo
+
+    check_prerequisites
+
+    # Get server IP
+    info "Detecting server IP..."
+    DEFAULT_IP=$(dig +short app.lvs.me.uk | head -1)
+    read -p "Server IP [$DEFAULT_IP]: " SERVER_IP
+    SERVER_IP=${SERVER_IP:-$DEFAULT_IP}
+    info "Using server: $SERVER_IP"
+
+    # Test SSH connection
+    info "Testing SSH connection..."
+    ssh -o ConnectTimeout=5 ubuntu@$SERVER_IP "echo connected" >/dev/null 2>&1 || \
+        error "Cannot SSH to server. Check that Terraform has completed."
+
+    # Collect passwords
+    info "Collecting passwords (input hidden)..."
+    prompt_password POSTGRES_ADMIN_PASSWORD "PostgreSQL admin password"
+    prompt_password POSTGRES_RUBY_PASSWORD "PostgreSQL ruby_demo_user password"
+    prompt_password REGISTRY_PASSWORD "Registry password (from GitHub secret)"
+
+    read -p "S3 Access Key: " S3_ACCESS_KEY
+    prompt_password S3_SECRET_KEY "S3 Secret Key"
+
+    # Verify server is ready
+    info "Verifying k3s is ready..."
+    ssh ubuntu@$SERVER_IP "kubectl get nodes" >/dev/null 2>&1 || \
+        error "k3s not ready. Wait a few minutes after Terraform completion."
+
+    # Setup SSH tunnel (background)
+    info "Setting up SSH tunnel for kubectl access..."
+    ssh -f -N -L 6443:127.0.0.1:6443 ubuntu@$SERVER_IP
+    TUNNEL_PID=$!
+    trap "kill $TUNNEL_PID 2>/dev/null || true; rm -f /tmp/k3s-kubeconfig.yaml /tmp/flux-deploy-key* /tmp/known_hosts" EXIT
+
+    sleep 2
+
+    # Get kubeconfig
+    info "Downloading kubeconfig..."
+    ssh ubuntu@$SERVER_IP "cat /etc/rancher/k3s/k3s.yaml" > /tmp/k3s-kubeconfig.yaml
+    export KUBECONFIG=/tmp/k3s-kubeconfig.yaml
+
+    # Test kubectl
+    kubectl get nodes >/dev/null 2>&1 || error "kubectl connection failed"
+    success "kubectl connected via SSH tunnel"
+
+    # Check if Flux already bootstrapped
+    if kubectl get namespace flux-system >/dev/null 2>&1; then
+        warn "Flux already bootstrapped. Skipping Flux bootstrap."
+    else
+        # Generate Flux deploy key if needed
+        if [ ! -f infrastructure/flux-deploy-key ]; then
+            info "Generating Flux deploy key..."
+            ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f infrastructure/flux-deploy-key -N ""
+
+            echo
+            warn "Add this deploy key to GitHub with WRITE access:"
+            echo "  https://github.com/louis-vs/lvs-cloud/settings/keys/new"
+            echo
+            cat infrastructure/flux-deploy-key.pub
+            echo
+            read -p "Press Enter after adding the deploy key to GitHub..."
+        fi
+
+        # Bootstrap Flux
+        info "Bootstrapping Flux..."
+        flux bootstrap git \
+            --url=ssh://git@github.com/louis-vs/lvs-cloud.git \
+            --branch=master \
+            --path=clusters/prod \
+            --private-key-file=infrastructure/flux-deploy-key || error "Flux bootstrap failed"
+
+        success "Flux bootstrap completed"
+    fi
+
+    # Create secrets
+    info "Creating Kubernetes secrets..."
+
+    # Flux Git SSH
+    if ! kubectl get secret flux-git-ssh -n flux-system >/dev/null 2>&1; then
+        ssh-keyscan github.com > /tmp/known_hosts
+        kubectl create secret generic flux-git-ssh \
+            -n flux-system \
+            --from-file=identity=infrastructure/flux-deploy-key \
+            --from-file=known_hosts=/tmp/known_hosts
+        success "Created flux-git-ssh secret"
+    else
+        info "flux-git-ssh secret already exists"
+    fi
+
+    # PostgreSQL auth
+    if ! kubectl get secret postgresql-auth -n default >/dev/null 2>&1; then
+        kubectl create secret generic postgresql-auth -n default \
+            --from-literal=postgres-password="$POSTGRES_ADMIN_PASSWORD" \
+            --from-literal=user-password="$POSTGRES_RUBY_PASSWORD" \
+            --from-literal=ruby-password="$POSTGRES_RUBY_PASSWORD"
+        success "Created postgresql-auth secret"
+    else
+        info "postgresql-auth secret already exists"
+    fi
+
+    # Registry credentials (for Flux Image Automation)
+    if ! kubectl get secret registry-credentials -n flux-system >/dev/null 2>&1; then
+        kubectl create secret docker-registry registry-credentials \
+            -n flux-system \
+            --docker-server=registry.lvs.me.uk \
+            --docker-username=robot_user \
+            --docker-password="$REGISTRY_PASSWORD"
+        success "Created registry-credentials secret"
+    else
+        info "registry-credentials secret already exists"
+    fi
+
+    # Wait for longhorn-system namespace
+    info "Waiting for Longhorn to be installed (this takes 10-15 minutes)..."
+    for i in {1..60}; do
+        if kubectl get namespace longhorn-system >/dev/null 2>&1; then
+            success "Longhorn namespace ready"
+            break
+        fi
+        echo -n "."
+        sleep 10
+    done
+    echo
+
+    # Longhorn S3 backup credentials
+    if ! kubectl get secret longhorn-backup -n longhorn-system >/dev/null 2>&1; then
+        kubectl create secret generic longhorn-backup -n longhorn-system \
+            --from-literal=AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" \
+            --from-literal=AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+            --from-literal=AWS_DEFAULT_REGION='nbg1' \
+            --from-literal=AWS_ENDPOINTS='{"s3":"https://nbg1.your-objectstorage.com"}'
+        success "Created longhorn-backup secret"
+    else
+        info "longhorn-backup secret already exists"
+    fi
+
+    # PostgreSQL S3 backup credentials
+    if ! kubectl get secret pg-backup-s3 -n default >/dev/null 2>&1; then
+        kubectl create secret generic pg-backup-s3 -n default \
+            --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
+            --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
+            --from-literal=S3_REGION='nbg1' \
+            --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" \
+            --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY"
+        success "Created pg-backup-s3 secret"
+    else
+        info "pg-backup-s3 secret already exists"
+    fi
+
+    # Monitor deployment
+    echo
+    info "Bootstrap complete! Monitoring deployment..."
+    echo "  This will take 30-45 minutes for full deployment"
+    echo "  Press Ctrl+C to exit monitoring (deployment continues in background)"
+    echo
+
+    sleep 5
+    watch -n 10 "flux get kustomizations"
+}
+
+main "$@"

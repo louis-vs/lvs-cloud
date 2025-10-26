@@ -1,6 +1,5 @@
 # TODO
 
-- [ ] sort out CPU requests from existing services. They need to be reduced, or we need to configure it to allow resource sharing. CPU and RAM are very limited so we don't want to have permanent allocations.
 - [ ] make it clearer how we connect to the cluster. Improve the scripts/connect-k8s.sh somehow.
   - [ ] sort out kubeconfig setup - we shouldn't need to export it in every new shell, it should just work. This is making claude code unable to handle command permissions as well which is a pain.
 - [ ] now that we have persistent etcd, we need to rethink bootstrap. Documentation needs to be clear that most of the steps will only actually need to run if etcd is lost, since most config is preserved. The order of steps needs to be changed. For example, we shouldn't be asking for credentials until we actually need them, to minimise the amount of manual input needed. We also need a more robust check to see if flux is bootstrapped, to account for situations where the bootstrap command is interrupted before properly completing.

@@ -35,11 +35,11 @@ spec:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         env:
-        - name: APP_VERSION
-          value: {{ .Values.image.tag | default .Chart.AppVersion | quote }}
-        {{- with .Values.env }}
+          - name: APP_VERSION
+            value: {{ .Values.image.tag | default .Chart.AppVersion | quote }}
+          {{- with .Values.env }}
           {{- toYaml . | nindent 10 }}
-        {{- end }}
+          {{- end }}
         {{- with .Values.envFrom }}
         envFrom:
           {{- toYaml . | nindent 10 }}

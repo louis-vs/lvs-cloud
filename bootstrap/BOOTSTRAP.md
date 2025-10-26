@@ -6,7 +6,7 @@ This guide walks through deploying the entire platform from scratch after Terraf
 
 Before starting, ensure you have:
 
-1. **GitHub Secrets configured** (required for Terraform workflow):
+1. **GitHub Secrets configured** (required for GitHub workflows):
    - `HCLOUD_TOKEN_RO` - Hetzner Cloud read-only API token
    - `HCLOUD_TOKEN_RW` - Hetzner Cloud read-write API token
    - `HETZNER_S3_ACCESS_KEY` - Hetzner S3 access key

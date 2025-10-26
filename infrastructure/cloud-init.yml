@@ -104,12 +104,14 @@ runcmd:
 
   # Create data directories
   - mkdir -p /srv/data/longhorn
+  - mkdir -p /srv/data/k3s
   - chown -R root:root /srv/data
 
   # Install k3s (with Traefik for ingress)
   - |
     curl -sfL https://get.k3s.io | sh -s - \
-      --write-kubeconfig-mode 644
+      --write-kubeconfig-mode 644 \
+      --data-dir /srv/data/k3s
 
   # Wait for k3s to be ready
   - sleep 30

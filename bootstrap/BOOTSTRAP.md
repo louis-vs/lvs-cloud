@@ -364,6 +364,111 @@ kubectl port-forward svc/postgresql 5432:5432
 psql postgresql://ruby_demo_user:PASSWORD@localhost:5432/ruby_demo
 ```
 
+## Persistence Model & Server Recreation
+
+### What Persists on Block Storage
+
+All critical data is stored on the persistent block storage volume (`/dev/sdb` → `/srv/data`):
+
+1. **k3s cluster state** (`/srv/data/k3s`)
+   - etcd database containing all Kubernetes resources
+   - Longhorn volume CRDs with volume metadata
+   - Secrets, ConfigMaps, deployments, services
+
+2. **Longhorn volume data** (`/srv/data/longhorn`)
+   - Actual persistent volume contents (PostgreSQL data, registry images)
+   - Volume snapshots and metadata
+   - Disk configuration
+
+3. **Application data** (stored in Longhorn volumes)
+   - PostgreSQL databases (including users, schemas, data)
+   - Docker registry images
+   - Any other PVC-backed data
+
+### Server Recreation Process
+
+When you recreate the server via Terraform:
+
+1. **Ephemeral components** (recreated):
+   - Server OS and packages
+   - k3s binary and systemd service
+   - Flux controllers
+   - Application pods
+
+2. **Persistent components** (automatically restored):
+   - k3s reads cluster state from `/srv/data/k3s/server/db/`
+   - Longhorn recognizes existing volumes in `/srv/data/longhorn/replicas/`
+   - Kubernetes resources (deployments, services) recreated from etcd
+   - Application pods automatically reattach to existing volumes
+
+### Verification After Server Recreation
+
+After recreating the server, verify volumes persisted correctly:
+
+```bash
+# Check k3s is using persistent data dir
+ssh ubuntu@$(dig +short app.lvs.me.uk) "systemctl cat k3s | grep data-dir"
+# Should show: --data-dir /srv/data/k3s
+
+# Check Longhorn recognizes existing volumes
+kubectl get volumes.longhorn.io -n longhorn-system
+# Should show existing volumes with matching PVC names
+
+# Check PVCs are bound to existing volumes
+kubectl get pvc -A
+# All should show: STATUS Bound
+
+# Verify PostgreSQL data persisted
+kubectl exec postgresql-0 -n default -- psql -U postgres -c '\du'
+# Should show ruby_demo_user and other existing users
+
+# Check registry images persisted
+curl -u robot_user:PASSWORD https://registry.lvs.me.uk/v2/_catalog
+# Should show existing images, not empty
+```
+
+### Manual PostgreSQL Setup (One-Time Only)
+
+PostgreSQL users and databases are created once and persist via Longhorn PVC. On **first bootstrap only**, create application databases:
+
+```bash
+# Get postgres password from secret
+POSTGRES_PASSWORD=$(kubectl get secret postgresql-auth -n default -o jsonpath='{.data.postgres-password}' | base64 -d)
+RUBY_PASSWORD=$(kubectl get secret postgresql-auth -n default -o jsonpath='{.data.ruby-password}' | base64 -d)
+
+# Create ruby_demo_user and database
+kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+  psql -U postgres -c "CREATE USER ruby_demo_user WITH PASSWORD '$RUBY_PASSWORD';"
+
+kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+  psql -U postgres -c "CREATE DATABASE ruby_demo OWNER ruby_demo_user;"
+
+kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+  psql -U postgres -d ruby_demo -c "GRANT ALL PRIVILEGES ON DATABASE ruby_demo TO ruby_demo_user; GRANT ALL ON SCHEMA public TO ruby_demo_user;"
+```
+
+**Note:** These users/databases persist forever in the PostgreSQL PVC. After server recreation, they're automatically available—no need to recreate.
+
+### Disaster Scenarios
+
+**Total block storage failure:**
+
+- Complete data loss—no automated recovery possible
+- Restore from manual backups or accept data loss
+- S3 backups (Longhorn, PostgreSQL) can provide off-site recovery
+
+**Accidental server deletion:**
+
+- Block storage survives (`lifecycle { prevent_destroy = true }` in Terraform)
+- Recreate server via Terraform → automatic full state recovery
+- Zero data loss, ~5 minute downtime
+
+**k3s corruption:**
+
+- etcd on persistent storage means corruption also persists
+- Restore from etcd snapshots if configured
+- Last resort: Manual PV/PVC rebinding (complex, not documented)
+
 ## Rollback
 
 If deployment fails, you can roll back:

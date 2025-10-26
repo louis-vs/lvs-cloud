@@ -87,7 +87,7 @@ main() {
 
     # Setup SSH tunnel (background)
     info "Setting up SSH tunnel for kubectl access..."
-    ssh -f -N -L 6443:127.0.0.1:6443 ubuntu@$SERVER_IP
+    ssh -N -L 6443:127.0.0.1:6443 ubuntu@$SERVER_IP &
     TUNNEL_PID=$!
     trap "kill $TUNNEL_PID 2>/dev/null || true; rm -f /tmp/k3s-kubeconfig.yaml /tmp/flux-deploy-key* /tmp/known_hosts" EXIT
 
@@ -126,7 +126,8 @@ main() {
             --url=ssh://git@github.com/louis-vs/lvs-cloud.git \
             --branch=master \
             --path=clusters/prod \
-            --private-key-file=infrastructure/flux-deploy-key || error "Flux bootstrap failed"
+            --private-key-file=infrastructure/flux-deploy-key \
+            --components-extra=image-reflector-controller,image-automation-controller || error "Flux bootstrap failed"
 
         success "Flux bootstrap completed"
     fi

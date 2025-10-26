@@ -14,7 +14,7 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 ## Current Architecture
 
 **Infrastructure**: Hetzner Cloud cx22 (€9.89/month total) + 50GB block storage
-**Stack**: k3s + Flux CD + LGTM (Loki + Grafana + Tempo + Mimir) + Longhorn + PostgreSQL + In-cluster Registry
+**Stack**: k3s + Flux CD + PGL (Prometheus + Grafana + Loki) + Longhorn + PostgreSQL + In-cluster Registry
 **Deployment**: GitHub Actions (build → push) → Flux Image Automation (scan → commit) → HelmRelease update → k3s rolling deployment
 
 ## File Structure
@@ -23,7 +23,7 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 ├── README.md             # Status, quick commands, current state
 ├── APPS.md               # App deployment and debugging
 ├── infrastructure/       # Terraform for Hetzner Cloud
-├── platform/             # Platform services (LGTM, Traefik, Registry)
+├── platform/             # Platform services (PGL monitoring, Traefik, Registry)
 ├── applications/         # User applications
 └── .github/workflows/    # CI/CD automation
 ```

@@ -44,7 +44,7 @@ Developer → Git Push
 - **Longhorn**: Distributed storage with S3 backups (Hetzner)
 - **cert-manager**: Automated TLS certificates
 - **PostgreSQL**: Bitnami Helm chart (Longhorn PVCs)
-- **LGTM**: Loki + Grafana + Tempo + Mimir (observability)
+- **PGL Observability**: Prometheus + Grafana + Loki (metrics, dashboards, logs)
 - **External Registry**: Docker + Caddy (outside cluster)
 
 ## Quick Commands
@@ -108,7 +108,7 @@ pkill -f 'ssh.*6443:127.0.0.1:6443'
 - [x] **Longhorn storage**: PVCs with S3 backups ✅
 - [x] **cert-manager**: Automated TLS for apps ✅
 - [x] **PostgreSQL**: Shared database server with per-app DBs ✅
-- [x] **LGTM stack**: Full observability (Grafana dashboards persist) ✅
+- [x] **PGL observability**: Prometheus metrics + Loki logs + Grafana dashboards ✅
 - [x] **External registry**: Docker + Caddy with Let's Encrypt ✅
 - [x] **Helm charts**: Apps packaged with values + image setters ✅
 

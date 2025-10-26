@@ -34,6 +34,26 @@ LVS Cloud uses a **persistent etcd + S3 backup** strategy for resilience:
 - Included in weekly Longhorn S3 backups
 - Additional resilience: images can be rebuilt from source via GitHub Actions
 
+### Monitoring Data (PGL Stack)
+
+**Prometheus Metrics:**
+
+- Stored on Longhorn PVC (10Gi, 7-day retention)
+- Backed up via weekly Longhorn S3 backups
+- Data loss acceptable: historical metrics can be regenerated
+
+**Loki Logs:**
+
+- Stored on Longhorn PVC (10Gi, 7-day retention)
+- Backed up via weekly Longhorn S3 backups
+- Data loss acceptable: logs are ephemeral by nature
+
+**Grafana Dashboards:**
+
+- Dashboards persist to Longhorn PVC (5Gi)
+- Backed up via weekly Longhorn S3 backups
+- Critical for custom dashboards; restore from S3 if lost
+
 ## Disaster Scenarios
 
 ### Scenario 1: Server Recreation (Common)

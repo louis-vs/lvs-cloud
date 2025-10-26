@@ -106,7 +106,7 @@ runcmd:
   - mkdir -p /srv/data/longhorn
   - chown -R root:root /srv/data
 
-  # Install k3s (keep Traefik ingress controller)
+  # Install k3s (with Traefik for ingress)
   - |
     curl -sfL https://get.k3s.io | sh -s - \
       --write-kubeconfig-mode 644
@@ -122,7 +122,7 @@ runcmd:
   - echo 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml' >> /home/ubuntu/.bashrc
   - chown ubuntu:ubuntu /home/ubuntu/.bashrc
 
-  # Setup complete (Flux bootstrap is manual - see docs/BOOTSTRAP.md)
+  # Setup complete (manual bootstrap still required)
   - echo "K3s setup complete" > /var/log/lvs-cloud-setup.log
   - echo "SSH to server and follow docs/BOOTSTRAP.md" >> /var/log/lvs-cloud-setup.log
   - date >> /var/log/lvs-cloud-setup.log

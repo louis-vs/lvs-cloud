@@ -1,0 +1,18 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: monitoring
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: monorepo
+  path: ./platform/monitoring
+  prune: true
+  wait: true
+  timeout: 15m
+  dependsOn:
+    - name: helmrepositories
+    - name: storage-install
+    - name: cert-manager-install

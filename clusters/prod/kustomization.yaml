@@ -9,5 +9,6 @@ resources:
   - cert-manager-config.yaml
   - registry.yaml
   - postgresql.yaml
+  - monitoring.yaml
   - image-automation.yaml
   - apps.yaml

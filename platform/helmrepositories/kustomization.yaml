@@ -5,3 +5,4 @@ resources:
   - longhorn.yaml
   - jetstack.yaml
   - bitnami.yaml
+  - grafana.yaml

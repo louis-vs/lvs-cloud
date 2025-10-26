@@ -302,10 +302,6 @@ When modifying Helm chart templates (not just values), you must bump the chart v
 # 2. Bump version in applications/my-app/chart/Chart.yaml
 #    version: 1.0.0 -> 1.0.1
 # 3. Commit and push
-git add applications/my-app/chart/
-git commit -m "fix(my-app): update chart template"
-git push
-
 # 4. Monitor deployment
 flux reconcile source git monorepo -n flux-system
 flux reconcile source chart default-my-app -n flux-system

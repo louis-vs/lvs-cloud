@@ -38,19 +38,19 @@ LVS Cloud uses a **persistent etcd + S3 backup** strategy for resilience:
 
 **Prometheus Metrics:**
 
-- Stored on Longhorn PVC (10Gi, 7-day retention)
+- Stored on Longhorn PVC (3Gi, 7-day retention)
 - Backed up via weekly Longhorn S3 backups
 - Data loss acceptable: historical metrics can be regenerated
 
 **Loki Logs:**
 
-- Stored on Longhorn PVC (10Gi, 7-day retention)
+- Stored on Longhorn PVC (3Gi, 7-day retention)
 - Backed up via weekly Longhorn S3 backups
 - Data loss acceptable: logs are ephemeral by nature
 
 **Grafana Dashboards:**
 
-- Dashboards persist to Longhorn PVC (5Gi)
+- Dashboards persist to Longhorn PVC (1Gi)
 - Backed up via weekly Longhorn S3 backups
 - Critical for custom dashboards; restore from S3 if lost
 

@@ -32,8 +32,8 @@ spec:
         retention: 7d
         resources:
           requests:
-            cpu: 200m
-            memory: 400Mi
+            cpu: 50m
+            memory: 200Mi
           limits:
             cpu: 500m
             memory: 800Mi
@@ -44,7 +44,7 @@ spec:
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
-                  storage: 10Gi
+                  storage: 3Gi
               metadata:
                 annotations:
                   longhorn.io/recurring-jobs: |
@@ -58,8 +58,8 @@ spec:
       alertmanagerSpec:
         resources:
           requests:
-            cpu: 50m
-            memory: 128Mi
+            cpu: 10m
+            memory: 50Mi
           limits:
             cpu: 100m
             memory: 256Mi
@@ -70,7 +70,7 @@ spec:
               accessModes: ["ReadWriteOnce"]
               resources:
                 requests:
-                  storage: 2Gi
+                  storage: 1Gi
 
     # Grafana configuration
     grafana:
@@ -88,7 +88,7 @@ spec:
       persistence:
         enabled: true
         storageClassName: longhorn
-        size: 5Gi
+        size: 1Gi
         annotations:
           longhorn.io/recurring-jobs: |
             [
@@ -98,8 +98,8 @@ spec:
 
       resources:
         requests:
-          cpu: 100m
-          memory: 256Mi
+          cpu: 50m
+          memory: 128Mi
         limits:
           cpu: 300m
           memory: 512Mi
@@ -134,8 +134,8 @@ spec:
     prometheus-node-exporter:
       resources:
         requests:
-          cpu: 50m
-          memory: 64Mi
+          cpu: 10m
+          memory: 30Mi
         limits:
           cpu: 100m
           memory: 128Mi
@@ -144,18 +144,18 @@ spec:
     kube-state-metrics:
       resources:
         requests:
-          cpu: 50m
-          memory: 64Mi
+          cpu: 20m
+          memory: 40Mi
         limits:
           cpu: 100m
           memory: 128Mi
 
-    # Disable Prometheus Operator resource limits (it's lightweight)
+    # Prometheus Operator
     prometheusOperator:
       resources:
         requests:
-          cpu: 50m
-          memory: 128Mi
+          cpu: 20m
+          memory: 64Mi
         limits:
           cpu: 200m
           memory: 256Mi

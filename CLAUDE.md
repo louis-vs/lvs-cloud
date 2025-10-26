@@ -46,6 +46,8 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format: `<type>
 - **Scopes**: Optional - use for component-specific changes (`platform`, `ruby-demo-app`, `infrastructure`)
 - **Examples**: `feat(platform): add new service`, `fix(ruby-demo-app): resolve crash`, `docs: update README`
 
+We are using pre-commit hooks with auto-fix in this repo. If the hook fails, re-add files and re-run *the exact same commit command*. Do NOT amend commits unless instructed.
+
 ### Database Development
 
 - **Shared PostgreSQL**: All apps use the shared PostgreSQL server with per-app databases

@@ -9,3 +9,4 @@
   - [ ] persist storage of logs and metrics using Longhorn
 - [ ] make sure that our backups to S3 aren't taking up loads of storage, since we are cost limited here. We need a job that deletes backups older than a week.
 - [ ] check licence restrictions of the software we're using and add the most restrictive licence possible to the code. We'll consider relicensing later once we're sure what's going on, and individual apps can have different licensing.
+- [ ] we need to update our GitHub build and push application workflow. It should attempt to pull the latest version of the existing image first, or otherwise be able to use the cached layers from the registry. This should speed up building significantly, since it prevents dependencies being reinstalled on every build.

@@ -1,8 +1,118 @@
-# Bootstrap Guide: Fresh Cluster Deployment
+# Bootstrap Guide
 
-This guide walks through deploying the entire platform from scratch after Terraform provisions the infrastructure.
+This guide covers cluster setup after Terraform provisions infrastructure. With persistent etcd, most config survives server recreation.
 
-## Prerequisites
+## Understanding Bootstrap Scenarios
+
+**Two distinct scenarios:**
+
+1. **Fresh Cluster Bootstrap** - etcd is empty (first deploy or after data loss)
+   - Full bootstrap required: install Flux, create all secrets, wait for platform deployment
+   - Takes 30-45 minutes
+   - Requires all credentials
+
+2. **Server Recreation Verification** - etcd persists from previous deployment
+   - Minimal steps: verify etcd intact, check Flux status, confirm secrets exist
+   - Takes 2-5 minutes
+   - No credential input needed
+
+**How to tell which scenario you're in:**
+
+```bash
+# After Terraform provisions the server, SSH and check:
+ssh ubuntu@$(dig +short app.lvs.me.uk)
+
+# Check if Flux kustomizations exist in etcd
+kubectl get kustomization -n flux-system
+
+# If you see flux-system and other kustomizations → Server Recreation (skip to that section)
+# If "No resources found" or namespace doesn't exist → Fresh Cluster Bootstrap
+```
+
+---
+
+## Server Recreation Verification
+
+**Use this when:** Terraform recreated the server but etcd persists (block storage intact).
+
+With persistent etcd at `/srv/data/k3s`, all Kubernetes resources survive server recreation:
+
+- Flux configuration and state
+- All secrets (PostgreSQL passwords, registry credentials)
+- HelmReleases and kustomizations
+- Deployed applications
+
+**Verification process:**
+
+### 1. Check Server is Ready
+
+```bash
+# Verify k3s is running
+ssh ubuntu@$(dig +short app.lvs.me.uk) kubectl get nodes
+# Should show: STATUS Ready
+```
+
+### 2. Verify Flux Resources Persisted
+
+```bash
+# Setup kubectl (use connect-k8s.sh or manual SSH tunnel)
+./scripts/connect-k8s.sh
+
+# Check Flux kustomizations exist
+kubectl get kustomization -n flux-system
+# Should show: flux-system, helmrepositories, storage-install, etc.
+
+# Check Flux is reconciling
+flux get all
+# All should show READY True (may take few minutes for pods to restart)
+```
+
+### 3. Verify Secrets Exist
+
+```bash
+# Check critical secrets
+kubectl get secret -n flux-system flux-git-ssh
+kubectl get secret -n flux-system registry-credentials
+kubectl get secret -n default postgresql-auth
+kubectl get secret -n longhorn-system longhorn-backup
+
+# All should exist (output: "NAME ... AGE")
+```
+
+### 4. Monitor Service Recovery
+
+```bash
+# Watch pods restart and attach to persistent volumes
+kubectl get pods -A -w
+
+# Wait until all pods are Running (5-10 minutes)
+# Longhorn will recognize existing volumes automatically
+```
+
+### 5. Verify Applications
+
+```bash
+# Check HelmReleases reconciled
+flux get helmreleases -A
+
+# Test application
+curl https://app.lvs.me.uk
+# Should return HTML
+
+# Test registry
+curl -u robot_user:PASSWORD https://registry.lvs.me.uk/v2/_catalog
+# Should return existing images
+```
+
+**If verification fails:** You may have lost etcd data. Proceed to Fresh Cluster Bootstrap section instead.
+
+---
+
+## Fresh Cluster Bootstrap
+
+**Use this when:** Deploying a brand new cluster or after etcd data loss.
+
+### Prerequisites
 
 Before starting, ensure you have:
 
@@ -25,9 +135,9 @@ Before starting, ensure you have:
    brew install fluxcd/tap/flux
    ```
 
-## Deployment Steps
+### Deployment Steps
 
-### 1. Trigger Infrastructure Deployment
+#### 1. Trigger Infrastructure Deployment
 
 ```bash
 # Push to master branch to trigger Terraform workflow
@@ -41,7 +151,7 @@ git push origin master
 dig +short app.lvs.me.uk
 ```
 
-### 2. Verify Server is Ready
+#### 2. Verify Server is Ready
 
 ```bash
 # Wait ~5 minutes for server provisioning, then verify
@@ -51,7 +161,7 @@ ssh ubuntu@$(dig +short app.lvs.me.uk) kubectl get nodes
 # If successful, exit back to your local machine
 ```
 
-### 3. Bootstrap Flux (FROM LOCAL MACHINE)
+#### 3. Bootstrap Flux (FROM LOCAL MACHINE)
 
 **IMPORTANT: Run these commands from your LOCAL machine, NOT on the server.**
 
@@ -93,7 +203,7 @@ flux bootstrap git \
 # You should see: "✔ Flux bootstrap completed"
 ```
 
-### 4. Create Initial Kubernetes Secrets (FROM LOCAL MACHINE)
+#### 4. Create Initial Kubernetes Secrets (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel from step 3.**
 
@@ -133,7 +243,7 @@ kubectl create secret docker-registry registry-credentials \
   --docker-password='YOUR_REGISTRY_PASSWORD'
 ```
 
-### 5. Monitor Initial Deployment (FROM LOCAL MACHINE)
+#### 5. Monitor Initial Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 
@@ -156,7 +266,7 @@ watch flux get kustomizations
 # Wait until storage-install shows READY True, then proceed to step 6
 ```
 
-### 6. Create Longhorn Secret (FROM LOCAL MACHINE)
+#### 6. Create Longhorn Secret (FROM LOCAL MACHINE)
 
 **After storage-install shows READY True**, create the Longhorn backup secret:
 
@@ -176,7 +286,7 @@ kubectl create secret generic longhorn-backup -n longhorn-system \
 rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub /tmp/known_hosts /tmp/k3s-kubeconfig.yaml
 ```
 
-### 7. Monitor Full Deployment (FROM LOCAL MACHINE)
+#### 7. Monitor Full Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 
@@ -215,7 +325,7 @@ kubectl logs -n <namespace> <pod-name>
 flux reconcile kustomization <name> --with-source
 ```
 
-### 8. Verify Deployment (FROM LOCAL MACHINE)
+#### 8. Verify Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 
@@ -256,7 +366,7 @@ flux get image update
 # - monorepo-auto ImageUpdateAutomation: READY True
 ```
 
-## How Image Automation Works
+### How Image Automation Works
 
 Once deployed, the system automatically updates applications:
 
@@ -288,7 +398,7 @@ flux get image update monorepo-auto
 git log --oneline --author="flux-bot"
 ```
 
-## Deployment Timeline
+### Deployment Timeline
 
 Total time from Terraform provision to fully operational: **30-45 minutes**
 
@@ -301,7 +411,7 @@ Total time from Terraform provision to fully operational: **30-45 minutes**
   - Apps: 5 minutes
 - TLS certificate issuance: 2-5 minutes
 
-## Dependency Graph
+### Dependency Graph
 
 ```
 flux-system (Flux controllers)
@@ -322,9 +432,9 @@ helmrepositories (Bitnami, Jetstack, Longhorn Helm repos)
         registry, apps (require TLS certificates)
 ```
 
-## Post-Deployment
+### Post-Deployment
 
-### Building and Deploying Applications
+#### Building and Deploying Applications
 
 ```bash
 # From your local machine
@@ -346,13 +456,13 @@ docker push registry.lvs.me.uk/ruby-demo-app:1.0.1
 # git push
 ```
 
-### Accessing Services
+#### Accessing Services
 
 - **Ruby Demo App**: <https://app.lvs.me.uk>
 - **Registry**: <https://registry.lvs.me.uk> (basic auth: robot_user)
 - **Longhorn UI**: `kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80`
 
-### Database Access
+#### Database Access
 
 ```bash
 # From within the cluster
@@ -364,7 +474,9 @@ kubectl port-forward svc/postgresql 5432:5432
 psql postgresql://ruby_demo_user:PASSWORD@localhost:5432/ruby_demo
 ```
 
-## Persistence Model & Server Recreation
+---
+
+## Persistence Model
 
 ### What Persists on Block Storage
 
@@ -385,9 +497,9 @@ All critical data is stored on the persistent block storage volume (`/dev/sdb` �
    - Docker registry images
    - Any other PVC-backed data
 
-### Server Recreation Process
+### How Server Recreation Works
 
-When you recreate the server via Terraform:
+When Terraform recreates the server:
 
 1. **Ephemeral components** (recreated):
    - Server OS and packages
@@ -427,9 +539,9 @@ curl -u robot_user:PASSWORD https://registry.lvs.me.uk/v2/_catalog
 # Should show existing images, not empty
 ```
 
-### Manual PostgreSQL Setup (One-Time Only)
+### PostgreSQL Database Setup (Fresh Cluster Only)
 
-PostgreSQL users and databases are created once and persist via Longhorn PVC. On **first bootstrap only**, create application databases:
+On **first bootstrap only**, create application databases and users. These persist via Longhorn PVC and survive server recreation:
 
 ```bash
 # Get postgres password from secret
@@ -469,7 +581,7 @@ kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
 - Restore from etcd snapshots if configured
 - Last resort: Manual PV/PVC rebinding (complex, not documented)
 
-## Rollback
+### Rollback
 
 If deployment fails, you can roll back:
 
@@ -484,9 +596,9 @@ git revert HEAD
 git push
 ```
 
-## Success Criteria
+### Success Criteria
 
-Deployment is complete when:
+Fresh cluster bootstrap is complete when:
 
 - [ ] All Flux kustomizations show `READY True`
 - [ ] All pods are `Running` or `Completed`
@@ -495,7 +607,9 @@ Deployment is complete when:
 - [ ] Longhorn storage class is available
 - [ ] PostgreSQL is accepting connections
 
-## Common Issues
+---
+
+## Troubleshooting
 
 ### HelmRelease stuck "InProgress"
 
@@ -527,10 +641,10 @@ kubectl logs -n cert-manager deploy/cert-manager --tail=100
 kubectl describe certificate ruby-demo-app-tls -n default
 ```
 
+---
+
 ## Next Steps
 
-See:
-
-- [DEPLOY.md](../DEPLOY.md) - Adding new applications
-- [OPS.md](../OPS.md) - Operations and maintenance
-- [README.md](../README.md) - Architecture overview
+- [DEPLOY.md](../../DEPLOY.md) - Adding new applications
+- [OPS.md](../../OPS.md) - Operations and maintenance
+- [README.md](../../README.md) - Architecture overview

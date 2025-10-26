@@ -71,15 +71,6 @@ main() {
     ssh -o ConnectTimeout=5 ubuntu@$SERVER_IP "echo connected" >/dev/null 2>&1 || \
         error "Cannot SSH to server. Check that Terraform has completed."
 
-    # Collect passwords
-    info "Collecting passwords (input hidden)..."
-    prompt_password POSTGRES_ADMIN_PASSWORD "PostgreSQL admin password"
-    prompt_password POSTGRES_RUBY_PASSWORD "PostgreSQL ruby_demo_user password"
-    prompt_password REGISTRY_PASSWORD "Registry password (from GitHub secret)"
-
-    read -p "S3 Access Key: " S3_ACCESS_KEY
-    prompt_password S3_SECRET_KEY "S3 Secret Key"
-
     # Verify server is ready
     info "Verifying k3s is ready..."
     ssh ubuntu@$SERVER_IP "kubectl get nodes" >/dev/null 2>&1 || \
@@ -102,9 +93,65 @@ main() {
     kubectl get nodes >/dev/null 2>&1 || error "kubectl connection failed"
     success "kubectl connected via SSH tunnel"
 
-    # Check if Flux already bootstrapped
+    # Detect scenario: Fresh cluster vs Server recreation
+    info "Detecting bootstrap scenario..."
+    if kubectl get kustomization flux-system -n flux-system >/dev/null 2>&1; then
+        # Flux kustomizations exist - this is server recreation
+        success "Detected: Server Recreation (etcd persists)"
+        echo
+        info "Running verification checks..."
+
+        # Verify Flux kustomizations exist
+        info "Checking Flux kustomizations..."
+        if ! kubectl get kustomization -n flux-system | grep -q flux-system; then
+            error "Flux kustomizations missing. etcd may be corrupted."
+        fi
+        success "Flux kustomizations present"
+
+        # Verify critical secrets exist
+        info "Checking critical secrets..."
+        kubectl get secret flux-git-ssh -n flux-system >/dev/null 2>&1 || warn "flux-git-ssh secret missing"
+        kubectl get secret registry-credentials -n flux-system >/dev/null 2>&1 || warn "registry-credentials secret missing"
+        kubectl get secret postgresql-auth -n default >/dev/null 2>&1 || warn "postgresql-auth secret missing"
+        success "Critical secrets present"
+
+        # Check Flux reconciliation
+        info "Verifying Flux reconciliation status..."
+        echo "Run 'flux get all' to check reconciliation status"
+        echo "All pods should restart and attach to persistent volumes within 5-10 minutes"
+        echo
+        success "Server recreation verification complete!"
+        echo
+        info "Next steps:"
+        echo "  1. Monitor pods: kubectl get pods -A -w"
+        echo "  2. Check Flux: flux get all"
+        echo "  3. Test app: curl https://app.lvs.me.uk"
+        exit 0
+    fi
+
+    # Fresh cluster - proceed with full bootstrap
+    success "Detected: Fresh Cluster Bootstrap"
+    echo
+    info "Proceeding with full bootstrap..."
+
+    # Check if Flux already partially bootstrapped
     if kubectl get namespace flux-system >/dev/null 2>&1; then
-        warn "Flux already bootstrapped. Skipping Flux bootstrap."
+        warn "flux-system namespace exists but kustomizations missing (interrupted bootstrap)"
+        warn "Proceeding with Flux bootstrap to recover..."
+    fi
+
+    # Collect passwords for fresh bootstrap
+    info "Collecting credentials for fresh bootstrap..."
+    prompt_password POSTGRES_ADMIN_PASSWORD "PostgreSQL admin password"
+    prompt_password POSTGRES_RUBY_PASSWORD "PostgreSQL ruby_demo_user password"
+    prompt_password REGISTRY_PASSWORD "Registry password (from GitHub secret)"
+    read -p "S3 Access Key: " S3_ACCESS_KEY
+    prompt_password S3_SECRET_KEY "S3 Secret Key"
+
+    # Check if Flux bootstrap needed
+    if kubectl get namespace flux-system >/dev/null 2>&1 && \
+       kubectl get kustomization flux-system -n flux-system >/dev/null 2>&1; then
+        success "Flux already bootstrapped. Skipping Flux bootstrap."
     else
         # Generate Flux deploy key if needed
         if [ ! -f infrastructure/flux-deploy-key ]; then

@@ -97,8 +97,9 @@ pkill -f 'ssh.*6443:127.0.0.1:6443'
 2. Push to `master`
 3. GitHub Actions runs `terraform plan`
 4. Reply "LGTM" to approval issue
-5. Terraform recreates server with k3s + Flux
-6. Flux deploys everything from Git
+5. Terraform recreates server with k3s
+6. etcd persists on block storage → config survives
+7. Pods restart and reattach to persistent volumes
 
 ## Current Status
 
@@ -115,7 +116,7 @@ pkill -f 'ssh.*6443:127.0.0.1:6443'
 
 ## Documentation
 
-- **[docs/BOOTSTRAP.md](docs/BOOTSTRAP.md)**: Complete setup guide from scratch
+- **[infrastructure/bootstrap/BOOTSTRAP.md](infrastructure/bootstrap/BOOTSTRAP.md)**: Bootstrap guide (fresh cluster & server recreation)
 - **[DEPLOY.md](DEPLOY.md)**: Adding apps, database setup, deployment patterns
 - **[OPS.md](OPS.md)**: Troubleshooting, monitoring, maintenance
 - **[POSTGRES.md](POSTGRES.md)**: Database management reference
@@ -157,6 +158,10 @@ lvs-cloud/
 
 ## Getting Started
 
-**New cluster?** Run `./bootstrap.sh` after Terraform provisions the server.
+**After Terraform provisions:**
 
-**Add an app?** See [DEPLOY.md](DEPLOY.md) for the application deployment guide.
+- Run `infrastructure/bootstrap/bootstrap.sh` - auto-detects fresh cluster vs server recreation
+- Fresh cluster: full bootstrap (~30-45 min)
+- Server recreation: verification only (~2-5 min)
+
+**Add an app?** See [DEPLOY.md](DEPLOY.md)

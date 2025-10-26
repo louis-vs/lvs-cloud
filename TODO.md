@@ -1,7 +1,7 @@
 # TODO
 
-- [ ] make it clearer how we connect to the cluster. Improve the scripts/connect-k8s.sh somehow.
-  - [ ] sort out kubeconfig setup - we shouldn't need to export it in every new shell, it should just work. This is making claude code unable to handle command permissions as well which is a pain.
+- [x] make it clearer how we connect to the cluster. Improve the scripts/connect-k8s.sh somehow.
+  - [x] sort out kubeconfig setup - we shouldn't need to export it in every new shell, it should just work. This is making claude code unable to handle command permissions as well which is a pain.
 - [ ] now that we have persistent etcd, we need to rethink bootstrap. Documentation needs to be clear that most of the steps will only actually need to run if etcd is lost, since most config is preserved. The order of steps needs to be changed. For example, we shouldn't be asking for credentials until we actually need them, to minimise the amount of manual input needed. We also need a more robust check to see if flux is bootstrapped, to account for situations where the bootstrap command is interrupted before properly completing.
 - [ ] I don't like the structure of having DEPLOY.md, OPS.md and POSTGRES.md. We should just have a single doc file that lists the steps needed to set up an app from scratch. Basically this should just be creating PostgreSQL secrets, and creating a new user and database on the server. We should have automated away most of the steps. We will need to document the basic steps for debugging the state of the cluster, since things will need manual kicks every now and then (to avoid waiting for automatic reconciliation processes). Again, these docs should be minimal and to-the-point.
 - [ ] Create DISASTER_RECOVERY.md. This needs to detail how to recreate the server from scratch if everything is lost. It can probably mostly reference existing documentation. Bootstrap should just work, recreating etcd.

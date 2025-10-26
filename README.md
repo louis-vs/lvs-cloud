@@ -50,6 +50,9 @@ Developer → Git Push
 ## Quick Commands
 
 ```bash
+# Setup kubectl access (run once per session)
+./scripts/connect-k8s.sh
+
 # SSH to server
 ssh ubuntu@$(dig +short app.lvs.me.uk)
 
@@ -70,6 +73,9 @@ kubectl logs -f -l app.kubernetes.io/name=ruby-demo-app
 
 # Port-forward to services
 kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
+
+# Kill kubectl tunnel if needed
+pkill -f 'ssh.*6443:127.0.0.1:6443'
 ```
 
 ## Deployment Flow

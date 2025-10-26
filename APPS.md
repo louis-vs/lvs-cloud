@@ -282,8 +282,37 @@ flux reconcile helmrelease my-app
 # Force image scan
 flux reconcile image repository my-app
 
+# Full reconciliation chain (git -> chart -> helmrelease)
+flux reconcile source git monorepo -n flux-system
+flux reconcile source chart default-my-app -n flux-system
+flux reconcile helmrelease my-app -n default
+
 # Restart pod
 kubectl rollout restart deployment/my-app
+```
+
+### Updating Helm Charts
+
+When modifying Helm chart templates (not just values), you must bump the chart version to force Flux to repackage:
+
+**Important**: If you only change chart templates (`chart/templates/*`) without bumping the version in `Chart.yaml`, Flux will not repackage the chart and changes won't deploy.
+
+```bash
+# 1. Edit chart files in applications/my-app/chart/templates/
+# 2. Bump version in applications/my-app/chart/Chart.yaml
+#    version: 1.0.0 -> 1.0.1
+# 3. Commit and push
+git add applications/my-app/chart/
+git commit -m "fix(my-app): update chart template"
+git push
+
+# 4. Monitor deployment
+flux reconcile source git monorepo -n flux-system
+flux reconcile source chart default-my-app -n flux-system
+flux reconcile helmrelease my-app -n default
+
+# Verify new chart version deployed
+kubectl get helmrelease my-app -n default -o jsonpath='{.status.lastAttemptedRevision}'
 ```
 
 ### Resource Monitoring

@@ -76,6 +76,9 @@ write_files:
 
 
 runcmd:
+  # Prevent locale issues
+  - locale-gen --keep-existing en_GB.UTF-8
+
   # Wait for volume to be attached
   - sleep 10
   - mkdir -p /srv/data

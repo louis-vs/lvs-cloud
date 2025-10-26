@@ -21,8 +21,7 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 
 ```plaintext
 ├── README.md             # Status, quick commands, current state
-├── DEPLOY.md             # App deployment, infrastructure setup
-├── OPS.md                # Troubleshooting, monitoring, maintenance
+├── APPS.md               # App deployment and debugging
 ├── infrastructure/       # Terraform for Hetzner Cloud
 ├── platform/             # Platform services (LGTM, Traefik, Registry)
 ├── applications/         # User applications
@@ -52,9 +51,8 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format: `<type>
 - **Shared PostgreSQL**: All apps use the shared PostgreSQL server with per-app databases
 - **Connection Pattern**: Pass individual env vars (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME), construct DATABASE_URL in app code
   - **IMPORTANT**: Kubernetes doesn't support `$(VAR)` substitution in env values
-  - See DEPLOY.md for examples in Ruby/Python
+  - See APPS.md for examples in Ruby/Python
 - **Migrations**: Include migration commands in app startup for GitOps compatibility
-- **Documentation**: See POSTGRES.md for detailed database management procedures
 
 ### Application Deployment
 

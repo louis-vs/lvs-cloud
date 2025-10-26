@@ -13,9 +13,9 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 
 ## Current Architecture
 
-**Infrastructure**: Hetzner Cloud (€9.89/month total)
-**Stack**: LGTM (Loki + Grafana + Tempo + Mimir) + Traefik + Docker Registry
-**Deployment**: GitHub Actions → Registry → Watchtower → Live Applications
+**Infrastructure**: Hetzner Cloud cx22 (€9.89/month total) + 50GB block storage
+**Stack**: k3s + Flux CD + LGTM (Loki + Grafana + Tempo + Mimir) + Longhorn + PostgreSQL + In-cluster Registry
+**Deployment**: GitHub Actions (build → push) → Flux Image Automation (scan → commit) → HelmRelease update → k3s rolling deployment
 
 ## File Structure
 
@@ -50,10 +50,19 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format: `<type>
 ### Database Development
 
 - **Shared PostgreSQL**: All apps use the shared PostgreSQL server with per-app databases
-- **Connection Pattern**: Use `DATABASE_URL=postgresql://app_user:${POSTGRES_APP_PASSWORD}@postgresql:5432/app_db`
+- **Connection Pattern**: Pass individual env vars (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME), construct DATABASE_URL in app code
+  - **IMPORTANT**: Kubernetes doesn't support `$(VAR)` substitution in env values
+  - See DEPLOY.md for examples in Ruby/Python
 - **Migrations**: Include migration commands in app startup for GitOps compatibility
-- **Monitoring**: Database metrics automatically collected via Grafana Alloy
 - **Documentation**: See POSTGRES.md for detailed database management procedures
+
+### Application Deployment
+
+- **Image Automation**: Use `spec.values.image` in HelmRelease (not `values.yaml`) for Flux Image Automation markers
+  - This ensures only changes to the specific app's helmrelease.yaml trigger reconciliation
+  - Prevents unnecessary reconciliation of all apps when one app updates
+- **Secrets**: registry-credentials secret required for Flux to scan private registry
+- **Versioning**: GitHub Actions uses clean semver tags (`1.0.X`), no git hash suffixes
 
 ### GitHub
 

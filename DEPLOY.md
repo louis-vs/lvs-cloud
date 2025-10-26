@@ -69,24 +69,31 @@ env: []
 
 **chart/templates/deployment.yaml**, **service.yaml**, **ingress.yaml** - copy from `applications/ruby-demo-app/chart/templates/`
 
-### 2. Production Values with Flux Setters
+### 2. Production Values
 
 **values.yaml** (root of app directory):
 
 ```yaml
-image:
-  repository: registry.lvs.me.uk/my-app   # {"$imagepolicy": "flux-system:my-app:name"}
-  tag: "1.0.0"                             # {"$imagepolicy": "flux-system:my-app:tag"}
+# Image config is in helmrelease.yaml for Flux automation
+# Keep other app configuration here
 
 env:
-  - name: DATABASE_URL
+  - name: DB_USER
+    value: my_app_user
+  - name: DB_HOST
+    value: postgresql
+  - name: DB_PORT
+    value: "5432"
+  - name: DB_NAME
+    value: my_app_db
+  - name: DB_PASSWORD  # Construct DATABASE_URL in your app code
     valueFrom:
       secretKeyRef:
-        name: my-app-db
-        key: url
+        name: postgresql-auth
+        key: my-app-password
 ```
 
-### 3. HelmRelease
+### 3. HelmRelease with Image Automation
 
 **helmrelease.yaml:**
 
@@ -105,9 +112,16 @@ spec:
         kind: GitRepository
         name: monorepo
         namespace: flux-system
-  valuesFiles:
-    - ./applications/my-app/values.yaml
+      valuesFiles:
+        - ./applications/my-app/values.yaml
+  values:
+    # Image automation - Flux updates these fields automatically
+    image:
+      repository: registry.lvs.me.uk/my-app # {"$imagepolicy": "flux-system:my-app:name"}
+      tag: "1.0.0" # {"$imagepolicy": "flux-system:my-app:tag"}
 ```
+
+**Note**: Image config goes in `spec.values` (not `values.yaml`) so Flux Image Automation can update it directly. This ensures only changes to this app's `helmrelease.yaml` trigger reconciliation, not changes to unrelated apps.
 
 ### 4. Flux Image Automation
 
@@ -123,6 +137,8 @@ metadata:
 spec:
   image: registry.lvs.me.uk/my-app
   interval: 1m
+  secretRef:
+    name: registry-credentials  # Required for authentication
 ---
 apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImagePolicy
@@ -134,8 +150,10 @@ spec:
     name: my-app
   policy:
     semver:
-      range: ">=1.0.0"
+      range: ">=1.0.0"  # Matches tags like 1.0.1, 1.2.3, etc.
 ```
+
+**Note**: The `registry-credentials` secret is created during bootstrap (see `docs/BOOTSTRAP.md`). It contains authentication for accessing the private registry.
 
 ### 5. Register App
 
@@ -159,18 +177,26 @@ resources:
 ### 6. Push to Deploy
 
 ```bash
-git add applications/my-app platform/flux-image-automation/my-app.yaml
+git add applications/my-app platform/flux-image-automation/my-app.yaml applications/kustomization.yaml platform/flux-image-automation/kustomization.yaml
 git commit -m "feat(my-app): add new application"
 git push
 ```
 
 **Flux will:**
 
-1. Detect new HelmRelease
-2. Pull chart from Git
-3. Render templates
-4. Deploy to cluster
-5. Monitor for new images
+1. Detect new HelmRelease in Git
+2. Pull chart and values from monorepo
+3. Render Helm templates with values
+4. Deploy to cluster with initial image tag
+5. Start monitoring registry for new image tags
+
+**For subsequent deployments:**
+
+1. Push code changes → GitHub Actions builds image with tag `1.0.X`
+2. Flux ImageRepository scans registry (every 1m), finds new tag
+3. Flux ImagePolicy selects latest semver tag
+4. Flux ImageUpdateAutomation commits update to `helmrelease.yaml`
+5. Flux applies updated HelmRelease → Kubernetes performs rolling update
 
 ## Database-Enabled Apps
 
@@ -199,29 +225,50 @@ kubectl exec -it postgresql-0 -- psql -U postgres -c \
 
 ### App Connection
 
+**IMPORTANT**: Kubernetes doesn't support `$(VAR)` shell substitution in env values. Instead, pass individual env vars and construct the DATABASE_URL in your application code.
+
 **In your app's values.yaml:**
 
 ```yaml
 env:
-  - name: DATABASE_URL
-    value: postgresql://my_app_user:PASSWORD@postgresql:5432/my_app_db
+  - name: DB_USER
+    value: my_app_user
+  - name: DB_HOST
+    value: postgresql
+  - name: DB_PORT
+    value: "5432"
+  - name: DB_NAME
+    value: my_app_db
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgresql-auth
+        key: my-app-password
 ```
 
-Or use a Secret:
+**In your application code:**
 
-```yaml
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: my-app-db
-stringData:
-  url: postgresql://my_app_user:${POSTGRES_MY_APP_PASSWORD}@postgresql:5432/my_app_db
----
-# In HelmRelease values:
-envFrom:
-  - secretRef:
-      name: my-app-db
+```ruby
+# Ruby example
+DB_USER = ENV.fetch('DB_USER')
+DB_PASSWORD = ENV.fetch('DB_PASSWORD')
+DB_HOST = ENV.fetch('DB_HOST')
+DB_PORT = ENV.fetch('DB_PORT')
+DB_NAME = ENV.fetch('DB_NAME')
+
+DATABASE_URL = "postgresql://#{DB_USER}:#{DB_PASSWORD}@#{DB_HOST}:#{DB_PORT}/#{DB_NAME}"
+```
+
+```python
+# Python example
+import os
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
+
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 ```
 
 ## DNS Setup
@@ -345,5 +392,5 @@ kubectl logs -f -l app.kubernetes.io/name=my-app
 ## Next Steps
 
 - [OPS.md](OPS.md) - Operations & troubleshooting
-- [docs/migration/APPS.md](docs/migration/APPS.md) - Detailed Helm chart guide
-- [docs/migration/FLUX_SETUP.md](docs/migration/FLUX_SETUP.md) - Flux configuration
+- [docs/BOOTSTRAP.md](docs/BOOTSTRAP.md) - Bootstrap guide for fresh clusters
+- [applications/ruby-demo-app/](applications/ruby-demo-app/) - Working example application

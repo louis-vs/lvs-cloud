@@ -20,13 +20,19 @@ Developer → Git Push
          ↓
    GitHub Actions (build + push image)
          ↓
-   registry.lvs.me.uk/app:1.2.3
+   registry.lvs.me.uk/app:1.0.X
          ↓
-   Flux CD (detects new tag)
+   Flux ImageRepository (scans registry)
          ↓
-   Updates values.yaml → commits
+   Flux ImagePolicy (selects latest tag)
          ↓
-   k3s deploys with rolling update
+   Flux ImageUpdateAutomation (commits update)
+         ↓
+   Updates helmrelease.yaml spec.values.image.tag
+         ↓
+   Flux applies updated HelmRelease
+         ↓
+   k3s performs rolling update
          ↓
    Live app with TLS cert
 ```
@@ -73,10 +79,11 @@ kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
 1. Edit code in `applications/ruby-demo-app/`
 2. Push to `master`
 3. GitHub Actions builds image → pushes as `1.0.X`
-4. Flux detects new tag
-5. Updates `applications/ruby-demo-app/values.yaml`
-6. Commits change → triggers Helm reconcile
-7. K8s rolls out new pods with probes
+4. Flux ImageRepository scans registry (every 1m)
+5. Flux ImagePolicy selects latest semver tag
+6. Flux ImageUpdateAutomation commits update to `helmrelease.yaml` spec.values.image.tag
+7. Flux applies updated HelmRelease to cluster
+8. K8s performs rolling update with health probes
 
 **Infrastructure changes:**
 
@@ -102,18 +109,10 @@ kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
 
 ## Documentation
 
+- **[docs/BOOTSTRAP.md](docs/BOOTSTRAP.md)**: Complete setup guide from scratch
 - **[DEPLOY.md](DEPLOY.md)**: Adding apps, database setup, deployment patterns
 - **[OPS.md](OPS.md)**: Troubleshooting, monitoring, maintenance
-- **[POSTGRES.md](POSTGRES.md)**: Database management (kept for reference)
-
-### Migration Guides (docs/migration/)
-
-- **[ARCHITECTURE.md](docs/migration/ARCHITECTURE.md)**: New architecture overview
-- **[K3S_SETUP.md](docs/migration/K3S_SETUP.md)**: k3s installation & config
-- **[FLUX_SETUP.md](docs/migration/FLUX_SETUP.md)**: Flux GitOps & image automation
-- **[REGISTRY.md](docs/migration/REGISTRY.md)**: External registry setup
-- **[STORAGE.md](docs/migration/STORAGE.md)**: Longhorn + S3 backups
-- **[APPS.md](docs/migration/APPS.md)**: Converting apps to Helm charts
+- **[POSTGRES.md](POSTGRES.md)**: Database management reference
 
 ## Commit Message Format
 
@@ -144,12 +143,14 @@ lvs-cloud/
 │   └── helmrepositories/       # Helm chart sources
 ├── applications/
 │   └── ruby-demo-app/
-│       ├── chart/              # Helm chart
-│       ├── values.yaml         # Flux image setters
-│       └── helmrelease.yaml    # Deployment config
-└── docs/migration/             # Migration guides
+│       ├── chart/              # Helm chart templates
+│       ├── values.yaml         # App configuration
+│       └── helmrelease.yaml    # Flux deployment + image automation
+└── docs/                       # Documentation
 ```
 
-## Next Steps
+## Getting Started
 
-See [DEPLOY.md](DEPLOY.md) for adding new applications.
+**New cluster?** Run `./bootstrap.sh` after Terraform provisions the server.
+
+**Add an app?** See [DEPLOY.md](DEPLOY.md) for the application deployment guide.

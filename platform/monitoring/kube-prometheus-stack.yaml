@@ -96,6 +96,13 @@ spec:
               {"name":"weekly-bak","task":"backup","cron":"0 3 * * 0","retain":4,"concurrency":1,"labels":{"app":"grafana"}}
             ]
 
+      # Disable sidecars to save memory (~200MB)
+      sidecar:
+        dashboards:
+          enabled: false
+        datasources:
+          enabled: false
+
       resources:
         requests:
           cpu: 50m

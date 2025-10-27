@@ -68,6 +68,11 @@ spec:
           cpu: 300m
           memory: 512Mi
 
+    # Disable sidecar to save memory (~100MB)
+    sidecar:
+      rules:
+        enabled: false
+
     # CRITICAL: Disable all distributed mode components
     backend:
       replicas: 0

@@ -241,6 +241,12 @@ kubectl create secret docker-registry registry-credentials \
   --docker-server=registry.lvs.me.uk \
   --docker-username=robot_user \
   --docker-password='YOUR_REGISTRY_PASSWORD'
+
+# Create Grafana admin credentials
+# Replace password with a secure value
+kubectl create secret generic grafana-admin -n monitoring \
+  --from-literal=admin-user=admin \
+  --from-literal=admin-password='CHANGE_ME_GRAFANA_PASSWORD'
 ```
 
 #### 5. Monitor Initial Deployment (FROM LOCAL MACHINE)

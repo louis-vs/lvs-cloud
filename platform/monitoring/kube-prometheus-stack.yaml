@@ -1,14 +1,8 @@
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana-admin
-  namespace: monitoring
-type: Opaque
-stringData:
-  admin-user: admin
-  admin-password: "${GRAFANA_ADMIN_PASSWORD}"
----
+# NOTE: grafana-admin secret must be created manually during bootstrap
+# kubectl create secret generic grafana-admin -n monitoring \
+#   --from-literal=admin-user=admin \
+#   --from-literal=admin-password='YOUR_SECURE_PASSWORD'
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

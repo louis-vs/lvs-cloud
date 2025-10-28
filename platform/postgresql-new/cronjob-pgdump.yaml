@@ -17,7 +17,7 @@ spec:
               emptyDir: {}
           initContainers:
             - name: dump
-              image: docker.io/bitnami/postgresql:16
+              image: docker.io/bitnami/postgresql:latest
               env:
                 - name: PGPASSWORD
                   valueFrom:

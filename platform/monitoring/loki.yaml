@@ -65,8 +65,8 @@ spec:
           cpu: 50m
           memory: 128Mi
         limits:
-          cpu: 300m
-          memory: 512Mi
+          cpu: 200m
+          memory: 384Mi
 
     # Disable sidecar to save memory (~100MB)
     sidecar:

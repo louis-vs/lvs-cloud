@@ -37,9 +37,3 @@ spec:
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
           effect: "NoSchedule"
-
-    longhornUI:
-      securityContext:
-        runAsUser: 0
-        runAsGroup: 0
-        fsGroup: 0

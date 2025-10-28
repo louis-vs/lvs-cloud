@@ -27,3 +27,15 @@ spec:
       limits:
         cpu: 50m
         memory: 64Mi
+
+    # Increase inotify limits to handle all pod logs
+    initContainer:
+      - name: init-inotify
+        image: docker.io/busybox:1.33
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+          - sysctl -w fs.inotify.max_user_instances=512
+        securityContext:
+          privileged: true

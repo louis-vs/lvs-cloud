@@ -5,3 +5,4 @@ resources:
   - helmrelease.yaml
   - secret-backup-s3.yaml
   - cronjob-pgdump.yaml
+  - cronjob-s3-cleanup.yaml

@@ -21,7 +21,7 @@ metadata:
 spec:
   task: backup
   cron: "0 3 * * 0"
-  retain: 4
+  retain: 1
   concurrency: 1
   groups: ["default"]
   labels:

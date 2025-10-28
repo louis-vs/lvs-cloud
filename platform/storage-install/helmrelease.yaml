@@ -40,7 +40,7 @@ spec:
 
   postRenderers:
   - kustomize:
-      patchesStrategicMerge:
+      patches:
         # fix for nginx error due to non-writeable nginx logs
         - |
           apiVersion: apps/v1

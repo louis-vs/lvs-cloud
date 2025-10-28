@@ -31,7 +31,7 @@ variable "registry_htpasswd" {
 variable "server_type" {
   description = "Hetzner server type"
   type        = string
-  default     = "cx22" # 2 vCPU, 4GB RAM, 40GB SSD - ~€4.90/month
+  default     = "cx23" # 2 vCPU, 8GB RAM, 40GB SSD - cx22 replacement
 }
 
 variable "location" {

@@ -90,24 +90,25 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.has_dockerfile == 'true'
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push
         if: steps.check.outputs.has_dockerfile == 'true'
-        run: |
-          cd applications/${{ matrix.app }}
-          VERSION="${{ steps.version.outputs.version }}"
+        uses: docker/build-push-action@v6
+        with:
+          context: applications/${{ matrix.app }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY_URL }}/${{ matrix.app }}:${{ steps.version.outputs.version }}
+            ${{ env.REGISTRY_URL }}/${{ matrix.app }}:latest
+          cache-from: type=registry,ref=${{ env.REGISTRY_URL }}/${{ matrix.app }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY_URL }}/${{ matrix.app }}:buildcache,mode=max
 
-          # Build image
-          docker build -t ${{ env.REGISTRY_URL }}/${{ matrix.app }}:${VERSION} .
-
-          # Tag as latest
-          docker tag ${{ env.REGISTRY_URL }}/${{ matrix.app }}:${VERSION} \
-                     ${{ env.REGISTRY_URL }}/${{ matrix.app }}:latest
-
-          # Push both tags
-          docker push ${{ env.REGISTRY_URL }}/${{ matrix.app }}:${VERSION}
-          docker push ${{ env.REGISTRY_URL }}/${{ matrix.app }}:latest
-
-          echo "✅ Pushed ${{ matrix.app }}:${VERSION}"
+      - name: Build summary
+        if: steps.check.outputs.has_dockerfile == 'true'
+        run: echo "✅ Pushed ${{ matrix.app }}:${{ steps.version.outputs.version }}"
 
   summary:
     name: Build Summary

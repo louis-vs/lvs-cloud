@@ -10,5 +10,6 @@ resources:
   - registry.yaml
   - postgresql.yaml
   - monitoring.yaml
+  - traefik-dashboard.yaml
   - image-automation.yaml
   - apps.yaml

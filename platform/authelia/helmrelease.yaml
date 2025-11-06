@@ -23,9 +23,6 @@ spec:
       kind: Deployment
       replicas: 1
 
-      # REQUIRED: Disable service links to avoid config conflicts
-      enableServiceLinks: false
-
       resources:
         requests:
           cpu: 50m

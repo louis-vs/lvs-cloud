@@ -42,7 +42,10 @@ write_files:
       kubectl cordon "$NODE" || true
 
       INSTALL_K3S_CHANNEL="stable" \
-      curl -sfL https://get.k3s.io | sh -s - --force-reinstall
+      INSTALL_K3S_FORCE_RESTART="true" \
+      curl -sfL https://get.k3s.io | sh -s - server \
+        --write-kubeconfig-mode 644 \
+        --data-dir /srv/data/k3s
 
       sleep 10
       kubectl uncordon "$NODE" || true

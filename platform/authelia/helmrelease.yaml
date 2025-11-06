@@ -92,6 +92,9 @@ spec:
           maximum_active_connections: 8
           minimum_idle_connections: 0
 
+          password:
+            disabled: true
+
       # Storage configuration - using PostgreSQL
       storage:
         encryption_key:

@@ -31,16 +31,25 @@ spec:
           cpu: 200m
           memory: 1536Mi
 
-      # Mount users database ConfigMap
+      # Mount users database ConfigMap and OIDC RSA key
       extraVolumes:
         - name: users-database
           configMap:
             name: authelia-users
+        - name: oidc-rsa
+          secret:
+            secretName: authelia
+            items:
+              - key: oidc.rsa.key
+                path: oidc.rsa.key
 
       extraVolumeMounts:
         - name: users-database
           mountPath: /config/users_database.yml
           subPath: users_database.yml
+        - name: oidc-rsa
+          mountPath: /secrets/oidc-rsa
+          readOnly: true
 
     # Service configuration
     service:
@@ -62,11 +71,6 @@ spec:
     # Secret configuration
     secret:
       existingSecret: authelia
-      additionalSecrets:
-        oidc-rsa:
-          items:
-            - key: oidc.rsa.key
-              path: oidc.rsa.key
 
     # Authelia configuration
     configMap:

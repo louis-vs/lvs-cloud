@@ -7,3 +7,4 @@ resources:
   - bitnami.yaml
   - grafana.yaml
   - prometheus-community.yaml
+  - authelia.yaml

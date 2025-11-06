@@ -179,6 +179,7 @@ spec:
               algorithm: RS256
               use: sig
               key:
+                secret_name: ~
                 path: oidc.rsa.key
 
           lifespans:

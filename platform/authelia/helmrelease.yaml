@@ -46,8 +46,6 @@ spec:
     service:
       type: ClusterIP
       port: 80
-      # REQUIRED: Preserve client IPs for proper access control
-      externalTrafficPolicy: Local
 
     # Ingress configuration
     ingress:

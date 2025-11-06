@@ -8,3 +8,4 @@ resources:
   - cert-manager-config
   - postgresql-new
   - monitoring
+  - traefik-dashboard

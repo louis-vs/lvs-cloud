@@ -9,4 +9,3 @@ resources:
   - postgresql-new
   - monitoring
   - traefik-dashboard
-  - authelia

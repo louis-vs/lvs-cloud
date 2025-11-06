@@ -1,7 +1,7 @@
 # TODO
 
 - [x] I want to be able to see the traefik dashboard at traefik.lvs.me.uk again, but it should be behind some kind of authentication.
-- [x] I want a proper SSO authentication server for all of my applications to be able to use. Grafana should be able to use this as a login server as well. I've done some research and authelia looks like a good option. Look into our options for incorporating an authelia server via helm.
+- [ ] I want a proper SSO authentication server for all of my applications to be able to use. Grafana should be able to use this as a login server as well. I've done some research and authelia looks like a good option. Look into our options for incorporating an authelia server via helm.
 - [ ] Let's do a full audit of LVS Cloud. The main focus should be on reliability and security. This is a non-exhaustive list of things we should check for:
   - How are we storing secrets? Is this maintainable? Is this resilient?
   - How much manual work is needed to maintain? For example, currently the bootstrap script needs us to manually input secrets. We shouldn't need to use that script often as it's a last resort, but still this seems bad. I have used credstash to store secrets in a bucket before - can we use a tool like that? One that doesn't require anything running on the cluster and can store stuff in our Hetzner Object storage.

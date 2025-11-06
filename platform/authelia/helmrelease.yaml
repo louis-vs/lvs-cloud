@@ -62,6 +62,11 @@ spec:
     # Secret configuration
     secret:
       existingSecret: authelia
+      additionalSecrets:
+        oidc-rsa:
+          items:
+            - key: oidc.rsa.key
+              path: oidc.rsa.key
 
     # Authelia configuration
     configMap:
@@ -179,8 +184,7 @@ spec:
               algorithm: RS256
               use: sig
               key:
-                secret_name: ~
-                path: oidc.rsa.key
+                path: /secrets/oidc-rsa/oidc.rsa.key
 
           lifespans:
             access_token: 1h

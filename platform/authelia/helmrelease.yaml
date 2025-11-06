@@ -179,7 +179,7 @@ spec:
               algorithm: RS256
               use: sig
               key:
-                path: /secrets/internal/oidc.rsa.key
+                path: oidc.rsa.key
 
           lifespans:
             access_token: 1h

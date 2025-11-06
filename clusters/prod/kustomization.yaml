@@ -9,6 +9,7 @@ resources:
   - cert-manager-config.yaml
   - registry.yaml
   - postgresql.yaml
+  - authelia.yaml
   - monitoring.yaml
   - traefik-dashboard.yaml
   - image-automation.yaml

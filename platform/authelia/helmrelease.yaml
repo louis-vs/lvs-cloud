@@ -110,6 +110,15 @@ spec:
             secret_name: ~
             path: storage.postgres.password.txt
 
+      # Identity validation for password reset
+      identity_validation:
+        reset_password:
+          jwt_lifespan: 5m
+          jwt_algorithm: HS256
+          secret:
+            secret_name: ~
+            path: identity_validation.reset_password.jwt.hmac.key
+
       # Authentication backend - file-based
       authentication_backend:
         refresh_interval: 5m

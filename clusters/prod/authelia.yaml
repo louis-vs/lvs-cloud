@@ -1,0 +1,19 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: authelia
+  namespace: flux-system
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: monorepo
+  path: ./platform/authelia
+  prune: true
+  wait: true
+  timeout: 15m
+  dependsOn:
+    - name: helmrepositories
+    - name: postgresql
+    - name: redis
+    - name: cert-manager-install

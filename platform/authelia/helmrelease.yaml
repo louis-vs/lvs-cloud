@@ -1,0 +1,213 @@
+---
+# NOTE: Secrets must be created manually during bootstrap
+# See BOOTSTRAP.md for detailed setup instructions
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: authelia
+  namespace: default
+spec:
+  interval: 30m
+  timeout: 15m
+  chart:
+    spec:
+      chart: authelia
+      version: ">=0.10.0"
+      sourceRef:
+        kind: HelmRepository
+        name: authelia
+        namespace: flux-system
+  values:
+    # Pod configuration
+    pod:
+      kind: Deployment
+      replicas: 1
+
+      # REQUIRED: Disable service links to avoid config conflicts
+      enableServiceLinks: false
+
+      resources:
+        requests:
+          cpu: 50m
+          memory: 1Gi  # Required for argon2id password hashing
+        limits:
+          cpu: 200m
+          memory: 1536Mi
+
+      # Mount users database ConfigMap
+      extraVolumes:
+        - name: users-database
+          configMap:
+            name: authelia-users
+
+      extraVolumeMounts:
+        - name: users-database
+          mountPath: /config/users_database.yml
+          subPath: users_database.yml
+
+    # Service configuration
+    service:
+      type: ClusterIP
+      port: 80
+      # REQUIRED: Preserve client IPs for proper access control
+      externalTrafficPolicy: Local
+
+    # Ingress configuration
+    ingress:
+      enabled: true
+      className: traefik
+
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt
+
+      tls:
+        enabled: true
+        secret: authelia-tls
+
+    # Secret configuration
+    secret:
+      existingSecret: authelia
+
+    # Authelia configuration
+    configMap:
+      # Session configuration - using Redis
+      session:
+        name: authelia_session
+        same_site: lax
+        expiration: 1h
+        inactivity: 5m
+        remember_me: 1M
+
+        encryption_key:
+          secret_name: ~
+          path: session.encryption.key
+
+        cookies:
+          - domain: lvs.me.uk
+            subdomain: auth
+            default_redirection_url: https://grafana.lvs.me.uk
+
+        redis:
+          enabled: true
+          host: redis-master.default.svc.cluster.local
+          port: 6379
+          database_index: 0
+          maximum_active_connections: 8
+          minimum_idle_connections: 0
+
+      # Storage configuration - using PostgreSQL
+      storage:
+        encryption_key:
+          secret_name: ~
+          path: storage.encryption.key
+
+        postgres:
+          enabled: true
+          address: tcp://postgresql.default.svc.cluster.local:5432
+          database: authelia
+          schema: public
+          username: authelia
+          timeout: 5s
+
+          password:
+            secret_name: ~
+            path: storage.postgres.password.txt
+
+      # Authentication backend - file-based
+      authentication_backend:
+        refresh_interval: 5m
+
+        password_reset:
+          disable: false
+
+        file:
+          enabled: true
+          path: /config/users_database.yml
+          watch: true
+
+          search:
+            email: false
+            case_insensitive: false
+
+          password:
+            algorithm: argon2
+            argon2:
+              variant: argon2id
+              iterations: 3
+              memory: 65536
+              parallelism: 4
+              key_length: 32
+              salt_length: 16
+
+      # Access control
+      access_control:
+        default_policy: deny
+
+        rules:
+          # Bypass auth for Authelia itself
+          - domain: auth.lvs.me.uk
+            policy: bypass
+
+          # Require two-factor for all other protected domains
+          - domain: "*.lvs.me.uk"
+            policy: two_factor
+
+      # Notifier - filesystem for now (can switch to SMTP later)
+      notifier:
+        filesystem:
+          enabled: true
+          filename: /config/notification.txt
+
+      # Identity providers - OIDC for Grafana
+      identity_providers:
+        oidc:
+          enabled: true
+
+          hmac_secret:
+            secret_name: ~
+            path: identity_providers.oidc.hmac.key
+
+          jwks:
+            - key_id: main
+              algorithm: RS256
+              use: sig
+              key:
+                path: /secrets/oidc.rsa.key
+
+          lifespans:
+            access_token: 1h
+            authorize_code: 1m
+            id_token: 1h
+            refresh_token: 90m
+
+          clients:
+            - client_id: grafana
+              client_name: Grafana
+
+              client_secret:
+                secret_name: ~
+                path: identity_providers.oidc.clients.grafana.secret.txt
+
+              authorization_policy: two_factor
+
+              redirect_uris:
+                - https://grafana.lvs.me.uk/login/generic_oauth
+
+              scopes:
+                - openid
+                - profile
+                - email
+                - groups
+
+              grant_types:
+                - authorization_code
+                - refresh_token
+
+              response_types:
+                - code
+
+      # Regulation (brute force protection)
+      regulation:
+        max_retries: 3
+        find_time: 2m
+        ban_time: 5m

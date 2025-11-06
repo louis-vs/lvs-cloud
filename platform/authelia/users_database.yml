@@ -1,7 +1,0 @@
-users:
-  admin:
-    displayname: "Admin User"
-    password: "$argon2id$v=19$m=65536,t=3,p=4$Gba/A56EgpsaNPdZOK3HVg$OnRKt1sFL53rnIOI46LexhOL+lXFN04GKcXEo6yebr0"
-    email: admin@lvs.me.uk
-    groups:
-      - admins

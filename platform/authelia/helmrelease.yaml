@@ -184,7 +184,7 @@ spec:
             # Grafana OIDC client
             - client_id: grafana
               client_name: Grafana
-              client_secret: "$argon2id$v=19$m=65536,t=3,p=4$YC3aFwn3hmqhaGGsIz62xA$I+ZEtQlz4jCmyTjG7luSuktzxia6wdIqjBCo+u+VyEo"
+              client_secret: "$argon2id$v=19$m=65536,t=3,p=4$PLACEHOLDER"
               public: false
               authorization_policy: one_factor
               redirect_uris:

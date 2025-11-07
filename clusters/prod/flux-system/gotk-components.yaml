@@ -4516,8 +4516,8 @@ spec:
             port: http
         resources:
           limits:
-            cpu: 1000m
-            memory: 1Gi
+            cpu: 200m
+            memory: 128Mi
           requests:
             cpu: 50m
             memory: 64Mi
@@ -5996,8 +5996,8 @@ spec:
             port: healthz
         resources:
           limits:
-            cpu: 1000m
-            memory: 1Gi
+            cpu: 200m
+            memory: 128Mi
           requests:
             cpu: 100m
             memory: 64Mi
@@ -8733,8 +8733,8 @@ spec:
             port: healthz
         resources:
           limits:
-            cpu: 1000m
-            memory: 1Gi
+            cpu: 200m
+            memory: 128Mi
           requests:
             cpu: 100m
             memory: 64Mi
@@ -10165,8 +10165,8 @@ spec:
             port: healthz
         resources:
           limits:
-            cpu: 1000m
-            memory: 1Gi
+            cpu: 200m
+            memory: 128Mi
           requests:
             cpu: 100m
             memory: 64Mi
@@ -11472,8 +11472,8 @@ spec:
             port: healthz
         resources:
           limits:
-            cpu: 1000m
-            memory: 1Gi
+            cpu: 200m
+            memory: 128Mi
           requests:
             cpu: 100m
             memory: 64Mi
@@ -12410,8 +12410,8 @@ spec:
             port: healthz
         resources:
           limits:
-            cpu: 1000m
-            memory: 1Gi
+            cpu: 200m
+            memory: 128Mi
           requests:
             cpu: 100m
             memory: 64Mi

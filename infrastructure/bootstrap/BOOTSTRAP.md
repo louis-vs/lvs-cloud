@@ -224,7 +224,8 @@ kubectl create secret generic flux-git-ssh \
 kubectl create secret generic postgresql-auth -n default \
   --from-literal=postgres-password='CHANGE_ME_ADMIN_PASSWORD' \
   --from-literal=user-password='CHANGE_ME_USER_PASSWORD' \
-  --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD'
+  --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD' \
+  --from-literal=authelia-password='CHANGE_ME_AUTHELIA_PASSWORD'
 
 # Create PostgreSQL S3 backup credentials
 kubectl create secret generic pg-backup-s3 -n default \
@@ -440,6 +441,23 @@ helmrepositories (Bitnami, Jetstack, Longhorn Helm repos)
 
 ### Post-Deployment
 
+#### Authelia SSO Setup
+
+After the platform is deployed, set up Authelia for SSO authentication:
+
+```bash
+# See detailed instructions in platform/authelia/BOOTSTRAP.md
+# Summary:
+# 1. Create PostgreSQL database for Authelia
+# 2. Generate encryption keys and OIDC secrets
+# 3. Create Kubernetes secrets
+# 4. Create users ConfigMap
+# 5. Add DNS record for auth.lvs.me.uk
+# 6. Deploy via Flux
+```
+
+See [platform/authelia/BOOTSTRAP.md](../../platform/authelia/BOOTSTRAP.md) for complete setup instructions.
+
 #### Building and Deploying Applications
 
 ```bash
@@ -566,6 +584,8 @@ kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
 ```
 
 **Note:** These users/databases persist forever in the PostgreSQL PVC. After server recreation, they're automatically available—no need to recreate.
+
+**Authelia database:** Created separately during Authelia bootstrap (see [platform/authelia/BOOTSTRAP.md](../../platform/authelia/BOOTSTRAP.md)).
 
 ### Disaster Scenarios
 

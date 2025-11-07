@@ -242,6 +242,9 @@ spec:
               require_pkce: true
               pkce_challenge_method: S256
 
+              # Enable JWT access tokens (RFC9068)
+              access_token_signed_response_alg: RS256
+
               redirect_uris:
                 - https://grafana.lvs.me.uk/login/generic_oauth
 

@@ -2,7 +2,7 @@
 
 - [x] I want to be able to see the traefik dashboard at traefik.lvs.me.uk again, but it should be behind some kind of authentication.
 - [x] I want a proper SSO authentication server for all of my applications to be able to use. Grafana should be able to use this as a login server as well. I've done some research and authelia looks like a good option. Look into our options for incorporating an authelia server via helm.
-- [ ] Use authelia as the forward auth for the traefik dashboard.
+- [x] Use authelia as the forward auth for the traefik dashboard.
 - [ ] We need to do a full audit our cluster. How much memory are we using versus how much we are allocating? We have limited resources and right now we don't even have any actual applications running. We want to make sure our platform services are resilient, but we also want to main
 - [ ] Let's audit the backup process. We need to make sure our S3 backups are working as expected and that our cluster will be able to sustain the node being destroyed.
 - [ ] Let's do a full audit of LVS Cloud. The main focus should be on reliability and security. This is a non-exhaustive list of things we should check for:

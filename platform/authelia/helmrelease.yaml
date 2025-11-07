@@ -219,6 +219,15 @@ spec:
           # Enable JWT access tokens for Grafana compatibility
           enable_jwt_access_token_stateless_introspection: true
 
+          # Claims policies for clients
+          claims_policies:
+            grafana:
+              id_token:
+                - email
+                - name
+                - groups
+                - preferred_username
+
           clients:
             - client_id: grafana
               client_name: Grafana
@@ -228,6 +237,10 @@ spec:
                 path: /secrets/oidc-clients/grafana.secret.txt
 
               authorization_policy: two_factor
+              claims_policy: grafana
+
+              require_pkce: true
+              pkce_challenge_method: S256
 
               redirect_uris:
                 - https://grafana.lvs.me.uk/login/generic_oauth

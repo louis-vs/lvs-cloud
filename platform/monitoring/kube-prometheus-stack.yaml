@@ -77,7 +77,7 @@ spec:
 
       env:
         GF_SERVER_ROOT_URL: "https://grafana.lvs.me.uk"
-        GF_USERS_ALLOW_SIGN_UP: "false"
+        GF_USERS_ALLOW_SIGN_UP: "true"
 
         # Authelia OIDC authentication
         GF_AUTH_GENERIC_OAUTH_ENABLED: "true"

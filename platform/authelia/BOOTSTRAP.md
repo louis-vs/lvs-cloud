@@ -142,3 +142,65 @@ kubectl logs -l app.kubernetes.io/name=grafana -n monitoring
 - Argon2id uses 64MB RAM per login
 - 2FA required for all protected domains
 - Rate limiting: 3 attempts, 2-minute find time, 5-minute ban time
+
+## Managing Users
+
+### Adding New Users
+
+**Automated Script (Recommended):**
+
+```bash
+./scripts/add-authelia-user.sh
+```
+
+**Manual Process:**
+
+```bash
+# 1. Generate password hash
+kubectl run -it --rm authelia-hash --image=ghcr.io/authelia/authelia:latest --restart=Never -- \
+  authelia crypto hash generate argon2 --password "user_password"
+
+# 2. Edit ConfigMap
+kubectl edit configmap authelia-users -n default
+
+# Add new user to users_database.yml:
+#   newuser:
+#     disabled: false
+#     displayname: "New User"
+#     password: "$argon2id$v=19$m=65536,t=3,p=4$..."
+#     email: "user@example.com"
+#     groups:
+#       - developers
+
+# 3. Changes auto-reload within 5 minutes
+# Or force immediate reload:
+kubectl rollout restart deployment/authelia
+```
+
+### Removing Users
+
+```bash
+kubectl edit configmap authelia-users -n default
+# Remove user entry or set disabled: true
+```
+
+### Resetting Passwords
+
+```bash
+# Generate new hash
+kubectl run -it --rm authelia-hash --image=ghcr.io/authelia/authelia:latest --restart=Never -- \
+  authelia crypto hash generate argon2 --password "new_password"
+
+# Update user's password field in ConfigMap
+kubectl edit configmap authelia-users -n default
+```
+
+### User Self-Registration
+
+File-based authentication **does not support self-registration**. For self-registration, you would need:
+
+- **LDAP backend** with registration features (e.g., FreeIPA, OpenLDAP with self-service)
+- **External user portal** that writes to LDAP
+- **Database backend** (not currently supported by Authelia)
+
+For a personal cloud with few users, file-based management is simpler and more secure than implementing self-registration.

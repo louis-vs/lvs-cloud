@@ -46,7 +46,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format: `<type>
 - **Scopes**: Optional - use for component-specific changes (`platform`, `ruby-demo-app`, `infrastructure`)
 - **Examples**: `feat(platform): add new service`, `fix(ruby-demo-app): resolve crash`, `docs: update README`
 
-We are using pre-commit hooks with auto-fix in this repo. If the hook fails, re-add files and re-run *the exact same commit command*. Do NOT amend commits unless instructed.
+We are using pre-commit hooks with auto-fix in this repo. If the hook fails, re-add files and re-run *the exact same commit command*. DO NOT AMEND COMMITS.
 
 ### Database Development
 
@@ -70,4 +70,7 @@ Infrastructure deployments require approval. Provide approval by replying "LGTM"
 
 ## Important Instructions
 
-Keep documentation concise and to the point. NEVER worry about backwards compatibility. Be frugal with tokens.
+- Keep documentation concise and to the point.
+- NEVER worry about backwards compatibility or deleting old pods.
+- Be frugal with tokens.
+- Run `flux reconcile` commands with a timeout so you aren't blocked by their completion. Then, check the logs.

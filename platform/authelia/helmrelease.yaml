@@ -234,6 +234,7 @@ spec:
                 - profile
                 - email
                 - groups
+                - offline_access
 
               grant_types:
                 - authorization_code

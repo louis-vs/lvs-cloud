@@ -243,6 +243,9 @@ spec:
               response_types:
                 - code
 
+              # Use JWT access tokens for Grafana compatibility
+              access_token_signed_response_alg: RS256
+
       # Regulation (brute force protection)
       regulation:
         max_retries: 3

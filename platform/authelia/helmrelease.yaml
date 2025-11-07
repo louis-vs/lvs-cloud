@@ -216,6 +216,9 @@ spec:
             id_token: 1h
             refresh_token: 90m
 
+          # Enable JWT access tokens for Grafana compatibility
+          enable_jwt_access_token_stateless_introspection: true
+
           clients:
             - client_id: grafana
               client_name: Grafana
@@ -242,9 +245,6 @@ spec:
 
               response_types:
                 - code
-
-              # Use JWT access tokens for Grafana compatibility
-              access_token_signed_response_alg: RS256
 
       # Regulation (brute force protection)
       regulation:

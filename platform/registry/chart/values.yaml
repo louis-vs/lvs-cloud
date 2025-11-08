@@ -27,7 +27,7 @@ ingress:
 persistence:
   enabled: true
   storageClass: longhorn
-  size: 5Gi
+  size: 15Gi
   annotations:
     longhorn.io/recurring-jobs: |
       [

@@ -64,6 +64,14 @@ We are using pre-commit hooks with auto-fix in this repo. If the hook fails, re-
 - **Secrets**: registry-credentials secret required for Flux to scan private registry
 - **Versioning**: GitHub Actions uses clean semver tags (`1.0.X`), no git hash suffixes
 
+### Platform Services with Traefik IngressRoute
+
+When exposing platform services with Traefik IngressRoute and Authelia:
+
+- **TLS Certificates**: Cert-manager doesn't auto-create certificates from IngressRoute annotations. Always create an explicit Certificate resource.
+- **Middleware Namespaces**: Traefik requires middlewares to be in the same namespace as the IngressRoute. Create namespace-local copies of the authelia-forwardauth middleware.
+- **Pattern**: See `platform/longhorn-dashboard/` for reference implementation
+
 ### GitHub
 
 Infrastructure deployments require approval. Provide approval by replying "LGTM" to the open GitHub issue. IMPORTANT: verify that Terraform plans will not destroy persistent block storage by inspecting the workflow first.

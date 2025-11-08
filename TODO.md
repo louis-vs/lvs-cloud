@@ -1,7 +1,5 @@
 # TODO
 
-- [x] Let's audit the backup process. We need to make sure our S3 backups are working as expected and that our cluster will be able to sustain the node being destroyed. Currently, it looks like the backup buckets are empty, so something might not be configured correctly. Longhorn has a built-in backup system so it should be able to manage backups on a Hetzner S3 bucket.
-  - **RESOLVED**: Backup system is now working. The BackupTarget was not configured (helm defaultSettings don't auto-create it). Configured via `kubectl patch backuptarget default -n longhorn-system`. Tested manual backup successfully uploaded ~859MB to S3. Weekly automated backups (`weekly-bak` RecurringJob) are scheduled for Sundays at 3am.
 - [ ] work out how to set up alerting using our monitoring stack. Ideally these would send email alerts.
 - [ ] Let's do a full audit of LVS Cloud. The main focus should be on reliability and security. This is a non-exhaustive list of things we should check for:
   - How are we storing secrets? Is this maintainable? Is this resilient?

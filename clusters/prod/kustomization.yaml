@@ -13,5 +13,6 @@ resources:
   - authelia.yaml
   - monitoring.yaml
   - traefik-dashboard.yaml
+  - longhorn-dashboard.yaml
   - image-automation.yaml
   - apps.yaml

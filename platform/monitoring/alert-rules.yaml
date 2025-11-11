@@ -1,0 +1,132 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: lvs-cloud-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus-stack
+    role: alert-rules
+spec:
+  groups:
+  - name: kubernetes
+    interval: 30s
+    rules:
+    # Node down
+    - alert: NodeDown
+      expr: up{job="node-exporter"} == 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Node {{ $labels.instance }} is down"
+        description: "Node {{ $labels.instance }} has been down for more than 5 minutes."
+
+    # High CPU usage
+    - alert: HighCPUUsage
+      expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High CPU usage on {{ $labels.instance }}"
+        description: "CPU usage is above 80% for more than 10 minutes."
+
+    # High memory usage
+    - alert: HighMemoryUsage
+      expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "High memory usage on {{ $labels.instance }}"
+        description: "Memory usage is above 85% for more than 10 minutes."
+
+    # Disk space warning
+    - alert: DiskSpaceWarning
+      expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Low disk space on {{ $labels.instance }}"
+        description: "Disk space is below 20% on root filesystem."
+
+    # Disk space critical
+    - alert: DiskSpaceCritical
+      expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Critical disk space on {{ $labels.instance }}"
+        description: "Disk space is below 10% on root filesystem."
+
+  - name: pods
+    interval: 30s
+    rules:
+    # Pod restart loop
+    - alert: PodRestartLoop
+      expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} restarting"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has been restarting frequently."
+
+    # Pod crash loop
+    - alert: PodCrashLoop
+      expr: kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff"} == 1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} in CrashLoopBackOff"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is in CrashLoopBackOff state."
+
+    # Pod not ready
+    - alert: PodNotReady
+      expr: kube_pod_status_phase{phase!~"Running|Succeeded"} == 1
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} not ready"
+        description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in {{ $labels.phase }} state for more than 15 minutes."
+
+  - name: deployments
+    interval: 30s
+    rules:
+    # Deployment replicas mismatch
+    - alert: DeploymentReplicasMismatch
+      expr: kube_deployment_spec_replicas != kube_deployment_status_replicas_available
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} replicas mismatch"
+        description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has {{ $value }} replicas available but expects {{ $labels.spec_replicas }}."
+
+  - name: longhorn
+    interval: 30s
+    rules:
+    # Longhorn volume degraded
+    - alert: LonghornVolumeDegraded
+      expr: longhorn_volume_robustness == 2
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Longhorn volume {{ $labels.volume }} degraded"
+        description: "Longhorn volume {{ $labels.volume }} is in degraded state."
+
+    # Longhorn volume faulted
+    - alert: LonghornVolumeFaulted
+      expr: longhorn_volume_robustness == 3
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Longhorn volume {{ $labels.volume }} faulted"
+        description: "Longhorn volume {{ $labels.volume }} is in faulted state."

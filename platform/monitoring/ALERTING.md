@@ -17,16 +17,21 @@
    - If in sandbox, request production access to send to any email
    - Or verify recipient email addresses for testing
 
-### 2. Create Kubernetes Secret
+### 2. Update Configuration
 
-Update `YOUR_EMAIL@example.com` in `kube-prometheus-stack.yaml:71` with your actual email address, then create the secret:
+1. **Update email and credentials** in `alertmanager-config.yaml`:
+   - Replace `YOUR_EMAIL@example.com` with your actual email
+   - Replace `YOUR_SES_SMTP_USERNAME` with your AWS SES SMTP username (appears twice)
+
+2. **Create Kubernetes Secret** for the password only:
 
 ```bash
 kubectl create secret generic alertmanager-ses-credentials \
   -n monitoring \
-  --from-literal=SMTP_USERNAME='your-ses-smtp-username' \
   --from-literal=SMTP_PASSWORD='your-ses-smtp-password'
 ```
+
+**Note**: The SMTP username must be configured inline in `alertmanager-config.yaml` as v1alpha1 doesn't support secret references for usernames.
 
 ### 3. Deploy
 

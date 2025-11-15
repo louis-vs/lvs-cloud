@@ -20,14 +20,11 @@ spec:
     - to: 'YOUR_EMAIL@example.com'
       from: 'alerts@lvs.me.uk'
       smarthost: 'email-smtp.eu-west-1.amazonaws.com:587'
-      authUsername:
-        secret:
-          name: alertmanager-ses-credentials
-          key: SMTP_USERNAME
+      authUsername: 'YOUR_SES_SMTP_USERNAME'
+      authIdentity: 'YOUR_SES_SMTP_USERNAME'
       authPassword:
-        secret:
-          name: alertmanager-ses-credentials
-          key: SMTP_PASSWORD
+        name: alertmanager-ses-credentials
+        key: SMTP_PASSWORD
       requireTLS: true
       headers:
       - key: Subject

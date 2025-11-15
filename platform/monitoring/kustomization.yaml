@@ -8,3 +8,4 @@ resources:
   - promtail.yaml
   - alert-rules.yaml
   - alertmanager-config.yaml
+  - s3-metrics-collector.yaml

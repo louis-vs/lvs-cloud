@@ -130,3 +130,36 @@ spec:
       annotations:
         summary: "Longhorn volume {{ $labels.volume }} faulted"
         description: "Longhorn volume {{ $labels.volume }} is in faulted state."
+
+  - name: s3-storage
+    interval: 30s
+    rules:
+    # S3 storage warning (>80GB across all buckets)
+    - alert: S3StorageHighUsage
+      expr: s3_total_size_bytes > 85899345920
+      for: 15m
+      labels:
+        severity: warning
+      annotations:
+        summary: "S3 storage usage is high"
+        description: "Total S3 storage usage is {{ $value | humanize1024 }}B (>80GB threshold)."
+
+    # S3 storage critical (>95GB across all buckets)
+    - alert: S3StorageCritical
+      expr: s3_total_size_bytes > 101991162880
+      for: 15m
+      labels:
+        severity: critical
+      annotations:
+        summary: "S3 storage usage is critical"
+        description: "Total S3 storage usage is {{ $value | humanize1024 }}B (>95GB threshold). Approaching 100GB limit."
+
+    # S3 metrics stale (no update for 30 minutes)
+    - alert: S3MetricsStale
+      expr: time() - push_time_seconds{job="s3_storage",instance="total"} > 1800
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "S3 metrics collection is stale"
+        description: "S3 storage metrics haven't been updated in over 30 minutes. Last update was {{ $value | humanizeDuration }} ago."

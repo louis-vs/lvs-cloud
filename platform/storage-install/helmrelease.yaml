@@ -25,6 +25,8 @@ spec:
       backupTargetCredentialSecret: longhorn-backup
       concurrentReplicaRebuildPerNodeLimit: "1"
       createDefaultDiskLabeledNodes: "false"
+      storageMinimalAvailablePercentage: "5"
+      storageReservedPercentageForDefaultDisk: "10"
 
     longhornManager:
       tolerations:

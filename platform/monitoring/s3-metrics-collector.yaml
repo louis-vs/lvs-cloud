@@ -171,7 +171,7 @@ spec:
             - name: AWS_DEFAULT_REGION
               value: "nbg1"
             - name: PUSHGATEWAY_URL
-              value: "http://kube-prometheus-stack-prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+              value: "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091"
             volumeMounts:
             - name: scripts
               mountPath: /scripts

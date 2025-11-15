@@ -1,6 +1,5 @@
 # TODO
 
-- [ ] work out how to set up alerting using our monitoring stack. Ideally these would send email alerts.
 - [ ] Let's do a full audit of LVS Cloud. The main focus should be on reliability and security. This is a non-exhaustive list of things we should check for:
   - How are we storing secrets? Is this maintainable? Is this resilient?
   - How much manual work is needed to maintain? For example, currently the bootstrap script needs us to manually input secrets. We shouldn't need to use that script often as it's a last resort, but still this seems bad. I have used credstash to store secrets in a bucket before - can we use a tool like that? One that doesn't require anything running on the cluster and can store stuff in our Hetzner Object storage.

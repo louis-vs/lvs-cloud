@@ -10,7 +10,7 @@
 | **Registry** | <https://registry.lvs.me.uk> | ✅ (robot_user) |
 | **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
 
-**Infrastructure:** Hetzner cx22 (2 vCPU, 4GB RAM) + 50GB block storage
+**Infrastructure:** Hetzner cx23 (2 vCPU, 4GB RAM) + 50GB block storage
 **Total Cost:** €9.89/month (€4.90 server + €4.99 Object Storage)
 
 ## Architecture
@@ -97,22 +97,9 @@ pkill -f 'ssh.*6443:127.0.0.1:6443'
 2. Push to `master`
 3. GitHub Actions runs `terraform plan`
 4. Reply "LGTM" to approval issue
-5. Terraform recreates server with k3s
-6. etcd persists on block storage → config survives
+5. If needed, Terraform recreates server with k3s
+6. etcd persists on block storage so the config persists
 7. Pods restart and reattach to persistent volumes
-
-## Current Status
-
-- [x] **k3s cluster**: Single node, weekly auto-upgrades ✅
-- [x] **Flux GitOps**: Automatic image updates + deployments ✅
-- [x] **Longhorn storage**: PVCs with S3 backups ✅
-- [x] **cert-manager**: Automated TLS for apps ✅
-- [x] **PostgreSQL**: Shared database server with per-app DBs ✅
-- [x] **PGL observability**: Prometheus metrics + Loki logs + Grafana dashboards ✅
-- [x] **External registry**: Docker + Caddy with Let's Encrypt ✅
-- [x] **Helm charts**: Apps packaged with values + image setters ✅
-
-**System Status**: ✅ Production ready - Full Kubernetes + GitOps
 
 ## Documentation
 
@@ -162,5 +149,3 @@ lvs-cloud/
 - Run `infrastructure/bootstrap/bootstrap.sh` - auto-detects fresh cluster vs server recreation
 - Fresh cluster: full bootstrap (~30-45 min)
 - Server recreation: verification only (~2-5 min)
-
-**Add an app?** See [DEPLOY.md](DEPLOY.md)

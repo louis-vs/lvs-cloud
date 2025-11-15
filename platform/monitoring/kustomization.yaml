@@ -4,6 +4,7 @@ namespace: monitoring
 resources:
   - namespace.yaml
   - kube-prometheus-stack.yaml
+  - pushgateway.yaml
   - loki.yaml
   - promtail.yaml
   - alert-rules.yaml

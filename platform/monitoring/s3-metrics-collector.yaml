@@ -5,74 +5,126 @@ metadata:
   name: s3-metrics-script
   namespace: monitoring
 data:
-  collect-metrics.sh: |
-    #!/bin/bash
-    set -e
+  collect-metrics.py: |
+    #!/usr/bin/env python3
+    import boto3
+    import os
+    import sys
+    import requests
+    from botocore.exceptions import ClientError
 
-    # Get S3 endpoint from environment
-    ENDPOINT="${AWS_ENDPOINTS}"
-    PUSHGATEWAY_URL="${PUSHGATEWAY_URL:-http://kube-prometheus-stack-prometheus-pushgateway.monitoring.svc.cluster.local:9091}"
+    def push_metrics(url, metrics):
+        """Push metrics to Prometheus Pushgateway"""
+        try:
+            response = requests.post(url, data=metrics)
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            print(f"Error pushing metrics: {e}")
+            return False
 
-    echo "Collecting S3 storage metrics from ${ENDPOINT}"
+    def get_bucket_size(s3_client, bucket_name):
+        """Get total size and object count for a bucket using pagination"""
+        total_size = 0
+        total_objects = 0
 
-    # List all buckets
-    BUCKETS=$(aws s3 ls --endpoint-url="${ENDPOINT}" | awk '{print $3}')
+        try:
+            paginator = s3_client.get_paginator('list_objects_v2')
+            page_iterator = paginator.paginate(Bucket=bucket_name)
 
-    if [ -z "$BUCKETS" ]; then
-      echo "No buckets found"
-      exit 0
-    fi
+            for page_num, page in enumerate(page_iterator, 1):
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        total_size += obj['Size']
+                        total_objects += 1
+                    print(f"  Page {page_num}: {len(page['Contents'])} objects")
 
-    TOTAL_SIZE=0
-    TOTAL_OBJECTS=0
+            return total_size, total_objects
+        except ClientError as e:
+            print(f"Error accessing bucket {bucket_name}: {e}")
+            return 0, 0
 
-    # Collect metrics for each bucket
-    for BUCKET in $BUCKETS; do
-      echo "Processing bucket: ${BUCKET}"
+    def main():
+        # Get configuration from environment
+        endpoint_url = os.environ.get('AWS_ENDPOINTS', 'https://nbg1.your-objectstorage.com')
+        pushgateway_url = os.environ.get('PUSHGATEWAY_URL',
+            'http://kube-prometheus-stack-prometheus-pushgateway.monitoring.svc.cluster.local:9091')
 
-      # Get bucket size and object count
-      # Note: This uses recursive ls and sums up file sizes
-      BUCKET_DATA=$(aws s3 ls s3://${BUCKET} --endpoint-url="${ENDPOINT}" --recursive --summarize | grep -E "Total (Size|Objects)")
+        print(f"Collecting S3 storage metrics from {endpoint_url}")
 
-      SIZE=$(echo "$BUCKET_DATA" | grep "Total Size" | awk '{print $3}')
-      OBJECTS=$(echo "$BUCKET_DATA" | grep "Total Objects" | awk '{print $3}')
+        # Initialize S3 client
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=endpoint_url,
+            aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY'),
+            region_name=os.environ.get('AWS_DEFAULT_REGION', 'nbg1')
+        )
 
-      # Default to 0 if empty
-      SIZE=${SIZE:-0}
-      OBJECTS=${OBJECTS:-0}
+        # List all buckets
+        try:
+            response = s3_client.list_buckets()
+            buckets = response['Buckets']
+        except ClientError as e:
+            print(f"Error listing buckets: {e}")
+            sys.exit(1)
 
-      TOTAL_SIZE=$((TOTAL_SIZE + SIZE))
-      TOTAL_OBJECTS=$((TOTAL_OBJECTS + OBJECTS))
+        if not buckets:
+            print("No buckets found")
+            sys.exit(0)
 
-      echo "Bucket ${BUCKET}: ${SIZE} bytes, ${OBJECTS} objects"
+        print(f"Found {len(buckets)} bucket(s)")
 
-      # Push per-bucket metrics
-      cat <<EOF | curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/s3_storage/instance/${BUCKET}"
-    # TYPE s3_bucket_size_bytes gauge
+        total_size = 0
+        total_objects = 0
+
+        # Process each bucket
+        for bucket in buckets:
+            bucket_name = bucket['Name']
+            print(f"\nProcessing bucket: {bucket_name}")
+
+            size, objects = get_bucket_size(s3_client, bucket_name)
+            total_size += size
+            total_objects += objects
+
+            size_mb = size / 1024 / 1024
+            print(f"Bucket {bucket_name}: {size:,} bytes ({size_mb:.2f} MB), {objects:,} objects")
+
+            # Push per-bucket metrics
+            metrics = f"""# TYPE s3_bucket_size_bytes gauge
     # HELP s3_bucket_size_bytes Total size of objects in S3 bucket in bytes
-    s3_bucket_size_bytes{bucket="${BUCKET}"} ${SIZE}
+    s3_bucket_size_bytes{{bucket="{bucket_name}"}} {size}
     # TYPE s3_bucket_objects_total gauge
     # HELP s3_bucket_objects_total Total number of objects in S3 bucket
-    s3_bucket_objects_total{bucket="${BUCKET}"} ${OBJECTS}
-    EOF
-    done
+    s3_bucket_objects_total{{bucket="{bucket_name}"}} {objects}
+    """
+            push_metrics(f"{pushgateway_url}/metrics/job/s3_storage/instance/{bucket_name}", metrics)
 
-    # Convert total size to GB for easier reading
-    TOTAL_SIZE_GB=$(echo "scale=2; ${TOTAL_SIZE} / 1073741824" | bc)
+        # Summary
+        total_gb = total_size / 1024 / 1024 / 1024
+        print(f"\n{'='*60}")
+        print(f"Total across all buckets:")
+        print(f"  Size: {total_size:,} bytes ({total_gb:.2f} GB)")
+        print(f"  Objects: {total_objects:,}")
+        print(f"{'='*60}")
 
-    echo "Total across all buckets: ${TOTAL_SIZE} bytes (${TOTAL_SIZE_GB} GB), ${TOTAL_OBJECTS} objects"
-
-    # Push total metrics
-    cat <<EOF | curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/s3_storage/instance/total"
-    # TYPE s3_total_size_bytes gauge
+        # Push total metrics
+        total_metrics = f"""# TYPE s3_total_size_bytes gauge
     # HELP s3_total_size_bytes Total size of all objects across all S3 buckets in bytes
-    s3_total_size_bytes ${TOTAL_SIZE}
+    s3_total_size_bytes {total_size}
     # TYPE s3_total_objects gauge
     # HELP s3_total_objects Total number of objects across all S3 buckets
-    s3_total_objects ${TOTAL_OBJECTS}
-    EOF
+    s3_total_objects {total_objects}
+    """
 
-    echo "Metrics pushed successfully"
+        if push_metrics(f"{pushgateway_url}/metrics/job/s3_storage/instance/total", total_metrics):
+            print("\nMetrics pushed successfully to Pushgateway")
+        else:
+            print("\nFailed to push metrics to Pushgateway")
+            sys.exit(1)
+
+    if __name__ == '__main__':
+        main()
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -93,10 +145,13 @@ spec:
           restartPolicy: OnFailure
           containers:
           - name: collector
-            image: amazon/aws-cli:latest
+            image: python:3.11-slim
             command:
-            - /bin/bash
-            - /scripts/collect-metrics.sh
+            - /bin/sh
+            - -c
+            - |
+              pip install --no-cache-dir boto3 requests > /dev/null 2>&1
+              python3 /scripts/collect-metrics.py
             env:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:

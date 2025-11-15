@@ -134,25 +134,15 @@ spec:
   - name: s3-storage
     interval: 30s
     rules:
-    # S3 storage warning (>80GB across all buckets)
+    # S3 storage warning (>500GB across all buckets)
     - alert: S3StorageHighUsage
-      expr: s3_total_size_bytes > 85899345920
+      expr: s3_total_size_bytes > 536870912000
       for: 15m
       labels:
         severity: warning
       annotations:
         summary: "S3 storage usage is high"
-        description: "Total S3 storage usage is {{ $value | humanize1024 }}B (>80GB threshold)."
-
-    # S3 storage critical (>95GB across all buckets)
-    - alert: S3StorageCritical
-      expr: s3_total_size_bytes > 101991162880
-      for: 15m
-      labels:
-        severity: critical
-      annotations:
-        summary: "S3 storage usage is critical"
-        description: "Total S3 storage usage is {{ $value | humanize1024 }}B (>95GB threshold). Approaching 100GB limit."
+        description: "Total S3 storage usage is {{ $value | humanize1024 }}B (>500GB threshold). 1TB included in plan."
 
     # S3 metrics stale (no update for 30 minutes)
     - alert: S3MetricsStale

@@ -49,43 +49,12 @@ spec:
 
     # Alertmanager configuration
     alertmanager:
-      config:
-        global:
-          resolve_timeout: 5m
-          smtp_from: "alerts@lvs.me.uk"
-          smtp_smarthost: "email-smtp.eu-west-1.amazonaws.com:587"
-          smtp_auth_username: "$SMTP_USERNAME"
-          smtp_auth_password: "$SMTP_PASSWORD"
-          smtp_require_tls: true
-
-        route:
-          group_by: ['alertname', 'cluster', 'service']
-          group_wait: 10s
-          group_interval: 10s
-          repeat_interval: 24h
-          receiver: 'email'
-
-        receivers:
-        - name: 'email'
-          email_configs:
-          - to: 'YOUR_EMAIL@example.com'
-            headers:
-              Subject: '[LVS Cloud] {{ .GroupLabels.alertname }}'
-
       alertmanagerSpec:
-        containers:
-        - name: alertmanager
-          env:
-          - name: SMTP_USERNAME
-            valueFrom:
-              secretKeyRef:
-                name: alertmanager-ses-credentials
-                key: SMTP_USERNAME
-          - name: SMTP_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: alertmanager-ses-credentials
-                key: SMTP_PASSWORD
+        # Enable AlertmanagerConfig CRD support
+        alertmanagerConfigSelector:
+          matchLabels:
+            alertmanagerConfig: email
+        alertmanagerConfigNamespaceSelector: {}
 
         resources:
           requests:

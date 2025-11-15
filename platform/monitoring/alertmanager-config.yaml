@@ -1,0 +1,32 @@
+---
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: email-config
+  namespace: monitoring
+  labels:
+    alertmanagerConfig: email
+spec:
+  route:
+    groupBy: ['alertname', 'cluster', 'service']
+    groupWait: 10s
+    groupInterval: 10s
+    repeatInterval: 24h
+    receiver: 'email'
+
+  receivers:
+  - name: 'email'
+    emailConfigs:
+    - to: 'YOUR_EMAIL@example.com'
+      from: 'alerts@lvs.me.uk'
+      smarthost: 'email-smtp.eu-west-1.amazonaws.com:587'
+      authUsername:
+        name: alertmanager-ses-credentials
+        key: SMTP_USERNAME
+      authPassword:
+        name: alertmanager-ses-credentials
+        key: SMTP_PASSWORD
+      requireTLS: true
+      headers:
+      - key: Subject
+        value: '[LVS Cloud] {{ .GroupLabels.alertname }}'

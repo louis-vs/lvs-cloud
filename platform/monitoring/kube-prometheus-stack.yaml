@@ -47,6 +47,10 @@ spec:
                       {"name":"weekly-bak","task":"backup","cron":"0 3 * * 0","retain":4,"concurrency":1,"labels":{"app":"prometheus"}}
                     ]
 
+    # Disable default alert rules (use only custom rules in alert-rules.yaml)
+    defaultRules:
+      create: false
+
     # Alertmanager configuration
     alertmanager:
       alertmanagerSpec:

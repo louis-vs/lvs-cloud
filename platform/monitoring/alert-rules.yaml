@@ -3,7 +3,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: lvs-cloud-alerts
-  namespace: monitoring
+  namespace: platform
   labels:
     prometheus: kube-prometheus-stack
     role: alert-rules

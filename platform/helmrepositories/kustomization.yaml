@@ -1,7 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-namespace: flux-system
 resources:
+  - platform-namespace.yaml
+  - applications-namespace.yaml
   - longhorn.yaml
   - jetstack.yaml
   - bitnami.yaml

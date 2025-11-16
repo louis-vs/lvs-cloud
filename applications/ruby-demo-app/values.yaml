@@ -25,6 +25,8 @@ ingress:
 env:
   - name: RACK_ENV
     value: production
+  - name: DB_HOST
+    value: postgresql.platform.svc.cluster.local
   - name: POSTGRES_PASSWORD
     valueFrom:
       secretKeyRef:

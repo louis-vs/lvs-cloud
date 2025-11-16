@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: s3-metrics-script
-  namespace: monitoring
+  namespace: platform
 data:
   collect-metrics.py: |
     #!/usr/bin/env python3
@@ -48,7 +48,7 @@ data:
         # Get configuration from environment
         endpoint_url = os.environ.get('AWS_ENDPOINTS', 'https://nbg1.your-objectstorage.com')
         pushgateway_url = os.environ.get('PUSHGATEWAY_URL',
-            'http://kube-prometheus-stack-prometheus-pushgateway.monitoring.svc.cluster.local:9091')
+            'http://kube-prometheus-stack-prometheus-pushgateway.platform.svc.cluster.local:9091')
 
         print(f"Collecting S3 storage metrics from {endpoint_url}")
 
@@ -130,7 +130,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: s3-metrics-collector
-  namespace: monitoring
+  namespace: platform
 spec:
   # Run every 6 hours
   schedule: "0 */6 * * *"
@@ -171,7 +171,7 @@ spec:
             - name: AWS_DEFAULT_REGION
               value: "nbg1"
             - name: PUSHGATEWAY_URL
-              value: "http://prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+              value: "http://prometheus-pushgateway.platform.svc.cluster.local:9091"
             volumeMounts:
             - name: scripts
               mountPath: /scripts
@@ -189,6 +189,6 @@ spec:
               defaultMode: 0755
 # NOTE: s3-credentials secret must be created manually during bootstrap
 # kubectl get secret longhorn-backup -n longhorn-system -o yaml | \
-#   sed 's/namespace: longhorn-system/namespace: monitoring/' | \
+#   sed 's/namespace: longhorn-system/namespace: platform/' | \
 #   sed 's/name: longhorn-backup/name: s3-credentials/' | \
 #   grep -v 'uid:\|resourceVersion:\|creationTimestamp:' | kubectl apply -f -

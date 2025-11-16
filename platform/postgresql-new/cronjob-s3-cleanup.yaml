@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: pgdump-s3-cleanup
-  namespace: default
+  namespace: platform
 spec:
   schedule: "0 4 * * *"
   successfulJobsHistoryLimit: 1

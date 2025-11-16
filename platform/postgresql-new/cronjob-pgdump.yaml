@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: pgdump-s3
-  namespace: default
+  namespace: platform
 spec:
   schedule: "0 1 * * *"
   successfulJobsHistoryLimit: 2
@@ -30,7 +30,7 @@ spec:
                   set -euo pipefail
                   TS=$(date -u +%Y%m%dT%H%M%SZ)
                   FILE="/dump/pgdumpall-$TS.sql.gz"
-                  pg_dumpall -h postgresql.default.svc.cluster.local -U postgres | gzip -9 > "$FILE"
+                  pg_dumpall -h postgresql.platform.svc.cluster.local -U postgres | gzip -9 > "$FILE"
                   ls -lh /dump
               volumeMounts:
                 - name: dump

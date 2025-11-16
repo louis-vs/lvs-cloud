@@ -1,8 +1,6 @@
 ---
-# NOTE: grafana-admin secret must be created manually during bootstrap
-# kubectl create secret generic grafana-admin -n monitoring \
-#   --from-literal=admin-user=admin \
-#   --from-literal=admin-password='YOUR_SECURE_PASSWORD'
+# grafana-admin secret created by infrastructure/bootstrap/bootstrap.sh
+# See SECRETS.md for complete secret inventory
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:

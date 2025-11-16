@@ -144,6 +144,7 @@ main() {
     info "Collecting credentials for fresh bootstrap..."
     prompt_password POSTGRES_ADMIN_PASSWORD "PostgreSQL admin password"
     prompt_password POSTGRES_RUBY_PASSWORD "PostgreSQL ruby_demo_user password"
+    prompt_password GRAFANA_ADMIN_PASSWORD "Grafana admin password"
     prompt_password REGISTRY_PASSWORD "Registry password (from GitHub secret)"
     read -p "S3 Access Key: " S3_ACCESS_KEY
     prompt_password S3_SECRET_KEY "S3 Secret Key"
@@ -153,19 +154,17 @@ main() {
        kubectl get kustomization flux-system -n flux-system >/dev/null 2>&1; then
         success "Flux already bootstrapped. Skipping Flux bootstrap."
     else
-        # Generate Flux deploy key if needed
-        if [ ! -f infrastructure/flux-deploy-key ]; then
-            info "Generating Flux deploy key..."
-            ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f infrastructure/flux-deploy-key -N ""
+        # Generate Flux deploy key
+        info "Generating Flux deploy key..."
+        ssh-keygen -t ed25519 -C "flux-bot@lvs.me.uk" -f /tmp/flux-deploy-key -N ""
 
-            echo
-            warn "Add this deploy key to GitHub with WRITE access:"
-            echo "  https://github.com/louis-vs/lvs-cloud/settings/keys/new"
-            echo
-            cat infrastructure/flux-deploy-key.pub
-            echo
-            read -p "Press Enter after adding the deploy key to GitHub..."
-        fi
+        echo
+        warn "Add this deploy key to GitHub with WRITE access:"
+        echo "  https://github.com/louis-vs/lvs-cloud/settings/keys/new"
+        echo
+        cat /tmp/flux-deploy-key.pub
+        echo
+        read -p "Press Enter after adding the deploy key to GitHub..."
 
         # Bootstrap Flux
         info "Bootstrapping Flux..."
@@ -173,7 +172,7 @@ main() {
             --url=ssh://git@github.com/louis-vs/lvs-cloud.git \
             --branch=master \
             --path=clusters/prod \
-            --private-key-file=infrastructure/flux-deploy-key \
+            --private-key-file=/tmp/flux-deploy-key \
             --components-extra=image-reflector-controller,image-automation-controller || error "Flux bootstrap failed"
 
         success "Flux bootstrap completed"
@@ -187,7 +186,7 @@ main() {
         ssh-keyscan github.com > /tmp/known_hosts
         kubectl create secret generic flux-git-ssh \
             -n flux-system \
-            --from-file=identity=infrastructure/flux-deploy-key \
+            --from-file=identity=/tmp/flux-deploy-key \
             --from-file=known_hosts=/tmp/known_hosts
         success "Created flux-git-ssh secret"
     else
@@ -252,6 +251,41 @@ main() {
         success "Created pg-backup-s3 secret"
     else
         info "pg-backup-s3 secret already exists"
+    fi
+
+    # etcd S3 backup credentials
+    if ! kubectl get secret etcd-backup-s3 -n kube-system >/dev/null 2>&1; then
+        kubectl create secret generic etcd-backup-s3 -n kube-system \
+            --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
+            --from-literal=S3_BUCKET='lvs-cloud-etcd-backups' \
+            --from-literal=S3_REGION='nbg1' \
+            --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" \
+            --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY"
+        success "Created etcd-backup-s3 secret"
+    else
+        info "etcd-backup-s3 secret already exists"
+    fi
+
+    # Wait for monitoring namespace
+    info "Waiting for monitoring namespace (this takes 5-10 minutes)..."
+    for i in {1..60}; do
+        if kubectl get namespace monitoring >/dev/null 2>&1; then
+            success "Monitoring namespace ready"
+            break
+        fi
+        echo -n "."
+        sleep 10
+    done
+    echo
+
+    # Grafana admin credentials
+    if ! kubectl get secret grafana-admin -n monitoring >/dev/null 2>&1; then
+        kubectl create secret generic grafana-admin -n monitoring \
+            --from-literal=admin-user='admin' \
+            --from-literal=admin-password="$GRAFANA_ADMIN_PASSWORD"
+        success "Created grafana-admin secret"
+    else
+        info "grafana-admin secret already exists"
     fi
 
     # Monitor deployment

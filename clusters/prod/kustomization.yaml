@@ -9,6 +9,7 @@ resources:
   - cert-manager-config.yaml
   - registry.yaml
   - postgresql.yaml
+  - etcd-backup.yaml
   - redis.yaml
   - authelia.yaml
   - monitoring.yaml

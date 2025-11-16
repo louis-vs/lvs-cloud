@@ -112,6 +112,10 @@ curl -u robot_user:PASSWORD https://registry.lvs.me.uk/v2/_catalog
 
 **Use this when:** Deploying a brand new cluster or after etcd data loss.
 
+**Quick Start:** Run `infrastructure/bootstrap/bootstrap.sh` after Terraform provisions the server. The script automates all steps below.
+
+**Secret Management:** See [SECRETS.md](../../SECRETS.md) for complete secret inventory and management procedures.
+
 ### Prerequisites
 
 Before starting, ensure you have:
@@ -128,6 +132,7 @@ Before starting, ensure you have:
    - `lvs-cloud-terraform-state` (Nuremberg region)
    - `lvs-cloud-longhorn-backups` (Nuremberg region)
    - `lvs-cloud-pg-backups` (Nuremberg region)
+   - `lvs-cloud-etcd-backups` (Nuremberg region)
 
 3. **Flux CLI installed locally**:
 
@@ -242,13 +247,9 @@ kubectl create secret docker-registry registry-credentials \
   --docker-server=registry.lvs.me.uk \
   --docker-username=robot_user \
   --docker-password='YOUR_REGISTRY_PASSWORD'
-
-# Create Grafana admin credentials
-# Replace password with a secure value
-kubectl create secret generic grafana-admin -n monitoring \
-  --from-literal=admin-user=admin \
-  --from-literal=admin-password='CHANGE_ME_GRAFANA_PASSWORD'
 ```
+
+**Note:** The grafana-admin secret is created automatically by the bootstrap script after the monitoring namespace is available. You don't need to create it manually.
 
 #### 5. Monitor Initial Deployment (FROM LOCAL MACHINE)
 
@@ -636,6 +637,115 @@ Fresh cluster bootstrap is complete when:
 ---
 
 ## Troubleshooting
+
+### Cloud-Init Issues
+
+If the server boots but k3s is not running or SSH fails:
+
+**Check cloud-init status:**
+
+```bash
+# SSH to server (if possible)
+ssh ubuntu@$(dig +short app.lvs.me.uk)
+
+# Check cloud-init completion status
+cloud-init status --long
+# Should show: status: done
+
+# View cloud-init logs
+sudo cat /var/log/cloud-init.log
+sudo cat /var/log/cloud-init-output.log
+
+# Check custom completion log
+cat /var/log/lvs-cloud-setup.log
+```
+
+**Common cloud-init issues:**
+
+1. **Block storage not mounted:**
+
+   ```bash
+   # Check volume attachment
+   lsblk
+   # Should show /dev/sdb mounted at /srv/data
+
+   # Check mount status
+   mount | grep /srv/data
+
+   # Check cloud-init mount logs
+   sudo grep "Mount volume" /var/log/cloud-init-output.log -A 20
+
+   # Manual mount if needed
+   sudo mount /dev/sdb /srv/data
+   ```
+
+1. **k3s not running:**
+
+   ```bash
+   # Check k3s service status
+   sudo systemctl status k3s
+
+   # Check k3s logs
+   sudo journalctl -u k3s --no-pager -n 100
+
+   # Verify k3s using correct data directory
+   sudo systemctl cat k3s | grep data-dir
+   # Should show: --data-dir /srv/data/k3s
+
+   # Check if k3s can access etcd
+   sudo ls -la /srv/data/k3s/server/db/
+   ```
+
+1. **Re-run cloud-init after failure:**
+
+   ```bash
+   # Clean cloud-init state
+   sudo cloud-init clean --logs
+
+   # Re-run cloud-init
+   sudo cloud-init init
+   sudo cloud-init modules --mode=config
+   sudo cloud-init modules --mode=final
+
+   # Or: destroy and recreate server via Terraform
+   ```
+
+**Access server console if SSH fails:**
+
+1. Go to Hetzner Cloud Console
+2. Select server → Console
+3. View boot logs and login directly
+4. Check `/var/log/cloud-init-output.log` for errors
+
+### Bootstrap Script Issues
+
+**Script hangs or fails:**
+
+```bash
+# Check SSH tunnel is running
+ps aux | grep "ssh.*6443"
+
+# Test kubectl connection
+kubectl get nodes
+
+# If tunnel died, restart it in a separate terminal
+ssh -L 6443:127.0.0.1:6443 ubuntu@$(dig +short app.lvs.me.uk) -N
+```
+
+**Namespace waits timing out:**
+
+The script waits for `longhorn-system` and `monitoring` namespaces. If these timeout:
+
+```bash
+# Check Flux reconciliation
+flux get kustomizations
+
+# Check HelmRelease status
+kubectl get helmrelease -A
+
+# Force reconcile if stuck
+flux reconcile kustomization storage-install --with-source
+```
 
 ### HelmRelease stuck "InProgress"
 

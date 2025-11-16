@@ -1,0 +1,83 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-backup-s3
+  namespace: kube-system
+spec:
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          volumes:
+            - name: etcd-data
+              hostPath:
+                path: /srv/data/k3s/server/db/etcd
+                type: Directory
+            - name: backup
+              emptyDir: {}
+          initContainers:
+            - name: snapshot
+              image: rancher/mirrored-k8s-gcr-io-etcd:v3.5.9-k3s1
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  TS=$(date -u +%Y%m%dT%H%M%SZ)
+                  FILE="/backup/etcd-snapshot-$TS.db"
+
+                  # Create etcd snapshot using k3s embedded etcd
+                  ETCDCTL_API=3 etcdctl snapshot save "$FILE" \
+                    --endpoints=https://127.0.0.1:2379 \
+                    --cacert=/srv/data/k3s/server/tls/etcd/server-ca.crt \
+                    --cert=/srv/data/k3s/server/tls/etcd/server-client.crt \
+                    --key=/srv/data/k3s/server/tls/etcd/server-client.key
+
+                  # Verify snapshot
+                  ETCDCTL_API=3 etcdctl snapshot status "$FILE" -w table
+
+                  # Compress snapshot
+                  gzip -9 "$FILE"
+                  ls -lh /backup
+              volumeMounts:
+                - name: etcd-data
+                  mountPath: /srv/data/k3s/server/db/etcd
+                  readOnly: true
+                - name: backup
+                  mountPath: /backup
+              securityContext:
+                privileged: true
+          containers:
+            - name: upload
+              image: quay.io/minio/mc:latest
+              envFrom:
+                - secretRef:
+                    name: etcd-backup-s3
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  mc alias set hetzner "${S3_ENDPOINT}" "${S3_ACCESS_KEY}" "${S3_SECRET_KEY}"
+                  mc mb -p "hetzner/${S3_BUCKET}" || true
+                  mc cp /backup/*.db.gz "hetzner/${S3_BUCKET}/$(date -u +%Y)/$(date -u +%m)/"
+                  echo "Uploaded etcd snapshot to S3"
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: "25m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"

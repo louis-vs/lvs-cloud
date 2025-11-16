@@ -234,7 +234,7 @@ main() {
             --from-literal=AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" \
             --from-literal=AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
             --from-literal=AWS_DEFAULT_REGION='nbg1' \
-            --from-literal=AWS_ENDPOINTS='{"s3":"https://nbg1.your-objectstorage.com"}'
+            --from-literal=AWS_ENDPOINTS='https://nbg1.your-objectstorage.com'
         success "Created longhorn-backup secret"
     else
         info "longhorn-backup secret already exists"

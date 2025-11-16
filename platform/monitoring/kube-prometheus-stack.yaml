@@ -52,6 +52,9 @@ spec:
     # Alertmanager configuration
     alertmanager:
       alertmanagerSpec:
+        # External URL for alert links
+        externalUrl: https://alertmanager.lvs.me.uk
+
         # Enable AlertmanagerConfig CRD support
         alertmanagerConfigSelector:
           matchLabels:

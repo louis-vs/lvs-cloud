@@ -15,5 +15,6 @@ resources:
   - monitoring.yaml
   - traefik-dashboard.yaml
   - longhorn-dashboard.yaml
+  - alertmanager.yaml
   - image-automation.yaml
   - apps.yaml

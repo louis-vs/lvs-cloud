@@ -56,6 +56,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [detect-changes]
     if: needs.detect-changes.outputs.apps != '[]'
+    permissions:
+      contents: write  # Required to push git tags
     strategy:
       matrix:
         app: ${{ fromJson(needs.detect-changes.outputs.apps) }}
@@ -106,9 +108,20 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY_URL }}/${{ matrix.app }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY_URL }}/${{ matrix.app }}:buildcache,mode=max
 
+      - name: Create and push git tag
+        if: steps.check.outputs.has_dockerfile == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          TAG="${{ matrix.app }}-${{ steps.version.outputs.version }}"
+          git tag -a "$TAG" -m "Release ${{ matrix.app }} version ${{ steps.version.outputs.version }}"
+          git push origin "$TAG"
+          echo "Created and pushed tag: $TAG"
+
       - name: Build summary
         if: steps.check.outputs.has_dockerfile == 'true'
-        run: echo "✅ Pushed ${{ matrix.app }}:${{ steps.version.outputs.version }}"
+        run: echo "✅ Pushed ${{ matrix.app }}:${{ steps.version.outputs.version }} and created tag ${{ matrix.app }}-${{ steps.version.outputs.version }}"
 
   summary:
     name: Build Summary

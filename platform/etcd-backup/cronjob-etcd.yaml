@@ -40,7 +40,7 @@ spec:
                   apk add --no-cache util-linux
 
                   nsenter --target 1 --mount --uts --ipc --net --pid -- \
-                    k3s etcd-snapshot save --name "etcd-snapshot-$TS"
+                    /usr/local/bin/k3s etcd-snapshot save --name "etcd-snapshot-$TS"
 
                   # Copy snapshot from host to container backup volume
                   # k3s saves to /srv/data/k3s/server/db/snapshots by default

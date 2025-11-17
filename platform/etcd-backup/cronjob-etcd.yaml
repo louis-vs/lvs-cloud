@@ -28,31 +28,33 @@ spec:
               emptyDir: {}
           initContainers:
             - name: snapshot
-              image: quay.io/coreos/etcd:v3.5
+              image: alpine:3.19
               command: ["/bin/sh", "-c"]
               args:
                 - |
                   set -euo pipefail
                   TS=$(date -u +%Y%m%dT%H%M%SZ)
-                  FILE="/backup/etcd-snapshot-$TS.db"
 
-                  # Create etcd snapshot
-                  ETCDCTL_API=3 etcdctl snapshot save "$FILE" \
-                    --endpoints=https://127.0.0.1:2379 \
-                    --cacert=/srv/data/k3s/server/tls/etcd/server-ca.crt \
-                    --cert=/srv/data/k3s/server/tls/etcd/server-client.crt \
-                    --key=/srv/data/k3s/server/tls/etcd/server-client.key
+                  # Use k3s built-in snapshot command via nsenter to host
+                  # This is the recommended approach for k3s etcd backups
+                  apk add --no-cache util-linux
 
-                  # Verify snapshot
-                  ETCDCTL_API=3 etcdctl snapshot status "$FILE" -w table
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    k3s etcd-snapshot save --name "etcd-snapshot-$TS"
 
-                  # Compress snapshot
-                  gzip -9 "$FILE"
+                  # Copy snapshot from host to container backup volume
+                  # k3s saves to /srv/data/k3s/server/db/snapshots by default
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cp /srv/data/k3s/server/db/snapshots/etcd-snapshot-$TS /backup/
+
+                  # Also backup the token file (required for restore)
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cp /srv/data/k3s/server/token /backup/k3s-token-$TS
+
+                  # Compress backups
+                  gzip -9 /backup/etcd-snapshot-$TS
                   ls -lh /backup
               volumeMounts:
-                - name: etcd-data
-                  mountPath: /srv/data/k3s/server/db/etcd
-                  readOnly: true
                 - name: backup
                   mountPath: /backup
               securityContext:

@@ -28,7 +28,7 @@ spec:
               emptyDir: {}
           initContainers:
             - name: snapshot
-              image: rancher/k3s:latest
+              image: quay.io/coreos/etcd:v3.5
               command: ["/bin/sh", "-c"]
               args:
                 - |
@@ -36,15 +36,15 @@ spec:
                   TS=$(date -u +%Y%m%dT%H%M%SZ)
                   FILE="/backup/etcd-snapshot-$TS.db"
 
-                  # Create etcd snapshot using k3s etcdctl
-                  ETCDCTL_API=3 k3s etcdctl snapshot save "$FILE" \
+                  # Create etcd snapshot
+                  ETCDCTL_API=3 etcdctl snapshot save "$FILE" \
                     --endpoints=https://127.0.0.1:2379 \
                     --cacert=/srv/data/k3s/server/tls/etcd/server-ca.crt \
                     --cert=/srv/data/k3s/server/tls/etcd/server-client.crt \
                     --key=/srv/data/k3s/server/tls/etcd/server-client.key
 
                   # Verify snapshot
-                  ETCDCTL_API=3 k3s etcdctl snapshot status "$FILE" -w table
+                  ETCDCTL_API=3 etcdctl snapshot status "$FILE" -w table
 
                   # Compress snapshot
                   gzip -9 "$FILE"

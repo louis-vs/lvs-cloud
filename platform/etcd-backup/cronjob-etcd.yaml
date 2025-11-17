@@ -1,0 +1,98 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: etcd-backup-s3
+  namespace: kube-system
+spec:
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          hostNetwork: true
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+          volumes:
+            - name: etcd-data
+              hostPath:
+                path: /srv/data/k3s/server/db/etcd
+                type: Directory
+            - name: backup
+              emptyDir: {}
+          initContainers:
+            - name: snapshot
+              image: alpine:3.19
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  TS=$(date -u +%Y%m%dT%H%M%SZ)
+
+                  # Use k3s built-in snapshot command via nsenter to host
+                  # This is the recommended approach for k3s etcd backups
+                  apk add --no-cache util-linux
+
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    /usr/local/bin/k3s etcd-snapshot save --name "etcd-snapshot-$TS"
+
+                  # Copy snapshot from host to container backup volume
+                  # k3s saves to /srv/data/k3s/server/db/snapshots by default
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cp /srv/data/k3s/server/db/snapshots/etcd-snapshot-$TS /backup/
+
+                  # Also backup the token file (required for restore)
+                  nsenter --target 1 --mount --uts --ipc --net --pid -- \
+                    cp /srv/data/k3s/server/token /backup/k3s-token-$TS
+
+                  # Compress backups
+                  gzip -9 /backup/etcd-snapshot-$TS
+                  ls -lh /backup
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              securityContext:
+                privileged: true
+          containers:
+            - name: upload
+              image: quay.io/minio/mc:latest
+              env:
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-backup
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-backup
+                      key: AWS_SECRET_ACCESS_KEY
+                - name: AWS_ENDPOINTS
+                  valueFrom:
+                    secretKeyRef:
+                      name: s3-backup
+                      key: AWS_ENDPOINTS
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  mc alias set hetzner "https://${AWS_ENDPOINTS}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}"
+                  mc mb -p "hetzner/lvs-cloud-etcd-backups" || true
+                  mc cp /backup/*.db.gz "hetzner/lvs-cloud-etcd-backups/$(date -u +%Y)/$(date -u +%m)/"
+                  echo "Uploaded etcd snapshot to S3"
+              volumeMounts:
+                - name: backup
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: "25m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"

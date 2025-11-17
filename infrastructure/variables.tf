@@ -28,12 +28,6 @@ variable "registry_htpasswd" {
   sensitive   = true
 }
 
-variable "server_type" {
-  description = "Hetzner server type"
-  type        = string
-  default     = "cx23" # 2 vCPU, 8GB RAM, 40GB SSD - cx22 replacement
-}
-
 variable "location" {
   description = "Hetzner location"
   type        = string

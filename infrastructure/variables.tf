@@ -46,13 +46,13 @@ variable "datacenter" {
   default     = "nbg1-dc3" # Nuremberg
 }
 
-variable "s3_access_key" {
+variable "S3_ACCESS_KEY" {
   description = "S3 access key for etcd backups (Hetzner Object Storage)"
   type        = string
   sensitive   = true
 }
 
-variable "s3_secret_key" {
+variable "S3_SECRET_KEY" {
   description = "S3 secret key for etcd backups (Hetzner Object Storage)"
   type        = string
   sensitive   = true

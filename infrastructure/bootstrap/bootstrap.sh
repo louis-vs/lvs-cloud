@@ -112,7 +112,7 @@ main() {
         info "Checking critical secrets..."
         kubectl get secret flux-git-ssh -n flux-system >/dev/null 2>&1 || warn "flux-git-ssh secret missing"
         kubectl get secret registry-credentials -n flux-system >/dev/null 2>&1 || warn "registry-credentials secret missing"
-        kubectl get secret postgresql-auth -n default >/dev/null 2>&1 || warn "postgresql-auth secret missing"
+        kubectl get secret postgresql-auth -n platform >/dev/null 2>&1 || warn "postgresql-auth secret missing"
         success "Critical secrets present"
 
         # Check Flux reconciliation
@@ -194,8 +194,8 @@ main() {
     fi
 
     # PostgreSQL auth
-    if ! kubectl get secret postgresql-auth -n default >/dev/null 2>&1; then
-        kubectl create secret generic postgresql-auth -n default \
+    if ! kubectl get secret postgresql-auth -n platform >/dev/null 2>&1; then
+        kubectl create secret generic postgresql-auth -n platform \
             --from-literal=postgres-password="$POSTGRES_ADMIN_PASSWORD" \
             --from-literal=user-password="$POSTGRES_RUBY_PASSWORD" \
             --from-literal=ruby-password="$POSTGRES_RUBY_PASSWORD"
@@ -241,8 +241,8 @@ main() {
     fi
 
     # PostgreSQL S3 backup credentials
-    if ! kubectl get secret pg-backup-s3 -n default >/dev/null 2>&1; then
-        kubectl create secret generic pg-backup-s3 -n default \
+    if ! kubectl get secret pg-backup-s3 -n platform >/dev/null 2>&1; then
+        kubectl create secret generic pg-backup-s3 -n platform \
             --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
             --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
             --from-literal=S3_REGION='nbg1' \
@@ -266,11 +266,11 @@ main() {
         info "etcd-backup-s3 secret already exists"
     fi
 
-    # Wait for monitoring namespace
-    info "Waiting for monitoring namespace (this takes 5-10 minutes)..."
+    # Wait for platform namespace
+    info "Waiting for platform namespace (this takes 5-10 minutes)..."
     for i in {1..60}; do
-        if kubectl get namespace monitoring >/dev/null 2>&1; then
-            success "Monitoring namespace ready"
+        if kubectl get namespace platform >/dev/null 2>&1; then
+            success "Platform namespace ready"
             break
         fi
         echo -n "."
@@ -279,8 +279,8 @@ main() {
     echo
 
     # Grafana admin credentials
-    if ! kubectl get secret grafana-admin -n monitoring >/dev/null 2>&1; then
-        kubectl create secret generic grafana-admin -n monitoring \
+    if ! kubectl get secret grafana-admin -n platform >/dev/null 2>&1; then
+        kubectl create secret generic grafana-admin -n platform \
             --from-literal=admin-user='admin' \
             --from-literal=admin-password="$GRAFANA_ADMIN_PASSWORD"
         success "Created grafana-admin secret"

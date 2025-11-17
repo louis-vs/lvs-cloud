@@ -25,11 +25,11 @@ stringData:
 **Create database and user on server:**
 
 ```bash
-kubectl exec -it postgresql-0 -- psql -U postgres -c \
+kubectl exec -it postgresql-0 -n platform -- psql -U postgres -c \
   "CREATE DATABASE my_app_db"
-kubectl exec -it postgresql-0 -- psql -U postgres -c \
+kubectl exec -it postgresql-0 -n platform -- psql -U postgres -c \
   "CREATE USER my_app_user WITH PASSWORD '<password>'"
-kubectl exec -it postgresql-0 -- psql -U postgres -c \
+kubectl exec -it postgresql-0 -n platform -- psql -U postgres -c \
   "GRANT ALL PRIVILEGES ON DATABASE my_app_db TO my_app_user"
 ```
 
@@ -131,7 +131,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
   name: my-app
-  namespace: default
+  namespace: applications
 spec:
   interval: 5m
   chart:
@@ -218,15 +218,15 @@ kubectl get nodes
 kubectl get pods -A
 
 # App status
-kubectl get pods -l app.kubernetes.io/name=my-app
-kubectl logs -f -l app.kubernetes.io/name=my-app
+kubectl get pods -l app.kubernetes.io/name=my-app -n applications
+kubectl logs -f -l app.kubernetes.io/name=my-app -n applications
 
 # Flux status
-flux get helmreleases
+flux get helmreleases -A
 flux get images all
 
 # Database
-kubectl exec -it postgresql-0 -- psql -U postgres -c '\l'
+kubectl exec -it postgresql-0 -n platform -- psql -U postgres -c '\l'
 ```
 
 ### Common Issues
@@ -259,8 +259,8 @@ kubectl get secret registry-credentials -n flux-system  # Should exist
 **Database connection issues:**
 
 ```bash
-kubectl exec -it postgresql-0 -- psql -U postgres -c "\du"
-kubectl exec -it postgresql-0 -- psql -U my_app_user -d my_app_db -c "SELECT 1"
+kubectl exec -it postgresql-0 -n platform -- psql -U postgres -c "\du"
+kubectl exec -it postgresql-0 -n platform -- psql -U my_app_user -d my_app_db -c "SELECT 1"
 ```
 
 **Certificate issues:**
@@ -277,18 +277,18 @@ kubectl -n cert-manager logs deploy/cert-manager -f
 # Force Flux to resync everything
 flux reconcile source git monorepo --with-source
 flux reconcile kustomization apps
-flux reconcile helmrelease my-app
+flux reconcile helmrelease my-app -n applications
 
 # Force image scan
 flux reconcile image repository my-app
 
 # Full reconciliation chain (git -> chart -> helmrelease)
 flux reconcile source git monorepo -n flux-system
-flux reconcile source chart default-my-app -n flux-system
-flux reconcile helmrelease my-app -n default
+flux reconcile source chart applications-my-app -n flux-system
+flux reconcile helmrelease my-app -n applications
 
 # Restart pod
-kubectl rollout restart deployment/my-app
+kubectl rollout restart deployment/my-app -n applications
 ```
 
 ### Updating Helm Charts
@@ -304,11 +304,11 @@ When modifying Helm chart templates (not just values), you must bump the chart v
 # 3. Commit and push
 # 4. Monitor deployment
 flux reconcile source git monorepo -n flux-system
-flux reconcile source chart default-my-app -n flux-system
-flux reconcile helmrelease my-app -n default
+flux reconcile source chart applications-my-app -n flux-system
+flux reconcile helmrelease my-app -n applications
 
 # Verify new chart version deployed
-kubectl get helmrelease my-app -n default -o jsonpath='{.status.lastAttemptedRevision}'
+kubectl get helmrelease my-app -n applications -o jsonpath='{.status.lastAttemptedRevision}'
 ```
 
 ### Resource Monitoring
@@ -323,7 +323,7 @@ kubectl get pv
 kubectl -n longhorn-system get volumes
 
 # Database sizes
-kubectl exec -it postgresql-0 -- psql -U postgres -c \
+kubectl exec -it postgresql-0 -n platform -- psql -U postgres -c \
   "SELECT datname, pg_size_pretty(pg_database_size(datname)) FROM pg_database ORDER BY pg_database_size(datname) DESC"
 ```
 
@@ -346,7 +346,7 @@ sudo systemctl restart k3s
 **Backup database:**
 
 ```bash
-kubectl exec postgresql-0 -- pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql.gz
+kubectl exec postgresql-0 -n platform -- pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql.gz
 ```
 
 ## Access Points
@@ -354,7 +354,7 @@ kubectl exec postgresql-0 -- pg_dumpall -U postgres > backup-$(date +%Y%m%d).sql
 - **Grafana**: <https://grafana.lvs.me.uk>
 - **Registry**: <https://registry.lvs.me.uk>
 - **SSH**: `ssh ubuntu@$(dig +short app.lvs.me.uk)`
-- **PostgreSQL** (internal): `postgresql.default.svc.cluster.local:5432`
+- **PostgreSQL** (internal): `postgresql.platform.svc.cluster.local:5432`
 
 ## Further Reading
 

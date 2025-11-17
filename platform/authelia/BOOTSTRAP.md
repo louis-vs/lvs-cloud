@@ -47,7 +47,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: authelia
-  namespace: default
+  namespace: platform
 type: Opaque
 stringData:
   storage.encryption.key: "PASTE_KEY_HERE"
@@ -64,7 +64,7 @@ EOF
 kubectl apply -f authelia-secret.yaml
 rm authelia-secret.yaml
 
-kubectl create secret generic grafana-oauth -n monitoring \
+kubectl create secret generic grafana-oauth -n platform \
   --from-literal=oauth-client-secret="$GRAFANA_CLIENT_SECRET"
 ```
 
@@ -80,7 +80,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: authelia-users
-  namespace: default
+  namespace: platform
 data:
   users_database.yml: |
     users:
@@ -122,17 +122,17 @@ kubectl get pods -l app.kubernetes.io/name=authelia -w
 
 ```bash
 # Pod issues
-kubectl describe pod -l app.kubernetes.io/name=authelia
-kubectl logs -l app.kubernetes.io/name=authelia
+kubectl describe pod -l app.kubernetes.io/name=authelia -n platform
+kubectl logs -l app.kubernetes.io/name=authelia -n platform
 
 # Database connectivity
-kubectl exec -it postgresql-0 -- psql -U authelia -d authelia -c "SELECT 1"
+kubectl exec -it postgresql-0 -n platform -- psql -U authelia -d authelia -c "SELECT 1"
 
 # Redis connectivity
-kubectl exec -it deployment/redis -- redis-cli ping
+kubectl exec -it deployment/redis -n platform -- redis-cli ping
 
 # OIDC issues
-kubectl logs -l app.kubernetes.io/name=grafana -n monitoring
+kubectl logs -l app.kubernetes.io/name=grafana -n platform
 # Verify redirect URI: https://grafana.lvs.me.uk/login/generic_oauth
 ```
 
@@ -161,7 +161,7 @@ kubectl run -it --rm authelia-hash --image=ghcr.io/authelia/authelia:latest --re
   authelia crypto hash generate argon2 --password "user_password"
 
 # 2. Edit ConfigMap
-kubectl edit configmap authelia-users -n default
+kubectl edit configmap authelia-users -n platform
 
 # Add new user to users_database.yml:
 #   newuser:
@@ -174,13 +174,13 @@ kubectl edit configmap authelia-users -n default
 
 # 3. Changes auto-reload within 5 minutes
 # Or force immediate reload:
-kubectl rollout restart deployment/authelia
+kubectl rollout restart deployment/authelia -n platform
 ```
 
 ### Removing Users
 
 ```bash
-kubectl edit configmap authelia-users -n default
+kubectl edit configmap authelia-users -n platform
 # Remove user entry or set disabled: true
 ```
 
@@ -192,7 +192,7 @@ kubectl run -it --rm authelia-hash --image=ghcr.io/authelia/authelia:latest --re
   authelia crypto hash generate argon2 --password "new_password"
 
 # Update user's password field in ConfigMap
-kubectl edit configmap authelia-users -n default
+kubectl edit configmap authelia-users -n platform
 ```
 
 ### User Self-Registration

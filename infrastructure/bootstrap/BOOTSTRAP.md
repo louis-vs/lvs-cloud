@@ -73,7 +73,7 @@ flux get all
 # Check critical secrets
 kubectl get secret -n flux-system flux-git-ssh
 kubectl get secret -n flux-system registry-credentials
-kubectl get secret -n default postgresql-auth
+kubectl get secret -n platform postgresql-auth
 kubectl get secret -n longhorn-system longhorn-backup
 
 # All should exist (output: "NAME ... AGE")
@@ -226,14 +226,14 @@ kubectl create secret generic flux-git-ssh \
 
 # Create PostgreSQL authentication secret
 # Replace passwords with secure values
-kubectl create secret generic postgresql-auth -n default \
+kubectl create secret generic postgresql-auth -n platform \
   --from-literal=postgres-password='CHANGE_ME_ADMIN_PASSWORD' \
   --from-literal=user-password='CHANGE_ME_USER_PASSWORD' \
   --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD' \
   --from-literal=authelia-password='CHANGE_ME_AUTHELIA_PASSWORD'
 
 # Create PostgreSQL S3 backup credentials
-kubectl create secret generic pg-backup-s3 -n default \
+kubectl create secret generic pg-backup-s3 -n platform \
   --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
   --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
   --from-literal=S3_REGION='nbg1' \
@@ -556,7 +556,7 @@ kubectl get pvc -A
 # All should show: STATUS Bound
 
 # Verify PostgreSQL data persisted
-kubectl exec postgresql-0 -n default -- psql -U postgres -c '\du'
+kubectl exec postgresql-0 -n platform -- psql -U postgres -c '\du'
 # Should show ruby_demo_user and other existing users
 
 # Check registry images persisted
@@ -570,17 +570,17 @@ On **first bootstrap only**, create application databases and users. These persi
 
 ```bash
 # Get postgres password from secret
-POSTGRES_PASSWORD=$(kubectl get secret postgresql-auth -n default -o jsonpath='{.data.postgres-password}' | base64 -d)
-RUBY_PASSWORD=$(kubectl get secret postgresql-auth -n default -o jsonpath='{.data.ruby-password}' | base64 -d)
+POSTGRES_PASSWORD=$(kubectl get secret postgresql-auth -n platform -o jsonpath='{.data.postgres-password}' | base64 -d)
+RUBY_PASSWORD=$(kubectl get secret postgresql-auth -n platform -o jsonpath='{.data.ruby-password}' | base64 -d)
 
 # Create ruby_demo_user and database
-kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
   psql -U postgres -c "CREATE USER ruby_demo_user WITH PASSWORD '$RUBY_PASSWORD';"
 
-kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
   psql -U postgres -c "CREATE DATABASE ruby_demo OWNER ruby_demo_user;"
 
-kubectl exec postgresql-0 -n default -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
   psql -U postgres -d ruby_demo -c "GRANT ALL PRIVILEGES ON DATABASE ruby_demo TO ruby_demo_user; GRANT ALL ON SCHEMA public TO ruby_demo_user;"
 ```
 

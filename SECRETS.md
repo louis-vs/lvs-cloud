@@ -19,12 +19,12 @@ These secrets are created automatically by the bootstrap script:
 | Secret Name | Namespace | Keys | Purpose | Created By |
 |-------------|-----------|------|---------|------------|
 | `flux-git-ssh` | `flux-system` | `identity`, `known_hosts` | Flux Git authentication (SSH deploy key for lvs-cloud repo) | bootstrap.sh:186-195 |
-| `postgresql-auth` | `default` | `postgres-password`, `user-password`, `ruby-password`, `authelia-password` | PostgreSQL user passwords for all applications | bootstrap.sh:198-206 |
-| `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:209-218 |
-| `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:233-242 |
-| `pg-backup-s3` | `default` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | PostgreSQL S3 backup credentials | bootstrap.sh:245-256 |
-| `etcd-backup-s3` | `kube-system` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | etcd S3 backup credentials | bootstrap.sh:258-269 |
-| `grafana-admin` | `monitoring` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:270-278 |
+| `postgresql-auth` | `platform` | `postgres-password`, `user-password`, `ruby-password`, `authelia-password` | PostgreSQL user passwords for all applications | bootstrap.sh:197-205 |
+| `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:208-217 |
+| `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:232-241 |
+| `pg-backup-s3` | `platform` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | PostgreSQL S3 backup credentials | bootstrap.sh:244-254 |
+| `etcd-backup-s3` | `kube-system` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | etcd S3 backup credentials | bootstrap.sh:257-267 |
+| `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:282-289 |
 
 ### Created Manually (Authelia)
 
@@ -32,14 +32,14 @@ These secrets are created manually after platform deployment following `platform
 
 | Secret Name | Namespace | Keys | Purpose | Documentation |
 |-------------|-----------|------|---------|---------------|
-| `authelia` | `default` | `storage.encryption.key`, `storage.postgres.password.txt`, `session.encryption.key`, `identity_providers.oidc.hmac.key`, `identity_providers.oidc.clients.grafana.secret.txt`, `oidc.rsa.key` | Authelia SSO encryption keys and OIDC secrets | platform/authelia/BOOTSTRAP.md:24-76 |
-| `grafana-oauth` | `monitoring` | `oauth-client-secret` | Grafana OIDC client secret (must match authelia secret) | platform/authelia/BOOTSTRAP.md:160-162 |
+| `authelia` | `platform` | `storage.encryption.key`, `storage.postgres.password.txt`, `session.encryption.key`, `identity_providers.oidc.hmac.key`, `identity_providers.oidc.clients.grafana.secret.txt`, `oidc.rsa.key` | Authelia SSO encryption keys and OIDC secrets | platform/authelia/BOOTSTRAP.md:45-69 |
+| `grafana-oauth` | `platform` | `oauth-client-secret` | Grafana OIDC client secret (must match authelia secret) | platform/authelia/BOOTSTRAP.md:67-68 |
 
 ### Created Manually (User Database)
 
 | Secret Name | Namespace | Type | Purpose | Documentation |
 |-------------|-----------|------|---------|---------------|
-| `authelia-users` | `default` | ConfigMap | User database with Argon2id password hashes | platform/authelia/BOOTSTRAP.md:74-76 |
+| `authelia-users` | `platform` | ConfigMap | User database with Argon2id password hashes | platform/authelia/BOOTSTRAP.md:78-97 |
 
 ## GitHub Secrets
 
@@ -178,11 +178,11 @@ gunzip /tmp/etcd-snapshot-20251116T020000Z.db.gz
 
 ```bash
 # Update secret
-kubectl patch secret postgresql-auth -n default --type='json' \
+kubectl patch secret postgresql-auth -n platform --type='json' \
   -p='[{"op": "replace", "path": "/data/postgres-password", "value": "'$(echo -n 'new-password' | base64)'"}]'
 
 # Restart PostgreSQL
-kubectl rollout restart statefulset postgresql -n default
+kubectl rollout restart statefulset postgresql -n platform
 
 # Update password in password manager
 ```
@@ -203,7 +203,7 @@ kubectl rollout restart statefulset postgresql -n default
 # Update secrets: longhorn-backup, pg-backup-s3, etcd-backup-s3
 # Restart affected pods
 kubectl delete pod -n longhorn-system -l app=longhorn-manager
-kubectl delete job -n default pgdump-s3-<latest>
+kubectl delete job -n platform pgdump-s3-<latest>
 kubectl delete job -n kube-system etcd-backup-s3-<latest>
 ```
 
@@ -211,11 +211,11 @@ kubectl delete job -n kube-system etcd-backup-s3-<latest>
 
 ```bash
 # Update secret
-kubectl patch secret grafana-admin -n monitoring --type='json' \
+kubectl patch secret grafana-admin -n platform --type='json' \
   -p='[{"op": "replace", "path": "/data/admin-password", "value": "'$(echo -n 'new-password' | base64)'"}]'
 
 # Restart Grafana
-kubectl rollout restart deployment -n monitoring kube-prometheus-stack-grafana
+kubectl rollout restart deployment -n platform kube-prometheus-stack-grafana
 ```
 
 ## Secret Validation
@@ -228,18 +228,18 @@ kubectl get secret flux-git-ssh -n flux-system
 kubectl get secret registry-credentials -n flux-system
 
 # Application secrets
-kubectl get secret postgresql-auth -n default
-kubectl get secret grafana-admin -n monitoring
+kubectl get secret postgresql-auth -n platform
+kubectl get secret grafana-admin -n platform
 
 # Backup secrets
 kubectl get secret longhorn-backup -n longhorn-system
-kubectl get secret pg-backup-s3 -n default
+kubectl get secret pg-backup-s3 -n platform
 kubectl get secret etcd-backup-s3 -n kube-system
 
 # Authelia secrets (if deployed)
-kubectl get secret authelia -n default
-kubectl get secret grafana-oauth -n monitoring
-kubectl get configmap authelia-users -n default
+kubectl get secret authelia -n platform
+kubectl get secret grafana-oauth -n platform
+kubectl get configmap authelia-users -n platform
 ```
 
 **Expected output:** All commands should return secret details (not "NotFound")

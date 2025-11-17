@@ -57,7 +57,7 @@ PASSWORD_HASH_ESCAPED=$(echo "$PASSWORD_HASH" | sed 's/\$/\\$/g')
 
 # Get current ConfigMap
 echo "Fetching current users ConfigMap..."
-CURRENT_USERS=$(kubectl get configmap authelia-users -n default -o jsonpath='{.data.users_database\.yml}')
+CURRENT_USERS=$(kubectl get configmap authelia-users -n platform -o jsonpath='{.data.users_database\.yml}')
 
 # Check if user already exists
 if echo "$CURRENT_USERS" | grep -q "^  ${USERNAME}:"; then
@@ -85,7 +85,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: authelia-users
-  namespace: default
+  namespace: platform
 data:
   users_database.yml: |
 ${UPDATED_USERS}

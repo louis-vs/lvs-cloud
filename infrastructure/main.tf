@@ -98,8 +98,8 @@ resource "hcloud_server" "main" {
   user_data = templatefile("${path.module}/cloud-init.yml", {
     ssh_key           = trimspace(file("${path.module}/lvs-cloud.pub"))
     registry_pass     = var.registry_pass
-    s3_access_key     = var.S3_ACCESS_KEY
-    s3_secret_key     = var.S3_SECRET_KEY
+    s3_access_key     = var.s3_access_key
+    s3_secret_key     = var.s3_secret_key
     registry_htpasswd = var.registry_htpasswd
   })
 }

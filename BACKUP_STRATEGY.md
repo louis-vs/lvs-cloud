@@ -4,12 +4,12 @@
 
 LVS Cloud uses a **two-tier backup strategy** combining application-level and block-level backups:
 
-### Tier 1: Application-Level Backups (Custom CronJobs)
+### Tier 1: Application-Level Backups
 
 Logical exports that can be restored to different systems:
 
-1. **etcd snapshots** - Daily cluster state backups (2 AM)
-2. **PostgreSQL dumps** - Daily database exports (1 AM)
+1. **etcd snapshots** - Daily cluster state backups (2 AM) via k3s built-in
+2. **PostgreSQL dumps** - Daily database exports (1 AM) via CronJob
 
 ### Tier 2: Block-Level Backups (Longhorn Built-in)
 
@@ -27,21 +27,21 @@ Volume-level snapshots for exact state recovery:
 
 ### Active Backup Jobs
 
-| CronJob | Namespace | Schedule | Target | Secret | Status |
-|---------|-----------|----------|--------|--------|--------|
-| `etcd-backup-s3` | `kube-system` | Daily 2 AM | etcd cluster state | `s3-backup` | ✅ **Working** |
-| `pgdump-s3` | `platform` | Daily 1 AM | All PostgreSQL databases | `s3-backup` | ✅ **Working** |
-| `pgdump-s3-cleanup` | `platform` | Daily 4 AM | Delete backups >7 days | `s3-backup` | ✅ **Working** |
-| `s3-metrics-collector` | `platform` | Every 6 hours | Collect S3 bucket metrics | `s3-backup` | ⚠️ **Optional** |
-| `weekly-bak` | `longhorn-system` | Weekly Sunday 3 AM | Grafana volume | `longhorn-backup` | ✅ **Working** |
+| Job | Type | Namespace | Schedule | Target | Secret | Status |
+|-----|------|-----------|----------|--------|--------|--------|
+| k3s etcd snapshot | Built-in | `kube-system` | Daily 2 AM | etcd cluster state | Cloud-init vars | ✅ **Working** |
+| `pgdump-s3` | CronJob | `platform` | Daily 1 AM | All PostgreSQL databases | `s3-backup` | ✅ **Working** |
+| `pgdump-s3-cleanup` | CronJob | `platform` | Daily 4 AM | Delete backups >7 days | `s3-backup` | ✅ **Working** |
+| `s3-metrics-collector` | CronJob | `platform` | Every 6 hours | Collect S3 bucket metrics | `s3-backup` | ⚠️ **Optional** |
+| `weekly-bak` | RecurringJob | `longhorn-system` | Weekly Sunday 3 AM | Grafana volume | `longhorn-backup` | ✅ **Working** |
 
 ### Backup Secrets
 
 Two S3 secrets provide credentials for all backup operations:
 
-1. **`s3-backup`** (platform + kube-system namespaces) ✅
+1. **`s3-backup`** (platform namespace) ✅
    - Keys: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINTS`, `AWS_DEFAULT_REGION`
-   - Used by: PostgreSQL dumps, etcd snapshots, S3 metrics collector
+   - Used by: PostgreSQL dumps, S3 metrics collector
    - Created during bootstrap from Hetzner S3 credentials
 
 2. **`longhorn-backup`** (longhorn-system namespace) ✅
@@ -58,7 +58,7 @@ According to `SECRETS.md`, four S3 buckets exist:
 | `lvs-cloud-terraform-state` | nbg1 | Terraform state | Terraform | SECRETS.md:69 |
 | `lvs-cloud-longhorn-backups` | nbg1 | Longhorn volume backups | Longhorn recurring job | SECRETS.md:70 |
 | `lvs-cloud-pg-backups` | nbg1 | PostgreSQL dumps | `pgdump-s3` cronjob | SECRETS.md:71 |
-| `lvs-cloud-etcd-backups` | nbg1 | etcd snapshots | `etcd-backup-s3` cronjob | SECRETS.md:72 |
+| `lvs-cloud-etcd-backups` | nbg1 | etcd snapshots | k3s built-in | SECRETS.md:72 |
 
 **Note:** Cannot verify bucket contents as S3 metrics collector is failing due to missing secret.
 
@@ -82,21 +82,24 @@ The `weekly-bak` RecurringJob targets volumes in the "default" group:
 
 ## How Backup Jobs Work
 
-### etcd Backup (`etcd-backup-s3`)
+### etcd Backup (k3s built-in)
 
 **Purpose:** Protect cluster state including all Kubernetes resources and secrets.
 
 **Process:**
 
-1. Init container creates etcd snapshot from k3s embedded etcd
-2. Verifies snapshot integrity
-3. Compresses with gzip
-4. Upload container sends to S3 bucket organized by year/month
-5. Runs on control plane node with privileged access to etcd data
+1. k3s server automatically creates etcd snapshots via built-in functionality
+2. Saves snapshots to `/srv/data/k3s/server/db/snapshots` on host
+3. Compresses and uploads directly to S3 bucket
+4. Configured via k3s server flags in cloud-init
 
-**Retention:** Managed manually (no automated cleanup)
+**Retention:** 7 snapshots (configured via `--etcd-snapshot-retention`)
 
-**Files:** `platform/etcd-backup/cronjob-etcd.yaml`
+**Configuration:**
+
+- `infrastructure/cloud-init.yml` - k3s server flags
+- `infrastructure/variables.tf` - S3 credential variables (s3_access_key, s3_secret_key)
+- Credentials passed via Terraform template variables
 
 ### PostgreSQL Backup (`pgdump-s3`)
 

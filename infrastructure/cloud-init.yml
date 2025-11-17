@@ -45,7 +45,15 @@ write_files:
       INSTALL_K3S_FORCE_RESTART="true" \
       curl -sfL https://get.k3s.io | sh -s - server \
         --write-kubeconfig-mode 644 \
-        --data-dir /srv/data/k3s
+        --data-dir /srv/data/k3s \
+        --etcd-snapshot-schedule-cron="0 2 * * *" \
+        --etcd-snapshot-retention=7 \
+        --etcd-s3 \
+        --etcd-s3-endpoint="nbg1.your-objectstorage.com" \
+        --etcd-s3-bucket="lvs-cloud-etcd-backups" \
+        --etcd-s3-region="nbg1" \
+        --etcd-s3-access-key="${s3_access_key}" \
+        --etcd-s3-secret-key="${s3_secret_key}"
 
       sleep 10
       kubectl uncordon "$NODE" || true
@@ -121,11 +129,19 @@ runcmd:
   - mkdir -p /srv/data/k3s
   - chown -R root:root /srv/data
 
-  # Install k3s (with Traefik for ingress)
+  # Install k3s with built-in etcd snapshots to S3
   - |
     curl -sfL https://get.k3s.io | sh -s - \
       --write-kubeconfig-mode 644 \
-      --data-dir /srv/data/k3s
+      --data-dir /srv/data/k3s \
+      --etcd-snapshot-schedule-cron="0 2 * * *" \
+      --etcd-snapshot-retention=7 \
+      --etcd-s3 \
+      --etcd-s3-endpoint="nbg1.your-objectstorage.com" \
+      --etcd-s3-bucket="lvs-cloud-etcd-backups" \
+      --etcd-s3-region="nbg1" \
+      --etcd-s3-access-key="${s3_access_key}" \
+      --etcd-s3-secret-key="${s3_secret_key}"
 
   # Wait for k3s to be ready
   - sleep 30

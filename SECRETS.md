@@ -22,9 +22,9 @@ These secrets are created automatically by the bootstrap script:
 | `postgresql-auth` | `platform` | `postgres-password`, `user-password`, `ruby-password`, `authelia-password` | PostgreSQL user passwords for all applications | bootstrap.sh:197-205 |
 | `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:208-217 |
 | `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:232-241 |
-| `pg-backup-s3` | `platform` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | PostgreSQL S3 backup credentials | bootstrap.sh:244-254 |
-| `etcd-backup-s3` | `kube-system` | `S3_ENDPOINT`, `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | etcd S3 backup credentials | bootstrap.sh:257-267 |
-| `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:282-289 |
+| `s3-backup` | `platform` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for PostgreSQL dumps and metrics | bootstrap.sh:243-253 |
+| `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for etcd snapshots | bootstrap.sh:255-265 |
+| `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:280-289 |
 
 ### Created Manually (Authelia)
 
@@ -200,11 +200,11 @@ kubectl rollout restart statefulset postgresql -n platform
 
 ```bash
 # Generate new S3 access key in Hetzner Console
-# Update secrets: longhorn-backup, pg-backup-s3, etcd-backup-s3
+# Update secrets: longhorn-backup, s3-backup (both namespaces)
 # Restart affected pods
 kubectl delete pod -n longhorn-system -l app=longhorn-manager
-kubectl delete job -n platform pgdump-s3-<latest>
-kubectl delete job -n kube-system etcd-backup-s3-<latest>
+kubectl delete secret s3-backup -n platform && kubectl delete secret s3-backup -n kube-system
+# Recreate secrets using new credentials (see bootstrap.sh)
 ```
 
 **Grafana admin password:**
@@ -233,8 +233,8 @@ kubectl get secret grafana-admin -n platform
 
 # Backup secrets
 kubectl get secret longhorn-backup -n longhorn-system
-kubectl get secret pg-backup-s3 -n platform
-kubectl get secret etcd-backup-s3 -n kube-system
+kubectl get secret s3-backup -n platform
+kubectl get secret s3-backup -n kube-system
 
 # Authelia secrets (if deployed)
 kubectl get secret authelia -n platform

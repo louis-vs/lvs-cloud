@@ -28,7 +28,7 @@ spec:
               emptyDir: {}
           initContainers:
             - name: snapshot
-              image: rancher/mirrored-k8s-gcr-io-etcd:v3.5.9-k3s1
+              image: rancher/mirrored-k8s-gcr-io-etcd:v3.5.16-k3s1
               command: ["/bin/sh", "-c"]
               args:
                 - |

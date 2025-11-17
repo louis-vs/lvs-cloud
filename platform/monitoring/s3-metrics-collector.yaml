@@ -156,17 +156,17 @@ spec:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: s3-credentials
+                  name: s3-backup
                   key: AWS_ACCESS_KEY_ID
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: s3-credentials
+                  name: s3-backup
                   key: AWS_SECRET_ACCESS_KEY
             - name: AWS_ENDPOINTS
               valueFrom:
                 secretKeyRef:
-                  name: s3-credentials
+                  name: s3-backup
                   key: AWS_ENDPOINTS
             - name: AWS_DEFAULT_REGION
               value: "nbg1"
@@ -187,8 +187,4 @@ spec:
             configMap:
               name: s3-metrics-script
               defaultMode: 0755
-# NOTE: s3-credentials secret must be created manually during bootstrap
-# kubectl get secret longhorn-backup -n longhorn-system -o yaml | \
-#   sed 's/namespace: longhorn-system/namespace: platform/' | \
-#   sed 's/name: longhorn-backup/name: s3-credentials/' | \
-#   grep -v 'uid:\|resourceVersion:\|creationTimestamp:' | kubectl apply -f -
+# NOTE: s3-backup secret is created during bootstrap (infrastructure/bootstrap/bootstrap.sh)

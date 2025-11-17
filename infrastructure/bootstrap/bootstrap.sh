@@ -240,30 +240,28 @@ main() {
         info "longhorn-backup secret already exists"
     fi
 
-    # PostgreSQL S3 backup credentials
-    if ! kubectl get secret pg-backup-s3 -n platform >/dev/null 2>&1; then
-        kubectl create secret generic pg-backup-s3 -n platform \
-            --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
-            --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
-            --from-literal=S3_REGION='nbg1' \
-            --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" \
-            --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY"
-        success "Created pg-backup-s3 secret"
+    # S3 backup credentials for platform namespace (PostgreSQL, metrics)
+    if ! kubectl get secret s3-backup -n platform >/dev/null 2>&1; then
+        kubectl create secret generic s3-backup -n platform \
+            --from-literal=AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" \
+            --from-literal=AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+            --from-literal=AWS_ENDPOINTS='nbg1.your-objectstorage.com' \
+            --from-literal=AWS_DEFAULT_REGION='nbg1'
+        success "Created s3-backup secret in platform namespace"
     else
-        info "pg-backup-s3 secret already exists"
+        info "s3-backup secret already exists in platform namespace"
     fi
 
-    # etcd S3 backup credentials
-    if ! kubectl get secret etcd-backup-s3 -n kube-system >/dev/null 2>&1; then
-        kubectl create secret generic etcd-backup-s3 -n kube-system \
-            --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
-            --from-literal=S3_BUCKET='lvs-cloud-etcd-backups' \
-            --from-literal=S3_REGION='nbg1' \
-            --from-literal=S3_ACCESS_KEY="$S3_ACCESS_KEY" \
-            --from-literal=S3_SECRET_KEY="$S3_SECRET_KEY"
-        success "Created etcd-backup-s3 secret"
+    # S3 backup credentials for kube-system namespace (etcd)
+    if ! kubectl get secret s3-backup -n kube-system >/dev/null 2>&1; then
+        kubectl create secret generic s3-backup -n kube-system \
+            --from-literal=AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY" \
+            --from-literal=AWS_SECRET_ACCESS_KEY="$S3_SECRET_KEY" \
+            --from-literal=AWS_ENDPOINTS='nbg1.your-objectstorage.com' \
+            --from-literal=AWS_DEFAULT_REGION='nbg1'
+        success "Created s3-backup secret in kube-system namespace"
     else
-        info "etcd-backup-s3 secret already exists"
+        info "s3-backup secret already exists in kube-system namespace"
     fi
 
     # Wait for platform namespace

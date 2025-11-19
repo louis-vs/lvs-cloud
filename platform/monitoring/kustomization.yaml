@@ -8,5 +8,3 @@ resources:
   - alert-rules.yaml
   - alertmanager-config.yaml
   - s3-metrics-collector.yaml
-patchesStrategicMerge:
-  - grafana-pvc-backup.yaml

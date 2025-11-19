@@ -1,9 +1,0 @@
----
-# Label Grafana PVC to enable Longhorn weekly backups
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: kube-prometheus-stack-grafana
-  namespace: platform
-  labels:
-    recurring-job-group.longhorn.io/default: enabled

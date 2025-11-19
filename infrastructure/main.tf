@@ -76,7 +76,7 @@ resource "hcloud_volume" "data" {
 resource "hcloud_server" "main" {
   name        = "${var.project_name}-server"
   image       = "ubuntu-22.04"
-  server_type = "cx23"
+  server_type = "cx33"
   datacenter  = var.datacenter
 
   ssh_keys = [hcloud_ssh_key.default.id]

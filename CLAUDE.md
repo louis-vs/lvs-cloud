@@ -13,7 +13,7 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 
 ## Current Architecture
 
-**Infrastructure**: Hetzner Cloud cx22 (€9.89/month total) + 50GB block storage
+**Infrastructure**: Hetzner Cloud cx33 (€9.60/month total) + 50GB block storage
 **Stack**: k3s + Flux CD + PGL (Prometheus + Grafana + Loki) + Longhorn + PostgreSQL + In-cluster Registry
 **Deployment**: GitHub Actions (build → push) → Flux Image Automation (scan → commit) → HelmRelease update → k3s rolling deployment
 

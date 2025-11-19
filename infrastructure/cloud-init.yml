@@ -82,9 +82,9 @@ runcmd:
   # Prevent locale issues
   - locale-gen --keep-existing en_GB.UTF-8
 
-  # Configure 6GB swap file
+  # Configure 12GB swap file (1.5x RAM for 8GB server)
   - |
-    fallocate -l 6G /swapfile
+    fallocate -l 12G /swapfile
     chmod 600 /swapfile
     mkswap /swapfile
     swapon /swapfile

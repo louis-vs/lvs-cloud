@@ -11,8 +11,8 @@
 | **Registry** | <https://registry.lvs.me.uk> | ✅ (robot_user) |
 | **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
 
-**Infrastructure:** Hetzner cx22 (2 vCPU, 4GB RAM) + 50GB block storage  
-**Total Cost:** ~€4.90/month (cx22 server + block storage)
+**Infrastructure:** Hetzner cx33 (4 vCPU, 8GB RAM) + 50GB block storage  
+**Total Cost:** ~€9.60/month (cx33 server + block storage)
 
 ## Architecture
 

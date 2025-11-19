@@ -13,7 +13,7 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 
 ## Current Architecture
 
-**Infrastructure**: Hetzner Cloud cx33 (€9.60/month total) + 50GB block storage
+**Infrastructure**: Hetzner Cloud + 50GB block storage
 **Stack**: k3s + Flux CD + PGL (Prometheus + Grafana + Loki) + Longhorn + PostgreSQL + In-cluster Registry
 **Deployment**: GitHub Actions (build → push) → Flux Image Automation (scan → commit) → HelmRelease update → k3s rolling deployment
 
@@ -27,14 +27,6 @@ LVS Cloud is a **personal private cloud platform** that scales while being maint
 ├── applications/         # User applications
 └── .github/workflows/    # CI/CD automation
 ```
-
-## Future Development
-
-- **Example apps:**
-  - **Go App**: Builtin server with Go templates
-  - **Python App**: FastAPI application template
-- **Authentication server**:
-  - Authelia authentication server that is used to authenticate to all platform services and applications
 
 ## Development Process
 

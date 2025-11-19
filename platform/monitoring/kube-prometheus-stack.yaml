@@ -155,14 +155,23 @@ spec:
             hosts:
               - grafana.lvs.me.uk
 
-      # Add Loki as datasource
-      additionalDataSources:
-        - name: Loki
-          type: loki
-          access: proxy
-          url: http://loki.platform.svc.cluster.local:3100
-          editable: true
-          isDefault: false
+      # Configure datasources
+      datasources:
+        datasources.yaml:
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              access: proxy
+              url: http://kube-prometheus-stack-prometheus.platform.svc.cluster.local:9090
+              editable: true
+              isDefault: true
+            - name: Loki
+              type: loki
+              access: proxy
+              url: http://loki.platform.svc.cluster.local:3100
+              editable: true
+              isDefault: false
 
     # Node Exporter configuration
     nodeExporter:

@@ -27,13 +27,13 @@ Volume-level snapshots for exact state recovery:
 
 ### Active Backup Jobs
 
-| CronJob | Namespace | Schedule | Target | Secret | Status |
-|---------|-----------|----------|--------|--------|--------|
-| `etcd-backup-s3` | `kube-system` | Daily 2 AM | etcd cluster state | `s3-backup` | ✅ **Working** |
-| `pgdump-s3` | `platform` | Daily 1 AM | All PostgreSQL databases | `s3-backup` | ✅ **Working** |
-| `pgdump-s3-cleanup` | `platform` | Daily 4 AM | Delete backups >7 days | `s3-backup` | ✅ **Working** |
-| `s3-metrics-collector` | `platform` | Every 6 hours | Collect S3 bucket metrics | `s3-backup` | ⚠️ **Optional** |
-| `weekly-bak` | `longhorn-system` | Weekly Sunday 3 AM | Grafana volume | `longhorn-backup` | ✅ **Working** |
+| Component | Type | Schedule | Target | Secret | Status |
+|-----------|------|----------|--------|--------|--------|
+| **k3s native** | Built-in etcd snapshots | Daily 2 AM | etcd cluster state | `s3-backup` | ✅ **Working** |
+| `pgdump-s3` | CronJob | Daily 1 AM | All PostgreSQL databases | `s3-backup` | ✅ **Working** |
+| `pgdump-s3-cleanup` | CronJob | Daily 4 AM | Delete backups >7 days | `s3-backup` | ✅ **Working** |
+| `s3-metrics-collector` | CronJob | Every 6 hours | Collect S3 bucket metrics | `s3-backup` | ⚠️ **Optional** |
+| `weekly-bak` | Longhorn RecurringJob | Weekly Sunday 3 AM | Grafana volume | `longhorn-backup` | ✅ **Working** |
 
 ### Backup Secrets
 
@@ -82,21 +82,21 @@ The `weekly-bak` RecurringJob targets volumes in the "default" group:
 
 ## How Backup Jobs Work
 
-### etcd Backup (`etcd-backup-s3`)
+### etcd Backup (k3s Native)
 
 **Purpose:** Protect cluster state including all Kubernetes resources and secrets.
 
 **Process:**
 
-1. Init container creates etcd snapshot from k3s embedded etcd
-2. Verifies snapshot integrity
-3. Compresses with gzip
-4. Upload container sends to S3 bucket organized by year/month
-5. Runs on control plane node with privileged access to etcd data
+1. k3s built-in scheduler creates etcd snapshots using embedded etcd
+2. Automatically verifies snapshot integrity
+3. Compresses and uploads directly to S3 using configured secret
+4. Organized by date in S3 bucket: `lvs-cloud-etcd-backups/`
+5. Runs natively within k3s server process
 
-**Retention:** Managed manually (no automated cleanup)
+**Retention:** 7 days
 
-**Files:** `platform/etcd-backup/cronjob-etcd.yaml`
+**Configuration:** k3s server flags in `infrastructure/cloud-init.yml`.
 
 ### PostgreSQL Backup (`pgdump-s3`)
 

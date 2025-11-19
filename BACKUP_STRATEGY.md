@@ -8,7 +8,7 @@ LVS Cloud uses a **two-tier backup strategy** combining application-level and bl
 
 Logical exports that can be restored to different systems:
 
-1. **etcd snapshots** - Daily cluster state backups (2 AM)
+1. **k3s SQLite database** - Daily cluster state backups (3 AM)
 2. **PostgreSQL dumps** - Daily database exports (1 AM)
 
 ### Tier 2: Block-Level Backups (Longhorn Built-in)
@@ -29,7 +29,7 @@ Volume-level snapshots for exact state recovery:
 
 | Component | Type | Schedule | Target | Secret | Status |
 |-----------|------|----------|--------|--------|--------|
-| **k3s native** | Built-in etcd snapshots | Daily 2 AM | etcd cluster state | `s3-backup` | ✅ **Working** |
+| `k3s-sqlite-backup-s3` | CronJob | Daily 3 AM | k3s SQLite database + token | `s3-backup` | ✅ **Working** |
 | `pgdump-s3` | CronJob | Daily 1 AM | All PostgreSQL databases | `s3-backup` | ✅ **Working** |
 | `pgdump-s3-cleanup` | CronJob | Daily 4 AM | Delete backups >7 days | `s3-backup` | ✅ **Working** |
 | `s3-metrics-collector` | CronJob | Every 6 hours | Collect S3 bucket metrics | `s3-backup` | ⚠️ **Optional** |
@@ -41,7 +41,7 @@ Two S3 secrets provide credentials for all backup operations:
 
 1. **`s3-backup`** (platform + kube-system namespaces) ✅
    - Keys: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINTS`, `AWS_DEFAULT_REGION`
-   - Used by: PostgreSQL dumps, etcd snapshots, S3 metrics collector
+   - Used by: PostgreSQL dumps, k3s SQLite backups, S3 metrics collector
    - Created during bootstrap from Hetzner S3 credentials
 
 2. **`longhorn-backup`** (longhorn-system namespace) ✅
@@ -58,7 +58,7 @@ According to `SECRETS.md`, four S3 buckets exist:
 | `lvs-cloud-terraform-state` | nbg1 | Terraform state | Terraform | SECRETS.md:69 |
 | `lvs-cloud-longhorn-backups` | nbg1 | Longhorn volume backups | Longhorn recurring job | SECRETS.md:70 |
 | `lvs-cloud-pg-backups` | nbg1 | PostgreSQL dumps | `pgdump-s3` cronjob | SECRETS.md:71 |
-| `lvs-cloud-etcd-backups` | nbg1 | etcd snapshots | `etcd-backup-s3` cronjob | SECRETS.md:72 |
+| `lvs-cloud-k3s-backups` | nbg1 | k3s SQLite database | `k3s-sqlite-backup-s3` cronjob | New bucket |
 
 **Note:** Cannot verify bucket contents as S3 metrics collector is failing due to missing secret.
 
@@ -82,21 +82,23 @@ The `weekly-bak` RecurringJob targets volumes in the "default" group:
 
 ## How Backup Jobs Work
 
-### etcd Backup (k3s Native)
+### k3s Backup (SQLite Database)
 
 **Purpose:** Protect cluster state including all Kubernetes resources and secrets.
 
+**Architecture:** k3s uses SQLite datastore (`/srv/data/k3s/server/db/state.db`) for single-node clusters, not etcd.
+
 **Process:**
 
-1. k3s built-in scheduler creates etcd snapshots using embedded etcd
-2. Automatically verifies snapshot integrity
-3. Compresses and uploads directly to S3 using configured secret
-4. Organized by date in S3 bucket: `lvs-cloud-etcd-backups/`
-5. Runs natively within k3s server process
+1. CronJob runs on control plane node with host filesystem access
+2. Uses SQLite `.backup` command to create consistent database copy
+3. Backs up server token file (required for cluster restoration)
+4. Compresses backups with gzip
+5. Uploads to S3 bucket organized by year/month: `lvs-cloud-k3s-backups/`
 
-**Retention:** 7 days
+**Retention:** Manual (no automated cleanup - add if needed)
 
-**Configuration:** k3s server flags in `infrastructure/cloud-init.yml`.
+**Configuration:** CronJob in `platform/k3s-backup/cronjob-k3s-sqlite.yaml`
 
 ### PostgreSQL Backup (`pgdump-s3`)
 
@@ -140,7 +142,7 @@ The `weekly-bak` RecurringJob targets volumes in the "default" group:
 **Application-level (portable backups):**
 
 - PostgreSQL databases → S3 daily dumps (7 day retention)
-- etcd cluster state → S3 daily snapshots (manual retention)
+- k3s SQLite database → S3 daily backups (manual retention)
 
 **Block-level (fast disaster recovery):**
 
@@ -158,7 +160,7 @@ Intentionally excluded to save costs and complexity:
 
 ### Why This Strategy?
 
-1. **Application backups** (PostgreSQL, etcd) provide version-independent, portable exports
-2. **Longhorn backups** (Grafana) provide fast recovery for custom configurations
-3. **No duplication** - PostgreSQL uses logical dumps, not volume backups
-4. **Cost-effective** - Only backs up what can't be rebuilt (19GB total vs 41GB all volumes)
+1. **Application backups** (PostgreSQL, k3s SQLite) provide version-independent, portable exports
+2. **Longhorn backups** (Grafana) provide fast recovery for custom configurations  
+3. **No duplication** - PostgreSQL uses logical dumps, k3s uses SQLite dumps, not volume backups
+4. **Cost-effective** - Only backs up what can't be rebuilt

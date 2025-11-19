@@ -126,10 +126,11 @@ spec:
               {"name":"weekly-bak","task":"backup","cron":"0 3 * * 0","retain":4,"concurrency":1,"labels":{"app":"grafana"}}
             ]
 
-      # Disable sidecars to save memory (~200MB)
+      # Enable dashboard sidecar to provision default dashboards
       sidecar:
         dashboards:
-          enabled: false
+          enabled: true
+          searchNamespace: ALL
         datasources:
           enabled: false
 

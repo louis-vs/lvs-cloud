@@ -7,11 +7,12 @@
 | Service | URL | Status |
 |---------|-----|--------|
 | **Grafana** | <https://grafana.lvs.me.uk> | ✅ (admin/secure-pass) |
+| **Authelia** | <https://auth.lvs.me.uk> | ✅ (SSO) |
 | **Registry** | <https://registry.lvs.me.uk> | ✅ (robot_user) |
 | **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
 
-**Infrastructure:** Hetzner cx23 (2 vCPU, 4GB RAM) + 50GB block storage
-**Total Cost:** €9.89/month (€4.90 server + €4.99 Object Storage)
+**Infrastructure:** Hetzner cx22 (2 vCPU, 4GB RAM) + 50GB block storage  
+**Total Cost:** ~€4.90/month (cx22 server + block storage)
 
 ## Architecture
 
@@ -98,7 +99,7 @@ pkill -f 'ssh.*6443:127.0.0.1:6443'
 3. GitHub Actions runs `terraform plan`
 4. Reply "LGTM" to approval issue
 5. If needed, Terraform recreates server with k3s
-6. etcd persists on block storage so the config persists
+6. k3s SQLite datastore persists on block storage so the cluster state persists
 7. Pods restart and reattach to persistent volumes
 
 ## Documentation

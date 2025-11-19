@@ -5,10 +5,10 @@ Complete inventory of all secrets used in LVS Cloud infrastructure.
 ## Secret Storage Strategy
 
 **Primary:** Kubernetes secrets created imperatively during bootstrap
-**Backup:** Secrets persist in etcd on block storage (`/srv/data/k3s`)
-**Recovery:** Daily etcd snapshots backed up to S3
+**Backup:** Secrets persist in k3s SQLite datastore on block storage (`/srv/data/k3s/server/db/state.db`)  
+**Recovery:** Daily k3s SQLite backups to S3
 
-All secrets are created by `infrastructure/bootstrap/bootstrap.sh` during fresh cluster bootstrap. After initial creation, secrets persist across server recreation via persistent etcd.
+All secrets are created by `infrastructure/bootstrap/bootstrap.sh` during fresh cluster bootstrap. After initial creation, secrets persist across server recreation via persistent k3s SQLite datastore.
 
 ## Kubernetes Secrets Inventory
 
@@ -23,7 +23,7 @@ These secrets are created automatically by the bootstrap script:
 | `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:208-217 |
 | `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:232-241 |
 | `s3-backup` | `platform` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for PostgreSQL dumps and metrics | bootstrap.sh:243-253 |
-| `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for etcd snapshots | bootstrap.sh:255-265 |
+| `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for k3s SQLite backups | bootstrap.sh:255-265 |
 | `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:280-289 |
 
 ### Created Manually (Authelia)
@@ -69,7 +69,7 @@ Created manually via Hetzner Cloud Console (not managed by Terraform).
 | `lvs-cloud-terraform-state` | nbg1 | Terraform state storage | Terraform backend |
 | `lvs-cloud-longhorn-backups` | nbg1 | Longhorn volume backups | Longhorn recurring job (weekly) |
 | `lvs-cloud-pg-backups` | nbg1 | PostgreSQL database dumps | PostgreSQL cronjob (daily) |
-| `lvs-cloud-etcd-backups` | nbg1 | etcd cluster snapshots | etcd backup cronjob (daily) |
+| `lvs-cloud-k3s-backups` | nbg1 | k3s SQLite database snapshots | k3s backup cronjob (daily) |
 
 **To create a new bucket:**
 
@@ -111,11 +111,11 @@ Run `infrastructure/bootstrap/bootstrap.sh` which will:
 
 **Total time:** 30-45 minutes
 
-### Server Recreation (etcd persists)
+### Server Recreation (k3s datastore persists)
 
 When Terraform recreates the server but block storage is intact:
 
-1. SSH to server and verify etcd persisted:
+1. SSH to server and verify k3s SQLite datastore persisted:
 
    ```bash
    kubectl get kustomization -n flux-system
@@ -143,29 +143,31 @@ When Terraform recreates the server but block storage is intact:
 
 ### Scenario 2: Block Storage Loss
 
-**Problem:** Hetzner block storage deleted, etcd lost, all secrets gone
+**Problem:** Hetzner block storage deleted, k3s SQLite datastore lost, all secrets gone
 
 **Recovery:**
 
 1. Run `infrastructure/bootstrap/bootstrap.sh` (fresh cluster bootstrap)
 2. Enter all credentials from password manager
-3. Restore etcd from S3 backup (see below)
+3. Restore k3s SQLite database from S3 backup (see below)
 4. Manually recreate Authelia secrets following `platform/authelia/BOOTSTRAP.md`
 
-**Restore etcd from S3:**
+**Restore k3s SQLite from S3:**
 
 ```bash
-# Download latest etcd snapshot
+# Download latest k3s SQLite backup
 mc alias set hetzner https://nbg1.your-objectstorage.com <ACCESS_KEY> <SECRET_KEY>
-mc ls hetzner/lvs-cloud-etcd-backups/
-mc cp hetzner/lvs-cloud-etcd-backups/2025/11/etcd-snapshot-20251116T020000Z.db.gz /tmp/
+mc ls hetzner/lvs-cloud-k3s-backups/
+mc cp hetzner/lvs-cloud-k3s-backups/2025/11/k3s-sqlite-20251116T030000Z.db.gz /tmp/
 
-# Extract snapshot
-gunzip /tmp/etcd-snapshot-20251116T020000Z.db.gz
+# Extract backup
+gunzip /tmp/k3s-sqlite-20251116T030000Z.db.gz
 
-# Restore etcd (requires cluster downtime)
-# CAUTION: This procedure is complex and not fully tested
-# See DISASTER_RECOVERY.md for complete instructions
+# Restore k3s SQLite database (requires cluster downtime)
+sudo systemctl stop k3s
+sudo cp /tmp/k3s-sqlite-20251116T030000Z.db /srv/data/k3s/server/db/state.db
+sudo chown root:root /srv/data/k3s/server/db/state.db
+sudo systemctl start k3s
 ```
 
 ### Scenario 3: Compromised Secret
@@ -271,7 +273,7 @@ kubectl get configmap authelia-users -n platform
    - Alert on unexpected secret reads
 
 3. **Backup secrets off-cluster**
-   - etcd backups to S3 (daily)
+   - k3s SQLite backups to S3 (daily)
    - Store credentials in password manager
    - Document all secret values in secure notes
 
@@ -289,7 +291,7 @@ kubectl get configmap authelia-users -n platform
 
 | What | Frequency | Retention | S3 Bucket |
 |------|-----------|-----------|-----------|
-| etcd snapshots | Daily 2 AM | 30 days | lvs-cloud-etcd-backups |
+| k3s SQLite backups | Daily 3 AM | Manual retention | lvs-cloud-k3s-backups |
 | PostgreSQL dumps | Daily 1 AM | 30 days | lvs-cloud-pg-backups |
 | Longhorn volumes | Weekly Sunday 3 AM | 4 weeks | lvs-cloud-longhorn-backups |
 

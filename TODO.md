@@ -9,7 +9,6 @@
 - [x] grafana connections for loki and prometheus seem to be broken, so we need to fix that. Presumably the plugin that runs this has stopped running for some reason. Investigate and resolve.
 - [x] following from the above: we need to set up etcd backups. Investigate the best way of doing this. There is a cronjob currently but it doesn't work. Remove the faulty cronjob and create a working solution, following the most standard route that is achievable with our current setup.
   - **Resolution**: k3s uses SQLite datastore, not etcd. Implemented k3s-sqlite-backup-s3 CronJob that backs up SQLite database and server token to S3 daily. Updated documentation to reflect actual architecture.
-- [ ] set up the Capacitor UI for flux and expose via traefik with authelia forwardauth on domain flux.lvs.me.uk
 - [ ] during the migration towards the dual namespace system, we had a lot of issues with secrets. Can we re-do the secrets audit and verify that all and only the required secrets are present in the cluster. You need to check and update the `SECRETS.md` documentation. This in in preparation for setting up SOPS so should be comprehensive.
 - [ ] set up SOPS for secrets management instead of current manual imperative approach
 - [ ] Check the connect-k8s script - when run in Claude Code it hangs forever, but run in a normal shell it exits as expected. It's essential that all of our scripts run well within Claude Code.

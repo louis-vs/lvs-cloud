@@ -11,7 +11,7 @@
 | **Registry** | <https://registry.lvs.me.uk> | ✅ (robot_user) |
 | **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
 
-**Infrastructure:** Hetzner cx33 (4 vCPU, 8GB RAM) + 50GB block storage  
+**Infrastructure:** Hetzner cx33 (4 vCPU, 8GB RAM) + 50GB block storage
 **Total Cost:** ~€9.60/month (cx33 server + block storage)
 
 ## Architecture
@@ -142,6 +142,33 @@ lvs-cloud/
 │       └── helmrelease.yaml    # Flux deployment + image automation
 └── docs/                       # Documentation
 ```
+
+## Local Development Requirements
+
+**Required tools:**
+
+```bash
+# Install age (encryption) and sops (secret management)
+brew install age sops
+
+# Verify installations
+age --version      # Should show 1.x.x
+sops --version     # Should show 3.x.x
+```
+
+**Setup:**
+
+1. Generate age keypair (one-time):
+
+   ```bash
+   age-keygen -o age.agekey
+   mkdir -p ~/.config/sops/age
+   cp age.agekey ~/.config/sops/age/keys.txt
+   ```
+
+2. **Important**: Backup `age.agekey` to your password manager - this key decrypts all secrets in the repository
+
+3. The public key from `age.agekey` is already configured in `.sops.yaml`
 
 ## Getting Started
 

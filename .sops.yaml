@@ -1,0 +1,20 @@
+creation_rules:
+  # Flux system secrets (flux-system namespace)
+  - path_regex: clusters/prod/flux-system/secrets/.*\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: age18q37g469gr690ywae38e56ckk463u9kpynhqe8tpcn9m00vg85xqzs9epa
+
+  # Platform secrets (platform namespace)
+  - path_regex: platform/secrets/.*\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: age18q37g469gr690ywae38e56ckk463u9kpynhqe8tpcn9m00vg85xqzs9epa
+
+  # Application secrets (applications namespace)
+  - path_regex: applications/secrets/.*\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: age18q37g469gr690ywae38e56ckk463u9kpynhqe8tpcn9m00vg85xqzs9epa
+
+  # Infrastructure secrets (longhorn-system, kube-system namespaces)
+  - path_regex: infrastructure/secrets/.*\.yaml$
+    encrypted_regex: '^(data|stringData)$'
+    age: age18q37g469gr690ywae38e56ckk463u9kpynhqe8tpcn9m00vg85xqzs9epa

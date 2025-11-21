@@ -3,6 +3,9 @@ kind: Kustomization
 resources:
   - sources.yaml
   - namespaces.yaml
+  - platform-secrets.yaml
+  - application-secrets.yaml
+  - infrastructure-secrets.yaml
   - helmrepositories.yaml
   - storage-install.yaml
   - storage-config.yaml

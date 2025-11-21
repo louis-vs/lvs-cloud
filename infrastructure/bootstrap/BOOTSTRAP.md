@@ -208,11 +208,29 @@ flux bootstrap git \
 # You should see: "✔ Flux bootstrap completed"
 ```
 
-#### 4. Create Initial Kubernetes Secrets (FROM LOCAL MACHINE)
+#### 4. Configure SOPS Decryption (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel from step 3.**
 
-Create initial secrets needed for Flux to start deploying:
+Create the age decryption key for Flux to decrypt SOPS-encrypted secrets:
+
+```bash
+# Create the sops-age secret from your local age key
+cat age.agekey | kubectl create secret generic sops-age \
+  --namespace=flux-system \
+  --from-file=age.agekey=/dev/stdin
+
+# Verify secret was created
+kubectl get secret sops-age -n flux-system
+```
+
+**Note:** All secrets in this repository are now encrypted with SOPS and stored in git. The `sops-age` secret allows Flux to decrypt them automatically. If you need to add new secrets or modify existing ones, see [SECRETS.md](../../SECRETS.md).
+
+#### 5. Create Initial Kubernetes Secrets (FROM LOCAL MACHINE)
+
+**Continue using the same kubectl context and SSH tunnel from step 3.**
+
+**IMPORTANT:** Most secrets are now managed by SOPS and stored encrypted in git. The following secrets are bootstrap-only and are NOT in git:
 
 ```bash
 # Get GitHub SSH host keys
@@ -251,7 +269,7 @@ kubectl create secret docker-registry registry-credentials \
 
 **Note:** The grafana-admin secret is created automatically by the bootstrap script after the monitoring namespace is available. You don't need to create it manually.
 
-#### 5. Monitor Initial Deployment (FROM LOCAL MACHINE)
+#### 6. Monitor Initial Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 
@@ -271,10 +289,10 @@ watch flux get kustomizations
 # 4. storage-install (10-15m) - Longhorn storage system
 # 5. cert-manager-install (5-10m) - TLS certificate manager
 
-# Wait until storage-install shows READY True, then proceed to step 6
+# Wait until storage-install shows READY True, then proceed to step 7
 ```
 
-#### 6. Create Longhorn Secret (FROM LOCAL MACHINE)
+#### 7. Create Longhorn Secret (FROM LOCAL MACHINE)
 
 **After storage-install shows READY True**, create the Longhorn backup secret:
 
@@ -294,7 +312,7 @@ kubectl create secret generic longhorn-backup -n longhorn-system \
 rm /tmp/flux-deploy-key /tmp/flux-deploy-key.pub /tmp/known_hosts /tmp/k3s-kubeconfig.yaml
 ```
 
-#### 7. Monitor Full Deployment (FROM LOCAL MACHINE)
+#### 8. Monitor Full Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 
@@ -333,7 +351,7 @@ kubectl logs -n <namespace> <pod-name>
 flux reconcile kustomization <name> --with-source
 ```
 
-#### 8. Verify Deployment (FROM LOCAL MACHINE)
+#### 9. Verify Deployment (FROM LOCAL MACHINE)
 
 **Continue using the same kubectl context and SSH tunnel.**
 

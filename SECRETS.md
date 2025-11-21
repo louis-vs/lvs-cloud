@@ -14,9 +14,8 @@ All secrets are created by `infrastructure/bootstrap/bootstrap.sh` during fresh 
 
 **IMPORTANT:** The PostgreSQL admin (postgres user) password is **NOT stored in the cluster** for security reasons:
 
-- Admin password set only during initial bootstrap (stored in your local password manager)
+- Admin password is set during initial bootstrap
 - Database backups use dedicated `pgbackup` user with REPLICATION privileges
-- Application users (ruby_demo_user, authelia) have passwords in their respective secrets
 - If you lose the admin password, you can reset it via direct pod access or during disaster recovery
 
 ## Kubernetes Secrets Inventory
@@ -28,13 +27,12 @@ These secrets are created automatically by the bootstrap script:
 | Secret Name | Namespace | Keys | Purpose | Created By |
 |-------------|-----------|------|---------|------------|
 | `flux-git-ssh` | `flux-system` | `identity`, `known_hosts` | Flux Git authentication (SSH deploy key for lvs-cloud repo) | bootstrap.sh:186-195 |
-| `postgresql-auth` | `platform` | `ruby-password` | PostgreSQL application user passwords (NOT admin password) | bootstrap.sh:196-204 |
 | `postgresql-backup-auth` | `platform` | `backup-password` | PostgreSQL backup user password (for pgbackup user with REPLICATION privileges) | Manual during bootstrap |
-| `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:206-215 |
-| `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:230-239 |
-| `s3-backup` | `platform` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for PostgreSQL dumps and metrics | bootstrap.sh:241-251 |
-| `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for k3s SQLite backups | bootstrap.sh:253-263 |
-| `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:278-287 |
+| `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:199-208 |
+| `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:222-231 |
+| `s3-backup` | `platform` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for PostgreSQL dumps and metrics | bootstrap.sh:233-243 |
+| `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for k3s SQLite backups | bootstrap.sh:245-255 |
+| `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:270-279 |
 | `registry-auth` | `platform` | `htpasswd` | Docker registry htpasswd authentication | Deployed with docker-registry Helm chart |
 
 ### Created Manually (Authelia)
@@ -45,20 +43,15 @@ These secrets are created manually after platform deployment following `platform
 |-------------|-----------|------|---------|---------------|
 | `authelia` | `platform` | `storage.encryption.key`, `storage.postgres.password.txt`, `session.encryption.key`, `session.redis.password.txt` (empty), `identity_providers.oidc.hmac.key`, `identity_providers.oidc.clients.grafana.secret.txt`, `identity_validation.reset_password.jwt.hmac.key`, `oidc.rsa.key` | Authelia SSO encryption keys, database password, and OIDC secrets | platform/authelia/BOOTSTRAP.md:45-69 |
 | `grafana-oauth` | `platform` | `oauth-client-secret` | Grafana OIDC client secret (plaintext, must match hashed secret in authelia) | platform/authelia/BOOTSTRAP.md:67-68 |
-
-### Created Manually (User Database)
-
-| Secret Name | Namespace | Type | Purpose | Documentation |
-|-------------|-----------|------|---------|---------------|
 | `authelia-users` | `platform` | ConfigMap | User database with Argon2id password hashes | platform/authelia/BOOTSTRAP.md:78-97 |
 
 ### Application Secrets
 
-Application-specific secrets created by HelmReleases:
+Application-specific secrets created manually per-application (proper namespace isolation):
 
 | Secret Name | Namespace | Keys | Purpose | Created By |
 |-------------|-----------|------|---------|------------|
-| `ruby-app-postgresql` | `applications` | `ruby-password` | Ruby demo app database password (references postgresql-auth) | Ruby demo app HelmRelease |
+| `ruby-app-postgresql` | `applications` | `ruby-password` | Ruby demo app database password for ruby_demo_user | Manual per applications/ruby-demo-app/README.md |
 
 ### Auto-Generated Secrets
 
@@ -128,11 +121,10 @@ Run `infrastructure/bootstrap/bootstrap.sh` which will:
 
 3. **Create Kubernetes secrets:**
    - flux-git-ssh
-   - postgresql-auth
    - registry-credentials
    - longhorn-backup (waits for namespace)
-   - pg-backup-s3
-   - etcd-backup-s3
+   - s3-backup (platform and kube-system namespaces)
+   - postgresql-backup-auth
    - grafana-admin (waits for namespace)
 
 4. **Deploy platform:**
@@ -259,9 +251,12 @@ After bootstrap or disaster recovery, verify all required secrets exist:
 kubectl get secret flux-git-ssh -n flux-system
 kubectl get secret registry-credentials -n flux-system
 
-# Application secrets
-kubectl get secret postgresql-auth -n platform
+# Platform secrets
 kubectl get secret grafana-admin -n platform
+kubectl get secret postgresql-backup-auth -n platform
+
+# Application secrets (per-namespace)
+kubectl get secret ruby-app-postgresql -n applications
 
 # Backup secrets
 kubectl get secret longhorn-backup -n longhorn-system

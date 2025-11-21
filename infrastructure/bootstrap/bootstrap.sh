@@ -112,7 +112,7 @@ main() {
         info "Checking critical secrets..."
         kubectl get secret flux-git-ssh -n flux-system >/dev/null 2>&1 || warn "flux-git-ssh secret missing"
         kubectl get secret registry-credentials -n flux-system >/dev/null 2>&1 || warn "registry-credentials secret missing"
-        kubectl get secret postgresql-auth -n platform >/dev/null 2>&1 || warn "postgresql-auth secret missing"
+        # Application secrets created per-namespace during app-specific setup
         success "Critical secrets present"
 
         # Check Flux reconciliation
@@ -193,14 +193,8 @@ main() {
         info "flux-git-ssh secret already exists"
     fi
 
-    # PostgreSQL auth (application passwords only - admin password not stored in cluster)
-    if ! kubectl get secret postgresql-auth -n platform >/dev/null 2>&1; then
-        kubectl create secret generic postgresql-auth -n platform \
-            --from-literal=ruby-password="$POSTGRES_RUBY_PASSWORD"
-        success "Created postgresql-auth secret"
-    else
-        info "postgresql-auth secret already exists"
-    fi
+    # NOTE: Application database passwords are created per-application namespace
+    # See platform/authelia/BOOTSTRAP.md and applications/*/README.md for per-app setup
 
     # Registry credentials (for Flux Image Automation)
     if ! kubectl get secret registry-credentials -n flux-system >/dev/null 2>&1; then

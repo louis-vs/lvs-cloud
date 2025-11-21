@@ -30,7 +30,7 @@ env:
   - name: POSTGRES_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: postgresql-auth
+        name: ruby-app-postgresql
         key: ruby-password
 resources:
   requests:

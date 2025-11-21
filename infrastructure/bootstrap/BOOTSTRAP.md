@@ -224,11 +224,8 @@ kubectl create secret generic flux-git-ssh \
   --from-file=identity=/tmp/flux-deploy-key \
   --from-file=known_hosts=/tmp/known_hosts
 
-# Create PostgreSQL authentication secret (application passwords only)
-# NOTE: Admin password is NOT stored in cluster for security
-# NOTE: Authelia creates its own user during manual bootstrap (see platform/authelia/BOOTSTRAP.md)
-kubectl create secret generic postgresql-auth -n platform \
-  --from-literal=ruby-password='CHANGE_ME_RUBY_PASSWORD'
+# NOTE: Application database passwords are created per-application namespace
+# See platform/authelia/BOOTSTRAP.md and applications/ruby-demo-app/README.md
 
 # Create PostgreSQL backup user secret
 # This user has REPLICATION privileges for pg_dumpall backups
@@ -575,18 +572,10 @@ On **first bootstrap only**, create application databases and users. These persi
 # IMPORTANT: Admin password is stored ONLY locally (not in cluster)
 # Retrieve it from your password manager
 POSTGRES_PASSWORD='your-local-admin-password'
-RUBY_PASSWORD=$(kubectl get secret postgresql-auth -n platform -o jsonpath='{.data.ruby-password}' | base64 -d)
 BACKUP_PASSWORD=$(kubectl get secret postgresql-backup-auth -n platform -o jsonpath='{.data.backup-password}' | base64 -d)
 
-# Create ruby_demo_user and database
-kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
-  psql -U postgres -c "CREATE USER ruby_demo_user WITH PASSWORD '$RUBY_PASSWORD';"
-
-kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
-  psql -U postgres -c "CREATE DATABASE ruby_demo OWNER ruby_demo_user;"
-
-kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
-  psql -U postgres -d ruby_demo -c "GRANT ALL PRIVILEGES ON DATABASE ruby_demo TO ruby_demo_user; GRANT ALL ON SCHEMA public TO ruby_demo_user;"
+# Application users and databases are created per-application
+# See applications/ruby-demo-app/README.md for ruby app database setup
 
 # Create backup user with REPLICATION privileges for pg_dumpall
 kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \

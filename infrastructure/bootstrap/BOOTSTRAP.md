@@ -228,8 +228,7 @@ kubectl create secret generic flux-git-ssh \
 # NOTE: Admin password is NOT stored in cluster for security
 # NOTE: Authelia creates its own user during manual bootstrap (see platform/authelia/BOOTSTRAP.md)
 kubectl create secret generic postgresql-auth -n platform \
-  --from-literal=user-password='CHANGE_ME_USER_PASSWORD' \
-  --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD'
+  --from-literal=ruby-password='CHANGE_ME_RUBY_PASSWORD'
 
 # Create PostgreSQL backup user secret
 # This user has REPLICATION privileges for pg_dumpall backups

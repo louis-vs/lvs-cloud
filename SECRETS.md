@@ -28,7 +28,7 @@ These secrets are created automatically by the bootstrap script:
 | Secret Name | Namespace | Keys | Purpose | Created By |
 |-------------|-----------|------|---------|------------|
 | `flux-git-ssh` | `flux-system` | `identity`, `known_hosts` | Flux Git authentication (SSH deploy key for lvs-cloud repo) | bootstrap.sh:186-195 |
-| `postgresql-auth` | `platform` | `user-password`, `ruby-password` | PostgreSQL application user passwords (NOT admin password) | bootstrap.sh:196-204 |
+| `postgresql-auth` | `platform` | `ruby-password` | PostgreSQL application user passwords (NOT admin password) | bootstrap.sh:196-204 |
 | `postgresql-backup-auth` | `platform` | `backup-password` | PostgreSQL backup user password (for pgbackup user with REPLICATION privileges) | Manual during bootstrap |
 | `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:206-215 |
 | `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:230-239 |

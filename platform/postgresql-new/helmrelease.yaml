@@ -17,9 +17,12 @@ spec:
     fullnameOverride: postgresql
 
     auth:
-      existingSecret: postgresql-auth
-      secretKeys:
-        adminPasswordKey: postgres-password
+      # Security: Admin password NOT stored in cluster
+      # - Admin password set only during initial bootstrap (stored locally by user)
+      # - Database backups use dedicated 'pgbackup' user with REPLICATION privileges
+      # - If PostgreSQL pod recreated, admin access requires manual password reset
+      # - Application users (ruby_demo_user, authelia) have passwords in their own secrets
+      postgresPassword: "unused-will-not-override-existing-db"
 
     primary:
       persistence:

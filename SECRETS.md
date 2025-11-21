@@ -10,6 +10,15 @@ Complete inventory of all secrets used in LVS Cloud infrastructure.
 
 All secrets are created by `infrastructure/bootstrap/bootstrap.sh` during fresh cluster bootstrap. After initial creation, secrets persist across server recreation via persistent k3s SQLite datastore.
 
+### PostgreSQL Admin Password Security
+
+**IMPORTANT:** The PostgreSQL admin (postgres user) password is **NOT stored in the cluster** for security reasons:
+
+- Admin password set only during initial bootstrap (stored in your local password manager)
+- Database backups use dedicated `pgbackup` user with REPLICATION privileges
+- Application users (ruby_demo_user, authelia) have passwords in their respective secrets
+- If you lose the admin password, you can reset it via direct pod access or during disaster recovery
+
 ## Kubernetes Secrets Inventory
 
 ### Created During Bootstrap
@@ -19,12 +28,13 @@ These secrets are created automatically by the bootstrap script:
 | Secret Name | Namespace | Keys | Purpose | Created By |
 |-------------|-----------|------|---------|------------|
 | `flux-git-ssh` | `flux-system` | `identity`, `known_hosts` | Flux Git authentication (SSH deploy key for lvs-cloud repo) | bootstrap.sh:186-195 |
-| `postgresql-auth` | `platform` | `postgres-password`, `user-password`, `ruby-password` | PostgreSQL user passwords for applications | bootstrap.sh:197-205 |
-| `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:208-217 |
-| `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:232-241 |
-| `s3-backup` | `platform` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for PostgreSQL dumps and metrics | bootstrap.sh:243-253 |
-| `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for k3s SQLite backups | bootstrap.sh:255-265 |
-| `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:280-289 |
+| `postgresql-auth` | `platform` | `user-password`, `ruby-password` | PostgreSQL application user passwords (NOT admin password) | bootstrap.sh:196-204 |
+| `postgresql-backup-auth` | `platform` | `backup-password` | PostgreSQL backup user password (for pgbackup user with REPLICATION privileges) | Manual during bootstrap |
+| `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:206-215 |
+| `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:230-239 |
+| `s3-backup` | `platform` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for PostgreSQL dumps and metrics | bootstrap.sh:241-251 |
+| `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for k3s SQLite backups | bootstrap.sh:253-263 |
+| `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:278-287 |
 | `registry-auth` | `platform` | `htpasswd` | Docker registry htpasswd authentication | Deployed with docker-registry Helm chart |
 
 ### Created Manually (Authelia)

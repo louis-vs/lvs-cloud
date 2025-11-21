@@ -193,10 +193,9 @@ main() {
         info "flux-git-ssh secret already exists"
     fi
 
-    # PostgreSQL auth
+    # PostgreSQL auth (application passwords only - admin password not stored in cluster)
     if ! kubectl get secret postgresql-auth -n platform >/dev/null 2>&1; then
         kubectl create secret generic postgresql-auth -n platform \
-            --from-literal=postgres-password="$POSTGRES_ADMIN_PASSWORD" \
             --from-literal=user-password="$POSTGRES_RUBY_PASSWORD" \
             --from-literal=ruby-password="$POSTGRES_RUBY_PASSWORD"
         success "Created postgresql-auth secret"

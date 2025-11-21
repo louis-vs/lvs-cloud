@@ -224,13 +224,17 @@ kubectl create secret generic flux-git-ssh \
   --from-file=identity=/tmp/flux-deploy-key \
   --from-file=known_hosts=/tmp/known_hosts
 
-# Create PostgreSQL authentication secret
-# Replace passwords with secure values
+# Create PostgreSQL authentication secret (application passwords only)
+# NOTE: Admin password is NOT stored in cluster for security
 # NOTE: Authelia creates its own user during manual bootstrap (see platform/authelia/BOOTSTRAP.md)
 kubectl create secret generic postgresql-auth -n platform \
-  --from-literal=postgres-password='CHANGE_ME_ADMIN_PASSWORD' \
   --from-literal=user-password='CHANGE_ME_USER_PASSWORD' \
   --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD'
+
+# Create PostgreSQL backup user secret
+# This user has REPLICATION privileges for pg_dumpall backups
+kubectl create secret generic postgresql-backup-auth -n platform \
+  --from-literal=backup-password='CHANGE_ME_BACKUP_PASSWORD'
 
 # Create S3 backup credentials for platform services (PostgreSQL, metrics)
 # NOTE: This is now created automatically by bootstrap.sh
@@ -569,9 +573,11 @@ curl -u robot_user:PASSWORD https://registry.lvs.me.uk/v2/_catalog
 On **first bootstrap only**, create application databases and users. These persist via Longhorn PVC and survive server recreation:
 
 ```bash
-# Get postgres password from secret
-POSTGRES_PASSWORD=$(kubectl get secret postgresql-auth -n platform -o jsonpath='{.data.postgres-password}' | base64 -d)
+# IMPORTANT: Admin password is stored ONLY locally (not in cluster)
+# Retrieve it from your password manager
+POSTGRES_PASSWORD='your-local-admin-password'
 RUBY_PASSWORD=$(kubectl get secret postgresql-auth -n platform -o jsonpath='{.data.ruby-password}' | base64 -d)
+BACKUP_PASSWORD=$(kubectl get secret postgresql-backup-auth -n platform -o jsonpath='{.data.backup-password}' | base64 -d)
 
 # Create ruby_demo_user and database
 kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
@@ -582,11 +588,20 @@ kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
 
 kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
   psql -U postgres -d ruby_demo -c "GRANT ALL PRIVILEGES ON DATABASE ruby_demo TO ruby_demo_user; GRANT ALL ON SCHEMA public TO ruby_demo_user;"
+
+# Create backup user with REPLICATION privileges for pg_dumpall
+kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+  psql -U postgres -c "CREATE USER pgbackup WITH REPLICATION PASSWORD '$BACKUP_PASSWORD';"
+
+kubectl exec postgresql-0 -n platform -- env PGPASSWORD="$POSTGRES_PASSWORD" \
+  psql -U postgres -c "GRANT pg_read_all_data TO pgbackup;"
 ```
 
 **Note:** These users/databases persist forever in the PostgreSQL PVC. After server recreation, they're automatically available—no need to recreate.
 
 **Authelia database:** Created separately during Authelia bootstrap (see [platform/authelia/BOOTSTRAP.md](../../platform/authelia/BOOTSTRAP.md)).
+
+**Admin password security:** The postgres admin password is NOT stored in the cluster. Store it in your local password manager. If you lose it, you can reset it by accessing the pod directly or recreating the database during disaster recovery.
 
 ### Disaster Scenarios
 

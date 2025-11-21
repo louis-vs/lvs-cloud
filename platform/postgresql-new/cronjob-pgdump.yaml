@@ -22,15 +22,15 @@ spec:
                 - name: PGPASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: postgresql-auth
-                      key: postgres-password
+                      name: postgresql-backup-auth
+                      key: backup-password
               command: ["/bin/bash","-c"]
               args:
                 - |
                   set -euo pipefail
                   TS=$(date -u +%Y%m%dT%H%M%SZ)
                   FILE="/dump/pgdumpall-$TS.sql.gz"
-                  pg_dumpall -h postgresql.platform.svc.cluster.local -U postgres | gzip -9 > "$FILE"
+                  pg_dumpall -h postgresql.platform.svc.cluster.local -U pgbackup | gzip -9 > "$FILE"
                   ls -lh /dump
               volumeMounts:
                 - name: dump

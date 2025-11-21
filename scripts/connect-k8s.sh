@@ -11,10 +11,11 @@ echo "Cleaning up existing tunnels..."
 pkill -f "ssh.*6443:127.0.0.1:6443" 2>/dev/null || true
 sleep 1
 
-# Start new SSH tunnel in background
+# Start new SSH tunnel in background, fully detached from shell
 echo "Starting SSH tunnel to $SERVER_IP:6443..."
-ssh -N -L 6443:127.0.0.1:6443 ubuntu@$SERVER_IP &
+ssh -N -L 6443:127.0.0.1:6443 ubuntu@$SERVER_IP </dev/null >/dev/null 2>&1 &
 TUNNEL_PID=$!
+disown
 echo "SSH tunnel started (PID: $TUNNEL_PID)"
 
 # Wait for tunnel to be established

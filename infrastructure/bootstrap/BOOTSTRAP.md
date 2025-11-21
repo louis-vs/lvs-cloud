@@ -70,14 +70,21 @@ flux get all
 ### 3. Verify Secrets Exist
 
 ```bash
-# Check critical secrets
+# Check critical secrets (including SOPS decryption key)
+kubectl get secret -n flux-system sops-age
 kubectl get secret -n flux-system flux-git-ssh
 kubectl get secret -n flux-system registry-credentials
 kubectl get secret -n platform postgresql-auth
 kubectl get secret -n longhorn-system longhorn-backup
 
 # All should exist (output: "NAME ... AGE")
+
+# Verify SOPS decryption is still configured in flux-system kustomization
+kubectl get kustomization flux-system -n flux-system -o jsonpath='{.spec.decryption}'
+# Should output: {"provider":"sops","secretRef":{"name":"sops-age"}}
 ```
+
+**Note:** The `sops-age` secret and SOPS decryption configuration persist in etcd and do NOT need to be recreated during server recreation.
 
 ### 4. Monitor Service Recovery
 
@@ -212,7 +219,9 @@ flux bootstrap git \
 
 **Continue using the same kubectl context and SSH tunnel from step 3.**
 
-Create the age decryption key for Flux to decrypt SOPS-encrypted secrets:
+**IMPORTANT:** This step is ONLY required during fresh cluster bootstrap. The configuration persists in etcd, so server recreation does NOT require re-running these commands.
+
+Configure age decryption for Flux to decrypt SOPS-encrypted secrets:
 
 ```bash
 # Create the sops-age secret from your local age key
@@ -222,9 +231,29 @@ cat age.agekey | kubectl create secret generic sops-age \
 
 # Verify secret was created
 kubectl get secret sops-age -n flux-system
+
+# Wait for Flux bootstrap to complete (flux-system kustomization should be READY)
+flux get kustomizations flux-system
+
+# Enable SOPS decryption in the flux-system Kustomization
+# This patch is required because gotk-sync.yaml is managed by flux bootstrap
+# and changes to it in git are overwritten. The patch modifies the cluster resource directly.
+kubectl patch kustomization flux-system -n flux-system --type=merge \
+  -p '{"spec":{"decryption":{"provider":"sops","secretRef":{"name":"sops-age"}}}}'
+
+# Verify decryption is configured
+kubectl get kustomization flux-system -n flux-system -o jsonpath='{.spec.decryption}' | jq
+# Should output: {"provider":"sops","secretRef":{"name":"sops-age"}}
 ```
 
-**Note:** All secrets in this repository are now encrypted with SOPS and stored in git. The `sops-age` secret allows Flux to decrypt them automatically. If you need to add new secrets or modify existing ones, see [SECRETS.md](../../SECRETS.md).
+**Why patching is necessary:**
+
+- The `clusters/prod/flux-system/gotk-sync.yaml` file in git includes decryption config
+- However, `flux bootstrap` manages this file and overwrites it during bootstrap
+- The kubectl patch directly modifies the Kustomization resource in the cluster
+- Once patched, the config persists in etcd and survives server recreation
+
+**Note:** All secrets in this repository are encrypted with SOPS and stored in git. The `sops-age` secret allows Flux to decrypt them automatically. See [SECRETS.md](../../SECRETS.md) for secret management procedures.
 
 #### 5. Create Initial Kubernetes Secrets (FROM LOCAL MACHINE)
 

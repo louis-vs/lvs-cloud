@@ -5,7 +5,7 @@ Complete inventory of all secrets used in LVS Cloud infrastructure.
 ## Secret Storage Strategy
 
 **Primary:** Kubernetes secrets created imperatively during bootstrap
-**Backup:** Secrets persist in k3s SQLite datastore on block storage (`/srv/data/k3s/server/db/state.db`)  
+**Backup:** Secrets persist in k3s SQLite datastore on block storage (`/srv/data/k3s/server/db/state.db`)
 **Recovery:** Daily k3s SQLite backups to S3
 
 All secrets are created by `infrastructure/bootstrap/bootstrap.sh` during fresh cluster bootstrap. After initial creation, secrets persist across server recreation via persistent k3s SQLite datastore.
@@ -19,12 +19,13 @@ These secrets are created automatically by the bootstrap script:
 | Secret Name | Namespace | Keys | Purpose | Created By |
 |-------------|-----------|------|---------|------------|
 | `flux-git-ssh` | `flux-system` | `identity`, `known_hosts` | Flux Git authentication (SSH deploy key for lvs-cloud repo) | bootstrap.sh:186-195 |
-| `postgresql-auth` | `platform` | `postgres-password`, `user-password`, `ruby-password`, `authelia-password` | PostgreSQL user passwords for all applications | bootstrap.sh:197-205 |
+| `postgresql-auth` | `platform` | `postgres-password`, `user-password`, `ruby-password` | PostgreSQL user passwords for applications | bootstrap.sh:197-205 |
 | `registry-credentials` | `flux-system` | Docker config | Flux Image Automation registry scanning credentials | bootstrap.sh:208-217 |
 | `longhorn-backup` | `longhorn-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | Longhorn S3 backups to Hetzner Object Storage | bootstrap.sh:232-241 |
 | `s3-backup` | `platform` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for PostgreSQL dumps and metrics | bootstrap.sh:243-253 |
 | `s3-backup` | `kube-system` | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, `AWS_ENDPOINTS` | S3 credentials for k3s SQLite backups | bootstrap.sh:255-265 |
 | `grafana-admin` | `platform` | `admin-user`, `admin-password` | Grafana admin login credentials | bootstrap.sh:280-289 |
+| `registry-auth` | `platform` | `htpasswd` | Docker registry htpasswd authentication | Deployed with docker-registry Helm chart |
 
 ### Created Manually (Authelia)
 
@@ -32,14 +33,33 @@ These secrets are created manually after platform deployment following `platform
 
 | Secret Name | Namespace | Keys | Purpose | Documentation |
 |-------------|-----------|------|---------|---------------|
-| `authelia` | `platform` | `storage.encryption.key`, `storage.postgres.password.txt`, `session.encryption.key`, `identity_providers.oidc.hmac.key`, `identity_providers.oidc.clients.grafana.secret.txt`, `oidc.rsa.key` | Authelia SSO encryption keys and OIDC secrets | platform/authelia/BOOTSTRAP.md:45-69 |
-| `grafana-oauth` | `platform` | `oauth-client-secret` | Grafana OIDC client secret (must match authelia secret) | platform/authelia/BOOTSTRAP.md:67-68 |
+| `authelia` | `platform` | `storage.encryption.key`, `storage.postgres.password.txt`, `session.encryption.key`, `session.redis.password.txt` (empty), `identity_providers.oidc.hmac.key`, `identity_providers.oidc.clients.grafana.secret.txt`, `identity_validation.reset_password.jwt.hmac.key`, `oidc.rsa.key` | Authelia SSO encryption keys, database password, and OIDC secrets | platform/authelia/BOOTSTRAP.md:45-69 |
+| `grafana-oauth` | `platform` | `oauth-client-secret` | Grafana OIDC client secret (plaintext, must match hashed secret in authelia) | platform/authelia/BOOTSTRAP.md:67-68 |
 
 ### Created Manually (User Database)
 
 | Secret Name | Namespace | Type | Purpose | Documentation |
 |-------------|-----------|------|---------|---------------|
 | `authelia-users` | `platform` | ConfigMap | User database with Argon2id password hashes | platform/authelia/BOOTSTRAP.md:78-97 |
+
+### Application Secrets
+
+Application-specific secrets created by HelmReleases:
+
+| Secret Name | Namespace | Keys | Purpose | Created By |
+|-------------|-----------|------|---------|------------|
+| `ruby-app-postgresql` | `applications` | `ruby-password` | Ruby demo app database password (references postgresql-auth) | Ruby demo app HelmRelease |
+
+### Auto-Generated Secrets
+
+These secrets are automatically created by Kubernetes controllers:
+
+| Secret Name Pattern | Namespace | Type | Purpose | Created By |
+|---------------------|-----------|------|---------|------------|
+| `*-tls` | Various | `tls.crt`, `tls.key` | TLS certificates for ingresses | cert-manager |
+| `sh.helm.release.v1.*` | Various | Helm release data | Helm release history and values | Helm |
+| Webhook CA/TLS secrets | `cert-manager`, `longhorn-system` | Certificate data | Internal webhook certificates | cert-manager, Longhorn |
+| Prometheus/Alertmanager secrets | `platform` | Configuration | Auto-generated monitoring configs | kube-prometheus-stack |
 
 ## GitHub Secrets
 

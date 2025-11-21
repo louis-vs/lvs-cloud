@@ -98,9 +98,10 @@ Create all secrets:
 
 - `flux-git-ssh` (Flux deploy key)
 - `postgresql-auth` (database passwords)
-- `pg-backup-s3` (PostgreSQL S3 credentials)
+- `s3-backup` in platform and kube-system namespaces (S3 backup credentials)
 - `registry-credentials` (Flux image scanning)
 - `longhorn-backup` (Longhorn S3 credentials)
+- `grafana-admin` (Grafana admin credentials)
 
 Wait for platform deployment (~30-45 min).
 

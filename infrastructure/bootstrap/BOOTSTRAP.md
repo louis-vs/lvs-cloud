@@ -226,19 +226,19 @@ kubectl create secret generic flux-git-ssh \
 
 # Create PostgreSQL authentication secret
 # Replace passwords with secure values
+# NOTE: Authelia creates its own user during manual bootstrap (see platform/authelia/BOOTSTRAP.md)
 kubectl create secret generic postgresql-auth -n platform \
   --from-literal=postgres-password='CHANGE_ME_ADMIN_PASSWORD' \
   --from-literal=user-password='CHANGE_ME_USER_PASSWORD' \
-  --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD' \
-  --from-literal=authelia-password='CHANGE_ME_AUTHELIA_PASSWORD'
+  --from-literal=ruby-password='CHANGE_ME_USER_PASSWORD'
 
-# Create PostgreSQL S3 backup credentials
-kubectl create secret generic pg-backup-s3 -n platform \
-  --from-literal=S3_ENDPOINT='https://nbg1.your-objectstorage.com' \
-  --from-literal=S3_BUCKET='lvs-cloud-pg-backups' \
-  --from-literal=S3_REGION='nbg1' \
-  --from-literal=S3_ACCESS_KEY='YOUR_HETZNER_S3_ACCESS_KEY' \
-  --from-literal=S3_SECRET_KEY='YOUR_HETZNER_S3_SECRET_KEY'
+# Create S3 backup credentials for platform services (PostgreSQL, metrics)
+# NOTE: This is now created automatically by bootstrap.sh
+kubectl create secret generic s3-backup -n platform \
+  --from-literal=AWS_ACCESS_KEY_ID='YOUR_HETZNER_S3_ACCESS_KEY' \
+  --from-literal=AWS_SECRET_ACCESS_KEY='YOUR_HETZNER_S3_SECRET_KEY' \
+  --from-literal=AWS_ENDPOINTS='nbg1.your-objectstorage.com' \
+  --from-literal=AWS_DEFAULT_REGION='nbg1'
 
 # Create registry credentials for Flux Image Automation
 # This allows Flux to scan the private registry for new image tags

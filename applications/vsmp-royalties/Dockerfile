@@ -27,7 +27,7 @@ ENV RAILS_ENV="production" \
     BUNDLE_WITHOUT="development test" \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
-# Throw-away build stage to reduce size of final image
+# Build stage with all dependencies (including test)
 FROM base AS build
 
 # Install packages needed to build gems
@@ -35,9 +35,9 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-# Install application gems
+# Install ALL gems (including test group) in one go
 COPY Gemfile Gemfile.lock vendor ./
-
+ENV BUNDLE_WITHOUT="development"
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
     # -j 1 disable parallel compilation to avoid a QEMU bug: https://github.com/rails/bootsnap/issues/495
@@ -54,23 +54,8 @@ RUN bundle exec bootsnap precompile -j 1 app/ lib/
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 
-# Test stage - includes test dependencies, built from scratch
-FROM base AS test
-
-# Install packages needed to build gems
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
-
-# Install gems including test group
-COPY Gemfile Gemfile.lock vendor ./
-ENV BUNDLE_WITHOUT="development"
-RUN bundle install && \
-    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
-
-# Copy application code
-COPY . .
-
+# Test stage - reuses build stage with test gems already installed
+FROM build AS test
 CMD ["bin/rails", "test"]
 
 
@@ -83,6 +68,7 @@ RUN groupadd --system --gid 1000 rails && \
 USER 1000:1000
 
 # Copy built artifacts: gems, application
+# Note: This includes test gems for faster builds, trading ~few MB for faster CI
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 

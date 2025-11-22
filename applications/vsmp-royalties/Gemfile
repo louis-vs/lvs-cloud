@@ -28,6 +28,15 @@ gem "solid_cache"
 gem "solid_queue"
 gem "solid_cable"
 
+# Mission Control for monitoring background jobs
+gem "mission_control-jobs"
+
+# Schema annotations in model files
+gem "annotate"
+
+# AWS SDK for S3-compatible storage (Hetzner)
+gem "aws-sdk-s3", require: false
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

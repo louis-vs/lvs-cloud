@@ -1,19 +1,19 @@
 # Traefik Dashboard
 
-Exposes the Traefik dashboard at <https://traefik.lvs.me.uk> with basic authentication.
+Provides HTTPS ingress to Traefik web UI via IngressRoute.
 
-## Bootstrap Setup
+## Service
 
-After Flux is running, create the auth secret:
+- **Traefik UI**: Access to the Traefik dashboard
+- **URL**: traefik.lvs.me.uk
+- **Namespace**: kube-system
 
-```bash
-# Generate htpasswd hash
-HASH=$(htpasswd -nb admin secure-pass)
+## Secrets
 
-# Create secret
-kubectl create secret generic traefik-dashboard-auth \
-  -n kube-system \
-  --from-literal=users="$HASH"
-```
+None (uses Traefik deployed by k3s)
 
-Change `admin` and `secure-pass` to your desired credentials.
+## Configuration
+
+- Protected by authelia-forwardauth middleware
+- TLS certificate via cert-manager (letsencrypt)
+- Standard Traefik IngressRoute pattern

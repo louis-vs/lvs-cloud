@@ -4,3 +4,4 @@ namespace: flux-system
 resources:
   - image-update.yaml
   - ruby-demo-app.yaml
+  - vsmp-royalties.yaml

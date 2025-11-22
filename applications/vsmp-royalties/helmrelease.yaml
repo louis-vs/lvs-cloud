@@ -12,8 +12,8 @@ spec:
         kind: GitRepository
         name: monorepo
         namespace: flux-system
-  valuesFiles:
-    - ./applications/vsmp-royalties/values.yaml
+      valuesFiles:
+        - ./applications/vsmp-royalties/values.yaml
   values:
     image:
       repository: registry.lvs.me.uk/vsmp-royalties # {"$imagepolicy": "flux-system:vsmp-royalties:name"}

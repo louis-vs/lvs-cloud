@@ -18,15 +18,15 @@
 - [x] Update monorepo workflow to run tests
 - [x] Configure database.yml to use Rails credentials
 - [x] Create secret.yaml template (needs encryption with SOPS)
-- [ ] Set up PostgreSQL database on cluster
-- [ ] Configure Rails credentials with DB and S3 secrets
-- [ ] Encrypt secret.yaml with SOPS
+- [x] Set up PostgreSQL database on cluster
+- [x] Configure Rails credentials with DB and S3 secrets
+- [x] Encrypt secret.yaml with SOPS
 - [ ] Deploy initial "hello world" version
 
 ### 1.3 Database Setup
 
-- [ ] Create PostgreSQL database and user on cluster
-- [ ] Add credentials to Rails encrypted credentials
+- [x] Create PostgreSQL database and user on cluster
+- [x] Add credentials to Rails encrypted credentials
 - [ ] Test database connection
 
 ## Phase 2: Core Data Model

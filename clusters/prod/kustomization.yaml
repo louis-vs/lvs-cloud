@@ -21,3 +21,4 @@ resources:
   - alertmanager.yaml
   - image-automation.yaml
   - ruby-demo-app.yaml
+  - vsmp-royalties.yaml

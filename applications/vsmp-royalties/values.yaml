@@ -1,3 +1,39 @@
+# Production values for vsmp-royalties
+# Flux image setters will update image values automatically
+
+image:
+  pullPolicy: Always
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: royalties.lvs.me.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: vsmp-royalties-tls
+      hosts:
+        - royalties.lvs.me.uk
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
 env:
   # Database connection
   - name: DB_HOST

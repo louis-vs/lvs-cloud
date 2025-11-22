@@ -7,7 +7,7 @@ resources:
   - storage-config
   - cert-manager-install
   - cert-manager-config
-  - postgresql-new
+  - postgresql
   - redis
   - authelia
   - monitoring

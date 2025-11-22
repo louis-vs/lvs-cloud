@@ -8,7 +8,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: monorepo
-  path: ./platform/postgresql-new
+  path: ./platform/postgresql
   prune: true
   wait: true
   timeout: 10m

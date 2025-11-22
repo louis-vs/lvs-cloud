@@ -132,7 +132,7 @@ lvs-cloud/
 │   └── longhorn/               # Storage setup
 ├── platform/
 │   ├── cert-manager/           # TLS automation
-│   ├── postgresql-new/         # Database server
+│   ├── postgresql/             # Database server
 │   ├── flux-image-automation/  # Image policies
 │   └── helmrepositories/       # Helm chart sources
 ├── applications/

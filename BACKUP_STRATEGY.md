@@ -115,8 +115,8 @@ The `weekly-bak` RecurringJob targets volumes in the "default" group:
 
 **Files:**
 
-- `platform/postgresql-new/cronjob-pgdump.yaml`
-- `platform/postgresql-new/cronjob-s3-cleanup.yaml`
+- `platform/postgresql/cronjob-pgdump.yaml`
+- `platform/postgresql/cronjob-s3-cleanup.yaml`
 
 ### Longhorn Volume Backup (`weekly-bak`)
 
@@ -161,6 +161,6 @@ Intentionally excluded to save costs and complexity:
 ### Why This Strategy?
 
 1. **Application backups** (PostgreSQL, k3s SQLite) provide version-independent, portable exports
-2. **Longhorn backups** (Grafana) provide fast recovery for custom configurations  
+2. **Longhorn backups** (Grafana) provide fast recovery for custom configurations
 3. **No duplication** - PostgreSQL uses logical dumps, k3s uses SQLite dumps, not volume backups
 4. **Cost-effective** - Only backs up what can't be rebuilt

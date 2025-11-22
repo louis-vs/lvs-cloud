@@ -8,14 +8,14 @@ Streamlined guide for deploying and debugging applications on LVS Cloud.
 
 **Add user/password to init scripts:**
 
-Edit `platform/postgresql-new/init-scripts.yaml`:
+Edit `platform/postgresql/init-scripts.yaml`:
 
 - Add user creation in `02-create-users.sql` ConfigMap
 - Add database grants in `03-grant-permissions.sql` ConfigMap
 
 **Add password to secret:**
 
-Edit `platform/postgresql-new/secret-auth.yaml`:
+Edit `platform/postgresql/secret-auth.yaml`:
 
 ```yaml
 stringData:

@@ -1,5 +1,5 @@
 env:
-  # Database connection (read from credentials in database.yml)
+  # Database connection
   - name: DB_HOST
     value: postgresql
   - name: DB_PORT

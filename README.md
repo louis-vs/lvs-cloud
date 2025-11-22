@@ -1,179 +1,125 @@
-# LVS Cloud - Kubernetes Private Cloud
+# LVS Cloud — Personal Kubernetes Private Cloud
 
-**Kubernetes-native private cloud** running on a single k3s node with enterprise GitOps patterns. Push code → Flux automatically deploys.
+LVS Cloud is a **Kubernetes-native private cloud** running on a single k3s node and fully managed through GitOps. Push code → GitHub Actions builds → Flux deploys → Grafana monitors.
 
-## Quick Status
+This README provides a basic overview. For detailed internal instructions, see the documentation referenced at the end, and the documentation within the different subfolders.
 
-| Service | URL | Status |
-|---------|-----|--------|
-| **Grafana** | <https://grafana.lvs.me.uk> | ✅ (admin/secure-pass) |
-| **Authelia** | <https://auth.lvs.me.uk> | ✅ (SSO) |
-| **Registry** | <https://registry.lvs.me.uk> | ✅ (robot_user) |
-| **Ruby Demo** | <https://app.lvs.me.uk> | ✅ |
+---
 
-**Infrastructure:** Hetzner cx33 (4 vCPU, 8GB RAM) + 50GB block storage
-**Total Cost:** ~€9.60/month (cx33 server + block storage)
+## **High-Level Architecture**
 
-## Architecture
+### Deployment Flow (GitOps)
 
 ```
 Developer → Git Push
          ↓
-   GitHub Actions (build + push image)
+   GitHub Actions builds & pushes image
          ↓
    registry.lvs.me.uk/app:1.0.X
          ↓
-   Flux ImageRepository (scans registry)
+   Flux ImageRepository scans registry
+   Flux ImagePolicy selects latest tag
+   Flux ImageUpdateAutomation commits tag update
          ↓
-   Flux ImagePolicy (selects latest tag)
+   HelmRelease updated in Git
          ↓
-   Flux ImageUpdateAutomation (commits update)
-         ↓
-   Updates helmrelease.yaml spec.values.image.tag
-         ↓
-   Flux applies updated HelmRelease
+   Flux applies changes to cluster
          ↓
    k3s performs rolling update
-         ↓
-   Live app with TLS cert
 ```
 
-**Stack:**
+### Core Stack
 
-- **k3s**: Lightweight Kubernetes (weekly auto-upgrades)
-- **Flux CD**: GitOps operator with image automation
-- **Longhorn**: Distributed storage with S3 backups (Hetzner)
-- **cert-manager**: Automated TLS certificates
-- **PostgreSQL**: Bitnami Helm chart (Longhorn PVCs)
-- **PGL Observability**: Prometheus + Grafana + Loki (metrics, dashboards, logs)
-- **External Registry**: Docker + Caddy (outside cluster)
+* **k3s** — Lightweight Kubernetes with automated upgrades
+* **Flux CD** — GitOps engine + image automation
+* **Longhorn** — Persistent storage with S3 backups
+* **cert-manager** — Automatic TLS
+* **PostgreSQL** — Stateful DB with Longhorn PVCs
+* **PGL** — Prometheus, Grafana, Loki (metrics, dashboards, logs)
+* **External Registry** — Docker + Caddy for private images
 
-## Quick Commands
+---
+
+## **Essential Commands**
 
 ```bash
-# Setup kubectl access (run once per session)
+# Authenticate kubectl (per session)
 ./scripts/connect-k8s.sh
 
-# SSH to server
-ssh ubuntu@$(dig +short app.lvs.me.uk)
-
-# Check cluster status
+# Cluster health
 kubectl get nodes
 kubectl get pods -A
 
-# Monitor Flux
+# Flux status and logs
 flux get all
 flux logs --all-namespaces --follow
 
-# Force reconciliation
+# Trigger reconciliation
 flux reconcile source git monorepo
 flux reconcile kustomization apps
 
-# View application logs
+# App logs (example)
 kubectl logs -f -l app.kubernetes.io/name=ruby-demo-app
-
-# Port-forward to services
-kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
-
-# Kill kubectl tunnel if needed
-pkill -f 'ssh.*6443:127.0.0.1:6443'
 ```
 
-## Deployment Flow
+For service access via port-forward:
 
-**Code changes:**
+```bash
+kubectl port-forward -n longhorn-system svc/longhorn-frontend 8080:80
+```
 
-1. Edit code in `applications/ruby-demo-app/`
+---
+
+## **Deployment Workflow**
+
+### **Application changes**
+
+1. Update code in `applications/<app>/`
 2. Push to `master`
-3. GitHub Actions builds image → pushes as `1.0.X`
-4. Flux ImageRepository scans registry (every 1m)
-5. Flux ImagePolicy selects latest semver tag
-6. Flux ImageUpdateAutomation commits update to `helmrelease.yaml` spec.values.image.tag
-7. Flux applies updated HelmRelease to cluster
-8. K8s performs rolling update with health probes
+3. GitHub Actions builds an image and tags with `1.0.X`
+4. Flux automation updates the HelmRelease
+5. k3s rolls out the update automatically
 
-**Infrastructure changes:**
+### **Infrastructure changes**
 
-1. Edit Terraform in `infrastructure/`
+1. Update Terraform files in `infrastructure/`
 2. Push to `master`
 3. GitHub Actions runs `terraform plan`
-4. Reply "LGTM" to approval issue
-5. If needed, Terraform recreates server with k3s
-6. k3s SQLite datastore persists on block storage so the cluster state persists
-7. Pods restart and reattach to persistent volumes
+4. Approve by replying **LGTM** to the GitHub issue
+5. Server may be recreated; k3s state persists on block storage
 
-## Documentation
+---
 
-- **[infrastructure/bootstrap/BOOTSTRAP.md](infrastructure/bootstrap/BOOTSTRAP.md)**: Bootstrap guide (fresh cluster & server recreation)
-- **[APPS.md](APPS.md)**: Adding apps, database setup, debugging
-- **[DISASTER_RECOVERY.md](DISASTER_RECOVERY.md)**: DR procedures and backup strategy
-
-## Commit Message Format
-
-Use [Conventional Commits](https://www.conventionalcommits.org/):
-
-```text
-<type>(<scope>): <description>
-
-Examples:
-feat(platform): add new monitoring dashboard
-fix(ruby-demo-app): resolve database connection issue
-chore(infrastructure): upgrade k3s version
-docs: update deployment guide
-```
-
-## Repository Structure
+## **Repository Structure**
 
 ```
 lvs-cloud/
 ├── clusters/prod/              # Flux entry point
-├── infrastructure/
-│   ├── main.tf                 # Hetzner + k3s
-│   └── longhorn/               # Storage setup
-├── platform/
-│   ├── cert-manager/           # TLS automation
-│   ├── postgresql/             # Database server
-│   ├── flux-image-automation/  # Image policies
-│   └── helmrepositories/       # Helm chart sources
-├── applications/
-│   └── ruby-demo-app/
-│       ├── chart/              # Helm chart templates
-│       ├── values.yaml         # App configuration
-│       └── helmrelease.yaml    # Flux deployment + image automation
-└── docs/                       # Documentation
+├── infrastructure/             # Terraform + bootstrap
+├── platform/                   # Core platform services
+├── applications/               # User applications
+└── docs/                       # Documentation set
 ```
 
-## Local Development Requirements
+---
 
-**Required tools:**
+## Local secret management
 
 ```bash
-# Install age (encryption) and sops (secret management)
 brew install age sops
 
-# Verify installations
-age --version      # Should show 1.x.x
-sops --version     # Should show 3.x.x
+age-keygen -o age.agekey
+mkdir -p ~/.config/sops/age
+cp age.agekey ~/.config/sops/age/keys.txt
 ```
 
-**Setup:**
+Store `age.agekey` securely — it decrypts all secrets in the repo.
 
-1. Generate age keypair (one-time):
+---
 
-   ```bash
-   age-keygen -o age.agekey
-   mkdir -p ~/.config/sops/age
-   cp age.agekey ~/.config/sops/age/keys.txt
-   ```
+## **Further Documentation**
 
-2. **Important**: Backup `age.agekey` to your password manager - this key decrypts all secrets in the repository
-
-3. The public key from `age.agekey` is already configured in `.sops.yaml`
-
-## Getting Started
-
-**After Terraform provisions:**
-
-- Run `infrastructure/bootstrap/bootstrap.sh` - auto-detects fresh cluster vs server recreation
-- Fresh cluster: full bootstrap (~30-45 min)
-- Server recreation: verification only (~2-5 min)
+* **APPS.md** — Deploying apps, debugging, database usage
+* **SECRETS.md** — Secrets management, SOPS, encryption
+* **BOOTSTRAP.md** — Fresh cluster provisioning
+* **DISASTER_RECOVERY.md** — Backup and restoration procedures

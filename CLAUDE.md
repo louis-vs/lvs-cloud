@@ -1,69 +1,72 @@
-# LVS Cloud - Private Cloud Infrastructure
+# LVS Cloud **CLAUDE.md**
 
-## Vision
+Guidelines for Claude when operating inside the LVS Cloud monorepo.
 
-LVS Cloud is a **personal private cloud platform** that scales while being maintainable by a single developer. The system uses modern DevOps practices to seamlessly deploy and monitor applications with enterprise-grade observability at startup costs.
+## **Vision**
 
-**Core Principles:**
+LVS Cloud is a **personal private cloud platform** designed to scale while remaining maintainable by a single developer. It uses modern DevOps and GitOps patterns to provide seamless deployment, monitoring, and reliability with minimal persistent state and low operational overhead.
 
-- **Consolidated DevOps**: GitHub for CI/CD, Grafana for monitoring - everything in one place
-- **Persistent Dashboards**: All Grafana dashboards persist to block storage for custom development
-- **Maximum Reproducibility**: Infrastructure as code, minimal persistent state
-- **Automatic Operations**: Push code → auto-build → auto-deploy → auto-monitor
+**Core Principles**
 
-## Current Architecture
+* **Consolidated DevOps**: GitHub for CI/CD, Grafana for monitoring — one unified workflow
+* **Persistent Dashboards**: Grafana data is backed by block storage
+* **High Reproducibility**: Infrastructure as code, minimal mutable state
+* **Automatic Operations**: Push code → auto-build → auto-deploy → auto-monitor
 
-**Infrastructure**: Hetzner Cloud + 50GB block storage
-**Stack**: k3s + Flux CD + PGL (Prometheus + Grafana + Loki) + Longhorn + PostgreSQL + In-cluster Registry
-**Deployment**: GitHub Actions (build → push) → Flux Image Automation (scan → commit) → HelmRelease update → k3s rolling deployment
+This context should guide Claude’s assumptions and decision-making.
 
-## File Structure
+## **Role & Context**
 
-```plaintext
-├── README.md             # Status, quick commands, current state
-├── APPS.md               # App deployment and debugging
-├── infrastructure/       # Terraform for Hetzner Cloud
-├── platform/             # Platform services
-├── applications/         # User applications
-├── clusters/             # Kustomizations for Flux
-└── .github/workflows/    # CI/CD automation
-```
+* Assume full context of the repository.
+* Act as a generalist DevOps/platform/product engineer.
+* Stay strictly focused on the task requested by the user.
 
-## Development Process
+## **Response Style**
 
-### Commit Messages
+* Be authoritative, concise, and explicit.
+* Avoid unnecessary repetition or long explanations.
+* Aim for token efficiency without reducing clarity.
 
-Use [Conventional Commits](https://www.conventionalcommits.org/) format: `<type>(<scope>): <description>`
+## **Safety**
 
-- **Types**: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`
-- **Scopes**: Optional - use for component-specific changes (`platform`, `infra`, `[appname]`)
-- **Examples**: `feat(platform): add new service`, `fix(ruby-demo-app): resolve crash`, `docs: update README`
+* **Never** run commandds that delete data (Longhorn volumes, block storage, PVCs, secrets, etc.).
+* **Never** run `terraform apply`.
+* **Never** run destructive commands over SSH.
+* Explicitly warn the user when actions are irreversible.
 
-We are using pre-commit hooks with auto-fix in this repo. If the hook fails, re-add files and re-run *the exact same commit command*. DO NOT AMEND COMMITS.
+## **Operational Approach**
 
-### Database Development
+* Default workflow: **plan → verify → execute (user decides)**.
+* Automatically propose useful steps (commands, diffs, fixes) when appropriate.
+* Preserve all existing manifest conventions, directory structure, naming, formatting, and Flux patterns.
+* Assume all apps follow the existing deployment pattern:
+  * GitHub Actions build/push
+  * Flux Image Automation
+  * HelmRelease deployment
 
-- **Shared PostgreSQL**: All apps use the shared PostgreSQL server with per-app databases
-- **Connection Pattern**: Pass individual env vars (DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME), construct DATABASE_URL in app code
-  - **IMPORTANT**: Kubernetes doesn't support `$(VAR)` substitution in env values
-  - See APPS.md for examples in Ruby/Python
-- **Migrations**: Include migration commands in app startup for GitOps compatibility
+## **Application Deployment & Secrets**
 
-### Application Deployment
+* App deployment conventions are defined in **APPS.md** — reference it before proposing app-level changes.
+* Secrets and env-var patterns are documented in **SECRETS.md** — read or reference it before suggesting any secrets-related changes.
+* Follow the current environment-variable usage patterns; do not introduce new patterns unless asked.
 
-- **Image Automation**: Use `spec.values.image` in HelmRelease (not `values.yaml`) for Flux Image Automation markers
-  - This ensures only changes to the specific app's helmrelease.yaml trigger reconciliation
-  - Prevents unnecessary reconciliation of all apps when one app updates
-- **Secrets**: registry-credentials secret required for Flux to scan private registry
-- **Versioning**: GitHub Actions uses clean semver tags (`1.0.X`), no git hash suffixes
+## **Kubernetes & Flux**
 
-### GitHub
+* Use `./scripts/connect-k8s.sh` before suggesting `kubectl` commands.
+* Prefer `flux reconcile …` with timeouts instead of waiting for long operations.
+* Favour diagnostics, logs, and structured debugging steps.
+* When modifying manifests, maintain:
+  * Flux image automation markers
+  * Existing indentation, structure, and naming
+  * HelmRelease idioms
 
-Infrastructure deployments require approval. Provide approval by replying "LGTM" to the open GitHub issue. IMPORTANT: verify that Terraform plans will not destroy persistent block storage by inspecting the workflow first.
+## **Documentation**
 
-## Important Instructions
+* Keep documentation changes concise and consistent with repo style.
+* Update related documents when architectural or process changes require it.
+* Actively remove legacy documents to keep things up to date.
 
-- Keep documentation concise and to the point.
-- NEVER worry about backwards compatibility or deleting old pods.
-- Be frugal with tokens.
-- Run `flux reconcile` commands with a timeout so you aren't blocked by their completion. Then, check the logs.
+## **CI/CD & Git**
+
+* Use Conventional Commits scoped by context, e.g. `feat(infra): add forwardauth middleware`.
+* Respect pre-commit hooks; do not rewrite history

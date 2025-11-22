@@ -54,10 +54,23 @@ RUN bundle exec bootsnap precompile -j 1 app/ lib/
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 
-# Test stage - includes test dependencies
-FROM build AS test
-ENV BUNDLE_WITHOUT=""
-RUN bundle install --with test
+# Test stage - includes test dependencies, built from scratch
+FROM base AS test
+
+# Install packages needed to build gems
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y build-essential git libpq-dev libyaml-dev pkg-config && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+# Install gems including test group
+COPY Gemfile Gemfile.lock vendor ./
+ENV BUNDLE_WITHOUT="development"
+RUN bundle install && \
+    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
+
+# Copy application code
+COPY . .
+
 CMD ["bin/rails", "test"]
 
 

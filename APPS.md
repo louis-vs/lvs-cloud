@@ -92,13 +92,51 @@ env: []
 
 **values.yaml** (root of app directory):
 
+**IMPORTANT:** This file must include the complete structure (image, service, ingress, resources, env), not just env vars. It overrides/augments chart defaults.
+
 ```yaml
+# Production values for my-app
+# Flux image setters will update image values automatically
+
+image:
+  pullPolicy: Always
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: my-app.lvs.me.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: my-app-tls
+      hosts:
+        - my-app.lvs.me.uk
+
+resources:
+  requests:
+    cpu: "50m"
+    memory: "128Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
 # Database connection (if needed)
 env:
   - name: DB_USER
     value: my_app_user
   - name: DB_HOST
-    value: postgresql
+    value: postgresql.platform.svc.cluster.local
   - name: DB_PORT
     value: "5432"
   - name: DB_NAME

@@ -20,4 +20,4 @@ resources:
   - longhorn-dashboard.yaml
   - alertmanager.yaml
   - image-automation.yaml
-  - apps.yaml
+  - ruby-demo-app.yaml

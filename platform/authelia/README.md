@@ -26,3 +26,20 @@ SSO authentication server with OIDC support for platform services.
 - Redis for session management
 - OIDC provider for Grafana OAuth
 - Requires authelia-users ConfigMap (managed separately)
+
+## ForwardAuth Middleware
+
+This kustomization deploys the `authelia-forwardauth` middleware to multiple namespaces:
+
+- **platform namespace** (`middleware-platform.yaml`): For platform services
+- **applications namespace** (`middleware-applications.yaml`): For user applications
+
+Applications and services reference the middleware using:
+
+```yaml
+middlewares:
+  - name: authelia-forwardauth
+    namespace: <same-namespace-as-ingressroute>
+```
+
+Both middlewares point to the Authelia service at `http://authelia.platform.svc.cluster.local/api/authz/forward-auth`.

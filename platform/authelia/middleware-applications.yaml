@@ -1,6 +1,6 @@
 ---
 # Traefik ForwardAuth middleware for Authelia SSO
-# Copy of the authelia-forwardauth middleware for the applications namespace
+# Middleware for the applications namespace
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:

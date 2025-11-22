@@ -12,6 +12,7 @@ AllCops:
     - 'vendor/**/*'
     - 'tmp/**/*'
     - '.bundle/**/*'
+    - 'applications/vsmp-royalties/**/*'
 
 # Layout and formatting
 Layout/LineLength:

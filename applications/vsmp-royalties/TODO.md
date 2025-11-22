@@ -21,13 +21,13 @@
 - [x] Set up PostgreSQL database on cluster
 - [x] Configure Rails credentials with DB and S3 secrets
 - [x] Encrypt secret.yaml with SOPS
-- [ ] Deploy initial "hello world" version
+- [x] Deploy initial "hello world" version
 
 ### 1.3 Database Setup
 
 - [x] Create PostgreSQL database and user on cluster
 - [x] Add credentials to Rails encrypted credentials
-- [ ] Test database connection
+- [x] Test database connection
 
 ## Phase 2: Core Data Model
 

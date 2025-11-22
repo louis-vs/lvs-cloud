@@ -1,0 +1,36 @@
+replicaCount: 1
+
+image:
+  repository: registry.lvs.me.uk/vsmp-royalties
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: royalties.lvs.me.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: vsmp-royalties-tls
+      hosts:
+        - royalties.lvs.me.uk
+
+resources:
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "1000m"
+    memory: "1Gi"
+
+env: []

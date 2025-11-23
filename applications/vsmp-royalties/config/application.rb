@@ -23,5 +23,9 @@ module VsmpRoyalties
     #
     # config.time_zone = "Central Time (US & Canada)"
     # config.eager_load_paths << Rails.root.join("extras")
+    #
+
+    # just disable auth on this for now...
+    config.mission_control.jobs.http_basic_auth_enabled = false
   end
 end

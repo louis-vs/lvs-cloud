@@ -9,4 +9,10 @@
 #  updated_at :datetime         not null
 #
 
-# Empty fixtures
+one:
+  name: "Mechanical"
+  group: "MECH"
+
+two:
+  name: "Performance"
+  group: "PERF"

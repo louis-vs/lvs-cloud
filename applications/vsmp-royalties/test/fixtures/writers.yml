@@ -14,4 +14,12 @@
 #  index_writers_on_ip_code  (ip_code) UNIQUE
 #
 
-# Empty fixtures
+one:
+  first_name: "John"
+  last_name: "Smith"
+  ip_code: "IP001"
+
+two:
+  first_name: "Jane"
+  last_name: "Doe"
+  ip_code: "IP002"

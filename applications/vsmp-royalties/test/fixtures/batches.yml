@@ -13,4 +13,10 @@
 #  index_batches_on_code  (code) UNIQUE
 #
 
-# Empty fixtures
+one:
+  code: "BATCH001"
+  description: "Test batch one"
+
+two:
+  code: "BATCH002"
+  description: "Test batch two"

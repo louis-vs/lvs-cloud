@@ -17,7 +17,7 @@ class BatchesControllerTest < ActionDispatch::IntegrationTest
 
   test "should create batch" do
     assert_difference("Batch.count") do
-      post batches_url, params: { batch: { code: @batch.code, description: @batch.description } }
+      post batches_url, params: { batch: { code: "NEW_BATCH_CODE", description: "New batch description" } }
     end
 
     assert_redirected_to batch_url(Batch.last)

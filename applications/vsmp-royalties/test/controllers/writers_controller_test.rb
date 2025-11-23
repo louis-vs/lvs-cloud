@@ -17,7 +17,7 @@ class WritersControllerTest < ActionDispatch::IntegrationTest
 
   test "should create writer" do
     assert_difference("Writer.count") do
-      post writers_url, params: { writer: { first_name: @writer.first_name, ip_code: @writer.ip_code, last_name: @writer.last_name } }
+      post writers_url, params: { writer: { first_name: "New", ip_code: "IP999", last_name: "Writer" } }
     end
 
     assert_redirected_to writer_url(Writer.last)

@@ -13,4 +13,10 @@
 #  index_works_on_work_id  (work_id)
 #
 
-# Empty fixtures
+one:
+  work_id: "WORK001"
+  title: "Test Song One"
+
+two:
+  work_id: "WORK002"
+  title: "Test Song Two"

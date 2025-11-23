@@ -11,4 +11,14 @@
 #  updated_at                :datetime         not null
 #
 
-# Empty fixtures
+one:
+  original_file_name: "test_import_1.csv"
+  fiscal_year: 2024
+  fiscal_quarter: 1
+  number_of_royalties_added: 10
+
+two:
+  original_file_name: "test_import_2.csv"
+  fiscal_year: 2024
+  fiscal_quarter: 2
+  number_of_royalties_added: 20

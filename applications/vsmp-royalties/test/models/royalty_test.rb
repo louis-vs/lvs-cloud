@@ -46,15 +46,15 @@
 require "test_helper"
 
 class RoyaltyTest < ActiveSupport::TestCase
-  test "should belong to batch, work, right_type, territory, exploitation, and import" do
+  test "should belong to batch, work, right_type, territory, and import" do
     royalty = Royalty.new
     assert_not royalty.valid?
     assert_includes royalty.errors[:batch], "must exist"
     assert_includes royalty.errors[:work], "must exist"
     assert_includes royalty.errors[:right_type], "must exist"
     assert_includes royalty.errors[:territory], "must exist"
-    assert_includes royalty.errors[:exploitation], "must exist"
     assert_includes royalty.errors[:import], "must exist"
+    # exploitation and statement are optional
   end
 
   test "should allow optional statement" do

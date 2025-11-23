@@ -9,4 +9,10 @@
 #  updated_at :datetime         not null
 #
 
-# Empty fixtures
+one:
+  name: "United States"
+  iso_code: "US"
+
+two:
+  name: "United Kingdom"
+  iso_code: "GB"

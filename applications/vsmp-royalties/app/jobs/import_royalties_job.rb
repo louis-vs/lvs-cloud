@@ -5,6 +5,7 @@ class ImportRoyaltiesJob < ApplicationJob
 
   def perform(import_id)
     import = Import.find(import_id)
+    import.mark_processing!
 
     # Download CSV file from ActiveStorage
     csv_data = import.csv_file.download
@@ -24,9 +25,12 @@ class ImportRoyaltiesJob < ApplicationJob
         royalty.save!
         royalties_count += 1
       end
-
-      import.update!(number_of_royalties_added: royalties_count)
     end
+
+    import.mark_completed!(royalties_count)
+  rescue => e
+    import.mark_failed!(e)
+    raise
   end
 
   private

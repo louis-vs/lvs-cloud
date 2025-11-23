@@ -18,12 +18,34 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
+    <%# Simple.css - classless CSS framework %>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+
     <%# Includes all stylesheet files in app/assets/stylesheets %>
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 
   <body>
-    <%= yield %>
+    <header>
+      <h1>VSMP Royalties</h1>
+      <nav>
+        <%= link_to "Imports", imports_path %> |
+        <%= link_to "Statements", statements_path %> |
+        <%= link_to "Writers", writers_path %> |
+        <%= link_to "Works", works_path %>
+      </nav>
+    </header>
+
+    <main>
+      <% if notice.present? %>
+        <p style="color: green"><%= notice %></p>
+      <% end %>
+      <% if alert.present? %>
+        <p style="color: red"><%= alert %></p>
+      <% end %>
+
+      <%= yield %>
+    </main>
   </body>
 </html>

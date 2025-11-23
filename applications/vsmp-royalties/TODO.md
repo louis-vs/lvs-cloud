@@ -42,10 +42,10 @@
 
 ## Phase 3: CSV Import System
 
-- [ ] Generate ImportRoyaltiesJob
-- [ ] Implement CSV parsing logic
-- [ ] Implement find_or_create for entities
-- [ ] Write job tests
+- [x] Generate ImportRoyaltiesJob
+- [x] Implement CSV parsing logic
+- [x] Implement find_or_create for entities
+- [x] Write job tests
 - [ ] Build Imports controller/views
 - [ ] Add progress tracking with Turbo
 

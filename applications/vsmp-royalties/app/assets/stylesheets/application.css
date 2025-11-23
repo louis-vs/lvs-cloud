@@ -8,3 +8,166 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+
+/* Page Layout - Centered content with max-width */
+body {
+  display: grid;
+  grid-template-columns: 1fr min(45rem, 90%) 1fr;
+}
+
+body > header {
+  grid-column: 1 / 4;
+  padding: 0 0.5rem 2rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+body > main {
+  grid-column: 2;
+}
+
+/* Component Styles */
+
+/* Royalty Row */
+.royalty {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.royalty.headings {
+  font-weight: bold;
+}
+
+.royalty .statement {
+  width: 15%;
+  text-align: center;
+}
+
+.royalty .resolve {
+  width: 15%;
+  text-align: center;
+}
+
+.royalty .number {
+  width: 10%;
+  text-align: right;
+}
+
+.royalty .grow {
+  flex: 1;
+}
+
+.royalty .button {
+  border: 0;
+  border-radius: 5px;
+  height: 100%;
+}
+
+.royalty .statement.button {
+  background-color: cyan;
+}
+
+.royalty .resolve.button {
+  background-color: lightgreen;
+}
+
+/* Pills */
+.pill-container {
+  display: flex;
+  gap: 5px;
+}
+
+.pill {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 15px;
+  display: inline-block;
+  font-size: 0.85rem;
+}
+
+.pill.invoiced {
+  color: black;
+  background-color: lightgreen;
+}
+
+.pill.conflicts {
+  background-color: crimson;
+  color: white;
+}
+
+.pill.pending {
+  background-color: #898EA4;
+  color: white;
+}
+
+.pill.processing {
+  background-color: #ffb300;
+  color: black;
+}
+
+.pill.completed {
+  background-color: lightgreen;
+  color: black;
+}
+
+.pill.failed {
+  background-color: crimson;
+  color: white;
+}
+
+/* Typography Utilities */
+.bold {
+  font-weight: bold;
+}
+
+/* Writer Select */
+.writer-select {
+  max-height: 300px;
+  overflow: scroll;
+}
+
+/* Statement FDA */
+.statement-fda {
+  font-size: 25px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.statement-fda-value {
+  font-weight: bold;
+}
+
+/* Progress Bar */
+.progress {
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  background-color: green;
+  padding: 8px;
+  color: white;
+  text-align: center;
+  z-index: 1000;
+}
+
+/* Table Improvements */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th {
+  text-align: left;
+  padding: 0.5rem;
+}
+
+table td {
+  padding: 0.5rem;
+}
+
+/* Action Links */
+.actions {
+  white-space: nowrap;
+}

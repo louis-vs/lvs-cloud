@@ -119,7 +119,10 @@ Store `age.agekey` securely — it decrypts all secrets in the repo.
 
 ## **Further Documentation**
 
-* **applications/README.md** — Deploying apps, debugging, database usage
+* **applications/README.md** — Application catalog
+* **applications/DEPLOYMENT.md** — Deploying apps, CI/CD, database setup
+* **applications/DEBUGGING.md** — Troubleshooting and debugging procedures
+* **platform/README.md** — Platform services catalog
 * **SECRETS.md** — Secrets management, SOPS, encryption
-* **BOOTSTRAP.md** — Fresh cluster provisioning
+* **infrastructure/bootstrap/BOOTSTRAP.md** — Fresh cluster provisioning
 * **DISASTER_RECOVERY.md** — Backup and restoration procedures

@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: statements
+#
+#  id             :integer          not null, primary key
+#  fiscal_year    :integer
+#  fiscal_quarter :integer
+#  invoiced       :boolean          default(FALSE)
+#  invoiced_at    :datetime
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#
+
 class Statement < ApplicationRecord
   has_many :statement_writers, dependent: :destroy
   has_many :writers, through: :statement_writers

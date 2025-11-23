@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: statements
+#
+#  id             :integer          not null, primary key
+#  fiscal_year    :integer
+#  fiscal_quarter :integer
+#  invoiced       :boolean          default(FALSE)
+#  invoiced_at    :datetime
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#
+
 require "test_helper"
 
 class StatementTest < ActiveSupport::TestCase

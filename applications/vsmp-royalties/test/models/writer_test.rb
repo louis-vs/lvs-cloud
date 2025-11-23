@@ -1,3 +1,19 @@
+# == Schema Information
+#
+# Table name: writers
+#
+#  id         :integer          not null, primary key
+#  first_name :string
+#  last_name  :string
+#  ip_code    :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_writers_on_ip_code  (ip_code) UNIQUE
+#
+
 require "test_helper"
 
 class WriterTest < ActiveSupport::TestCase

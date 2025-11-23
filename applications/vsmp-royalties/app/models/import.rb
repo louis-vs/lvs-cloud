@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: imports
+#
+#  id                        :integer          not null, primary key
+#  original_file_name        :string
+#  fiscal_year               :integer
+#  fiscal_quarter            :integer
+#  number_of_royalties_added :integer
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#
+
 class Import < ApplicationRecord
   has_one_attached :csv_file
   has_many :royalties, dependent: :destroy_async

@@ -1,16 +1,29 @@
-<p style="color: green"><%= notice %></p>
-
 <% content_for :title, "Imports" %>
 
-<h1>Imports</h1>
+<h1>CSV Imports</h1>
 
-<div id="imports">
-  <% @imports.each do |import| %>
-    <%= render import %>
-    <p>
-      <%= link_to "Show this import", import %>
-    </p>
-  <% end %>
-</div>
+<p><%= link_to "Upload New CSV", new_import_path %></p>
 
-<%= link_to "New import", new_import_path %>
+<%= turbo_stream_from "imports" %>
+
+<table>
+  <thead>
+    <tr>
+      <th>File</th>
+      <th>Period</th>
+      <th>Status</th>
+      <th>Royalties</th>
+      <th>Created</th>
+      <th class="actions">Actions</th>
+    </tr>
+  </thead>
+  <tbody id="imports">
+    <% @imports.each do |import| %>
+      <%= render import %>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @imports.empty? %>
+  <p>No imports yet. <%= link_to "Upload your first CSV", new_import_path %>.</p>
+<% end %>

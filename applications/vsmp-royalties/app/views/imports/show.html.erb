@@ -1,10 +1,97 @@
-<p style="color: green"><%= notice %></p>
+<% content_for :title, @import.display_name %>
 
-<%= render @import %>
+<h1>Import: <%= @import.original_file_name %></h1>
 
-<div>
-  <%= link_to "Edit this import", edit_import_path(@import) %> |
-  <%= link_to "Back to imports", imports_path %>
+<%= turbo_stream_from "imports" %>
 
-  <%= button_to "Destroy this import", @import, method: :delete %>
-</div>
+<section id="<%= dom_id @import %>">
+  <p>
+    <strong>Period:</strong> Q<%= @import.fiscal_quarter %> <%= @import.fiscal_year %>
+  </p>
+
+  <p>
+    <strong>Status:</strong>
+    <span class="pill <%= @import.status %>"><%= @import.status.titleize %></span>
+  </p>
+
+  <p>
+    <strong>Created:</strong> <%= @import.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+  </p>
+
+  <% if @import.started_at %>
+    <p>
+      <strong>Started:</strong> <%= @import.started_at.strftime("%B %d, %Y at %I:%M %p") %>
+    </p>
+  <% end %>
+
+  <% if @import.completed_at %>
+    <p>
+      <strong>Completed:</strong> <%= @import.completed_at.strftime("%B %d, %Y at %I:%M %p") %>
+      <% if @import.started_at %>
+        (<%= distance_of_time_in_words(@import.started_at, @import.completed_at) %>)
+      <% end %>
+    </p>
+  <% end %>
+
+  <% if @import.completed? %>
+    <p>
+      <strong>Royalties Imported:</strong> <%= @import.number_of_royalties_added %>
+    </p>
+  <% end %>
+
+  <% if @import.failed? && @import.error_message.present? %>
+    <details>
+      <summary style="color: red; cursor: pointer;"><strong>Error Message</strong></summary>
+      <pre style="background: #f5f5f5; padding: 1rem; overflow: auto;"><%= @import.error_message %></pre>
+    </details>
+  <% end %>
+
+  <% if @import.processing? %>
+    <div class="progress">
+      Processing CSV file... This may take a few minutes.
+    </div>
+  <% end %>
+</section>
+
+<% if @import.completed? && @import.royalties.any? %>
+  <h2>Imported Royalties (showing first 10)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Work</th>
+        <th>Territory</th>
+        <th>Right Type</th>
+        <th>Amount</th>
+        <th>Period</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @import.royalties.includes(:work, :territory, :right_type).limit(10).each do |royalty| %>
+        <tr>
+          <td><%= royalty.work.title %></td>
+          <td><%= royalty.territory.name %></td>
+          <td><%= royalty.right_type.name %></td>
+          <td><%= number_to_currency(royalty.distributed_amount || 0, precision: 2) %></td>
+          <td>
+            <% if royalty.period_start && royalty.period_end %>
+              <%= royalty.period_start.strftime("%b %d") %> - <%= royalty.period_end.strftime("%b %d, %Y") %>
+            <% else %>
+              -
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <% if @import.royalties.count > 10 %>
+    <p><em>Showing 10 of <%= @import.number_of_royalties_added %> royalties</em></p>
+  <% end %>
+<% end %>
+
+<p>
+  <%= link_to "← Back to Imports", imports_path %>
+  <% if @import.failed? || @import.completed? %>
+    | <%= link_to "Delete Import", @import, data: { turbo_method: :delete, turbo_confirm: "Are you sure? This will delete all #{@import.number_of_royalties_added} imported royalties." } %>
+  <% end %>
+</p>

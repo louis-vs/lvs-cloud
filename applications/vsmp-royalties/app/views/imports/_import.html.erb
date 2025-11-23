@@ -1,22 +1,15 @@
-<div id="<%= dom_id import %>">
-  <div>
-    <strong>Original file name:</strong>
-    <%= import.original_file_name %>
-  </div>
-
-  <div>
-    <strong>Fiscal year:</strong>
-    <%= import.fiscal_year %>
-  </div>
-
-  <div>
-    <strong>Fiscal quarter:</strong>
-    <%= import.fiscal_quarter %>
-  </div>
-
-  <div>
-    <strong>Number of royalties added:</strong>
-    <%= import.number_of_royalties_added %>
-  </div>
-
-</div>
+<tr id="<%= dom_id import %>">
+  <td><%= import.original_file_name %></td>
+  <td>Q<%= import.fiscal_quarter %> <%= import.fiscal_year %></td>
+  <td>
+    <span class="pill <%= import.status %>"><%= import.status.titleize %></span>
+  </td>
+  <td><%= import.number_of_royalties_added || "-" %></td>
+  <td><%= time_ago_in_words(import.created_at) %> ago</td>
+  <td class="actions">
+    <%= link_to "View", import %>
+    <% if import.failed? || import.completed? %>
+      | <%= link_to "Delete", import, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %>
+    <% end %>
+  </td>
+</tr>

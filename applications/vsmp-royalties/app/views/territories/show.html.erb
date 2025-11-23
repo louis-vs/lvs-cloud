@@ -1,0 +1,10 @@
+<p style="color: green"><%= notice %></p>
+
+<%= render @territory %>
+
+<div>
+  <%= link_to "Edit this territory", edit_territory_path(@territory) %> |
+  <%= link_to "Back to territories", territories_path %>
+
+  <%= button_to "Destroy this territory", @territory, method: :delete %>
+</div>

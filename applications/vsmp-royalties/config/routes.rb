@@ -1,4 +1,12 @@
 Rails.application.routes.draw do
+  resources :statements
+  resources :imports
+  resources :works
+  resources :exploitations
+  resources :batches
+  resources :right_types
+  resources :territories
+  resources :writers
   # Mount Mission Control for job monitoring
   mount MissionControl::Jobs::Engine, at: "/jobs"
 

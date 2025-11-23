@@ -1,0 +1,16 @@
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Right types" %>
+
+<h1>Right types</h1>
+
+<div id="right_types">
+  <% @right_types.each do |right_type| %>
+    <%= render right_type %>
+    <p>
+      <%= link_to "Show this right type", right_type %>
+    </p>
+  <% end %>
+</div>
+
+<%= link_to "New right type", new_right_type_path %>

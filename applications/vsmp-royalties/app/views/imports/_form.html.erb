@@ -1,0 +1,37 @@
+<%= form_with(model: import) do |form| %>
+  <% if import.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(import.errors.count, "error") %> prohibited this import from being saved:</h2>
+
+      <ul>
+        <% import.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :original_file_name, style: "display: block" %>
+    <%= form.text_field :original_file_name %>
+  </div>
+
+  <div>
+    <%= form.label :fiscal_year, style: "display: block" %>
+    <%= form.number_field :fiscal_year %>
+  </div>
+
+  <div>
+    <%= form.label :fiscal_quarter, style: "display: block" %>
+    <%= form.number_field :fiscal_quarter %>
+  </div>
+
+  <div>
+    <%= form.label :number_of_royalties_added, style: "display: block" %>
+    <%= form.number_field :number_of_royalties_added %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>

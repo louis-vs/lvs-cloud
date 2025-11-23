@@ -1,0 +1,27 @@
+<%= form_with(model: right_type) do |form| %>
+  <% if right_type.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(right_type.errors.count, "error") %> prohibited this right_type from being saved:</h2>
+
+      <ul>
+        <% right_type.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :name, style: "display: block" %>
+    <%= form.text_field :name %>
+  </div>
+
+  <div>
+    <%= form.label :group, style: "display: block" %>
+    <%= form.text_field :group %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>

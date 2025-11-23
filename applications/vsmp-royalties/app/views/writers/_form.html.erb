@@ -1,0 +1,32 @@
+<%= form_with(model: writer) do |form| %>
+  <% if writer.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(writer.errors.count, "error") %> prohibited this writer from being saved:</h2>
+
+      <ul>
+        <% writer.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :first_name, style: "display: block" %>
+    <%= form.text_field :first_name %>
+  </div>
+
+  <div>
+    <%= form.label :last_name, style: "display: block" %>
+    <%= form.text_field :last_name %>
+  </div>
+
+  <div>
+    <%= form.label :ip_code, style: "display: block" %>
+    <%= form.text_field :ip_code %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>

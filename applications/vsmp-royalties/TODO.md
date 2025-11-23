@@ -31,14 +31,14 @@
 
 ## Phase 2: Core Data Model
 
-- [ ] Generate independent models (Writer, Territory, RightType, Batch, Exploitation)
-- [ ] Generate Work and WorkWriter models
-- [ ] Generate Import model with ActiveStorage
-- [ ] Generate Royalty model with all fields
-- [ ] Generate Statement and related models
-- [ ] Run migrations
-- [ ] Add associations and validations
-- [ ] Write model tests
+- [x] Generate independent models (Writer, Territory, RightType, Batch, Exploitation)
+- [x] Generate Work and WorkWriter models
+- [x] Generate Import model with ActiveStorage
+- [x] Generate Royalty model with all fields
+- [x] Generate Statement and related models
+- [x] Run migrations
+- [x] Add associations and validations
+- [x] Write model tests
 
 ## Phase 3: CSV Import System
 
@@ -74,8 +74,8 @@
 
 ## Deployment Milestones
 
-- [ ] Initial deployment (Phase 1)
-- [ ] Data model deployed (Phase 2)
+- [x] Initial deployment (Phase 1)
+- [x] Data model deployed (Phase 2)
 - [ ] Import system deployed (Phase 3)
 - [ ] Statement generation deployed (Phase 4)
 - [ ] Full system deployed (Phase 5)

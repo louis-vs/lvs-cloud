@@ -1,0 +1,10 @@
+<p style="color: green"><%= notice %></p>
+
+<%= render @right_type %>
+
+<div>
+  <%= link_to "Edit this right type", edit_right_type_path(@right_type) %> |
+  <%= link_to "Back to right types", right_types_path %>
+
+  <%= button_to "Destroy this right type", @right_type, method: :delete %>
+</div>

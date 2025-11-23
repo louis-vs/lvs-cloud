@@ -1,0 +1,11 @@
+<% content_for :title, "New writer" %>
+
+<h1>New writer</h1>
+
+<%= render "form", writer: @writer %>
+
+<br>
+
+<div>
+  <%= link_to "Back to writers", writers_path %>
+</div>

@@ -1,0 +1,11 @@
+<% content_for :title, "New statement" %>
+
+<h1>New statement</h1>
+
+<%= render "form", statement: @statement %>
+
+<br>
+
+<div>
+  <%= link_to "Back to statements", statements_path %>
+</div>

@@ -1,0 +1,12 @@
+<% content_for :title, "Editing territory" %>
+
+<h1>Editing territory</h1>
+
+<%= render "form", territory: @territory %>
+
+<br>
+
+<div>
+  <%= link_to "Show this territory", @territory %> |
+  <%= link_to "Back to territories", territories_path %>
+</div>

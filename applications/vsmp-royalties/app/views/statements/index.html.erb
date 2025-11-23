@@ -1,0 +1,16 @@
+<p style="color: green"><%= notice %></p>
+
+<% content_for :title, "Statements" %>
+
+<h1>Statements</h1>
+
+<div id="statements">
+  <% @statements.each do |statement| %>
+    <%= render statement %>
+    <p>
+      <%= link_to "Show this statement", statement %>
+    </p>
+  <% end %>
+</div>
+
+<%= link_to "New statement", new_statement_path %>

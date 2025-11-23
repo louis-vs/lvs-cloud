@@ -2,4 +2,4 @@ apiVersion: v2
 name: vsmp-royalties
 description: VSMP Royalties Management System
 type: application
-version: 1.0.0
+version: 1.0.1

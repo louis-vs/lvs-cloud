@@ -5,19 +5,19 @@ class CreateRoyalties < ActiveRecord::Migration[8.1]
       t.references :work, null: false, foreign_key: true
       t.references :right_type, null: false, foreign_key: true
       t.references :territory, null: false, foreign_key: true
-      t.references :exploitation, null: false, foreign_key: true
+      t.references :exploitation, null: true, foreign_key: true
       t.references :import, null: false, foreign_key: true
       t.references :statement, null: true, foreign_key: true
       t.string :agreement_code
       t.string :custom_work_id
-      t.decimal :distributed_amount, precision: 20, scale: 18
-      t.decimal :final_distributed_amount, precision: 20, scale: 18
-      t.decimal :percentage_paid, precision: 20, scale: 18
-      t.decimal :unit_sum, precision: 20, scale: 18
-      t.decimal :wht_adj_received_amount, precision: 20, scale: 18
-      t.decimal :wht_adj_source_amount, precision: 20, scale: 18
-      t.decimal :direct_collect_fee_taken, precision: 20, scale: 18
-      t.decimal :direct_collected_amount, precision: 20, scale: 18
+      t.decimal :distributed_amount
+      t.decimal :final_distributed_amount
+      t.decimal :percentage_paid
+      t.decimal :unit_sum
+      t.decimal :wht_adj_received_amount
+      t.decimal :wht_adj_source_amount
+      t.decimal :direct_collect_fee_taken
+      t.decimal :direct_collected_amount
       t.string :credit_or_debit
       t.string :recording_artist
       t.string :av_production_title

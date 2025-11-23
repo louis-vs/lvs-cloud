@@ -24,6 +24,6 @@ class Import < ApplicationRecord
   private
 
   def start_import_job
-    # ImportRoyaltiesJob.perform_later(id)
+    ImportRoyaltiesJob.perform_later(id)
   end
 end

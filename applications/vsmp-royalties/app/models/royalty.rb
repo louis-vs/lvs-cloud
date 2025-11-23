@@ -7,19 +7,19 @@
 #  work_id                  :integer          not null
 #  right_type_id            :integer          not null
 #  territory_id             :integer          not null
-#  exploitation_id          :integer          not null
+#  exploitation_id          :integer
 #  import_id                :integer          not null
 #  statement_id             :integer
 #  agreement_code           :string
 #  custom_work_id           :string
-#  distributed_amount       :decimal(20, 18)
-#  final_distributed_amount :decimal(20, 18)
-#  percentage_paid          :decimal(20, 18)
-#  unit_sum                 :decimal(20, 18)
-#  wht_adj_received_amount  :decimal(20, 18)
-#  wht_adj_source_amount    :decimal(20, 18)
-#  direct_collect_fee_taken :decimal(20, 18)
-#  direct_collected_amount  :decimal(20, 18)
+#  distributed_amount       :decimal(, )
+#  final_distributed_amount :decimal(, )
+#  percentage_paid          :decimal(, )
+#  unit_sum                 :decimal(, )
+#  wht_adj_received_amount  :decimal(, )
+#  wht_adj_source_amount    :decimal(, )
+#  direct_collect_fee_taken :decimal(, )
+#  direct_collected_amount  :decimal(, )
 #  credit_or_debit          :string
 #  recording_artist         :string
 #  av_production_title      :string
@@ -48,7 +48,7 @@ class Royalty < ApplicationRecord
   belongs_to :work
   belongs_to :right_type
   belongs_to :territory
-  belongs_to :exploitation
+  belongs_to :exploitation, optional: true
   belongs_to :import
   belongs_to :statement, optional: true
 end

@@ -83,14 +83,14 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_23_004728) do
     t.datetime "created_at", null: false
     t.string "credit_or_debit"
     t.string "custom_work_id"
-    t.decimal "direct_collect_fee_taken", precision: 20, scale: 18
-    t.decimal "direct_collected_amount", precision: 20, scale: 18
-    t.decimal "distributed_amount", precision: 20, scale: 18
-    t.bigint "exploitation_id", null: false
-    t.decimal "final_distributed_amount", precision: 20, scale: 18
+    t.decimal "direct_collect_fee_taken"
+    t.decimal "direct_collected_amount"
+    t.decimal "distributed_amount"
+    t.bigint "exploitation_id"
+    t.decimal "final_distributed_amount"
     t.string "generated_at_cover_rate"
     t.bigint "import_id", null: false
-    t.decimal "percentage_paid", precision: 20, scale: 18
+    t.decimal "percentage_paid"
     t.date "period_end"
     t.date "period_start"
     t.string "recording_artist"
@@ -99,10 +99,10 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_23_004728) do
     t.string "source_name"
     t.bigint "statement_id"
     t.bigint "territory_id", null: false
-    t.decimal "unit_sum", precision: 20, scale: 18
+    t.decimal "unit_sum"
     t.datetime "updated_at", null: false
-    t.decimal "wht_adj_received_amount", precision: 20, scale: 18
-    t.decimal "wht_adj_source_amount", precision: 20, scale: 18
+    t.decimal "wht_adj_received_amount"
+    t.decimal "wht_adj_source_amount"
     t.bigint "work_id", null: false
     t.index ["batch_id"], name: "index_royalties_on_batch_id"
     t.index ["exploitation_id"], name: "index_royalties_on_exploitation_id"

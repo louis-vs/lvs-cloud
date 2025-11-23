@@ -65,6 +65,6 @@ class ImportsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def import_params
-      params.expect(import: [ :original_file_name, :fiscal_year, :fiscal_quarter, :number_of_royalties_added ])
+      params.expect(import: [ :original_file_name, :fiscal_year, :fiscal_quarter, :number_of_royalties_added, :csv_file ])
     end
 end

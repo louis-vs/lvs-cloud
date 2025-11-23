@@ -149,6 +149,7 @@ Deployments are triggered automatically via GitHub Actions when code is pushed t
 2. GitHub Actions builds and tags Docker image
 3. Flux ImagePolicy detects new image
 4. Flux updates HelmRelease and deploys
+5. Pod startup runs `db:prepare` (migrations run automatically)
 
 Manual trigger:
 

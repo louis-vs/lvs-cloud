@@ -46,8 +46,8 @@
 - [x] Implement CSV parsing logic
 - [x] Implement find_or_create for entities
 - [x] Write job tests
-- [ ] Build Imports controller/views
-- [ ] Add progress tracking with Turbo
+- [x] Build Imports controller/views
+- [x] Add progress tracking with Turbo
 
 ## Phase 4: Statement Generation
 
@@ -76,7 +76,7 @@
 
 - [x] Initial deployment (Phase 1)
 - [x] Data model deployed (Phase 2)
-- [ ] Import system deployed (Phase 3)
+- [x] Import system deployed (Phase 3)
 - [ ] Statement generation deployed (Phase 4)
 - [ ] Full system deployed (Phase 5)
 - [ ] Production ready (Phase 6)

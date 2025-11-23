@@ -54,11 +54,14 @@ class ImportsController < ApplicationController
 
   # DELETE /imports/1 or /imports/1.json
   def destroy
-    @import.destroy!
-
     respond_to do |format|
-      format.html { redirect_to imports_path, notice: "Import was successfully destroyed.", status: :see_other }
-      format.json { head :no_content }
+      if @import.destroy
+        format.html { redirect_to imports_path, notice: "Import was successfully rolled back.", status: :see_other }
+        format.json { head :no_content }
+      else
+        format.html { redirect_to imports_path, alert: @import.errors.full_messages.to_sentence, status: :see_other }
+        format.json { render json: @import.errors, status: :unprocessable_entity }
+      end
     end
   end
 

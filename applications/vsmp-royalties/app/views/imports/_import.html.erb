@@ -9,7 +9,7 @@
   <td class="actions">
     <%= link_to "View", import %>
     <% if import.failed? || import.completed? %>
-      | <%= link_to "Delete", import, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %>
+      | <%= link_to "Rollback", import, data: { turbo_method: :delete, turbo_confirm: "Are you sure you want to rollback this import?" } %>
     <% end %>
   </td>
 </tr>

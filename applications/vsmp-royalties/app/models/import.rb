@@ -17,7 +17,7 @@
 
 class Import < ApplicationRecord
   has_one_attached :csv_file
-  has_many :royalties, dependent: :destroy_async
+  has_many :royalties, dependent: :destroy
 
   enum :status, { pending: 0, processing: 1, completed: 2, failed: 3 }
 
@@ -27,6 +27,7 @@ class Import < ApplicationRecord
 
   after_create :start_import_job
   after_update_commit -> { broadcast_replace_to "imports", partial: "imports/import", locals: { import: self } }
+  before_destroy :check_for_assigned_royalties, prepend: true
 
   def display_name
     "#{original_file_name} (Q#{fiscal_quarter} #{fiscal_year})"
@@ -56,5 +57,13 @@ class Import < ApplicationRecord
 
   def start_import_job
     ImportRoyaltiesJob.perform_later(id)
+  end
+
+  def check_for_assigned_royalties
+    assigned_count = royalties.where.not(statement_id: nil).count
+    if assigned_count > 0
+      errors.add(:base, "Cannot rollback import: #{assigned_count} royalties have been assigned to statements")
+      throw :abort
+    end
   end
 end

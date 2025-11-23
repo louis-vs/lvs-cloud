@@ -1,5 +1,5 @@
 class WritersController < ApplicationController
-  before_action :set_writer, only: %i[ show edit update destroy ]
+  before_action :set_writer, only: %i[ show edit update ]
 
   # GET /writers or /writers.json
   def index
@@ -44,16 +44,6 @@ class WritersController < ApplicationController
         format.html { render :edit, status: :unprocessable_entity }
         format.json { render json: @writer.errors, status: :unprocessable_entity }
       end
-    end
-  end
-
-  # DELETE /writers/1 or /writers/1.json
-  def destroy
-    @writer.destroy!
-
-    respond_to do |format|
-      format.html { redirect_to writers_path, notice: "Writer was successfully destroyed.", status: :see_other }
-      format.json { head :no_content }
     end
   end
 

@@ -6,7 +6,7 @@ Rails.application.routes.draw do
   resources :batches
   resources :right_types
   resources :territories
-  resources :writers
+  resources :writers, except: [ :destroy ]
   # Mount Mission Control for job monitoring
   mount MissionControl::Jobs::Engine, at: "/jobs"
 

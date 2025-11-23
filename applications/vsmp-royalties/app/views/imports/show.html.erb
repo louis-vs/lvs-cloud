@@ -92,6 +92,6 @@
 <p>
   <%= link_to "← Back to Imports", imports_path %>
   <% if @import.failed? || @import.completed? %>
-    | <%= link_to "Delete Import", @import, data: { turbo_method: :delete, turbo_confirm: "Are you sure? This will delete all #{@import.number_of_royalties_added} imported royalties." } %>
+    | <%= link_to "Rollback Import", @import, data: { turbo_method: :delete, turbo_confirm: "Are you sure? This will rollback the import and delete all #{@import.number_of_royalties_added} imported royalties." } %>
   <% end %>
 </p>

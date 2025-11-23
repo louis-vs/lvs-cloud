@@ -38,11 +38,12 @@ class WritersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to writer_url(@writer)
   end
 
-  test "should destroy writer" do
-    assert_difference("Writer.count", -1) do
+  test "should not allow destroying writer" do
+    assert_no_difference("Writer.count") do
       delete writer_url(@writer)
     end
 
-    assert_redirected_to writers_url
+    # Should return 404 or routing error since destroy route doesn't exist
+    assert_response :not_found
   end
 end

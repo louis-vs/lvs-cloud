@@ -15,6 +15,7 @@ ingress:
   className: traefik
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd
   hosts:
     - host: app.lvs.me.uk
       paths:

@@ -50,12 +50,18 @@ class ImportRoyaltiesJobTest < ActiveJob::TestCase
   end
 
   test "creates work-writer associations" do
-    skip "TODO: Fix writer parsing - associations not being created correctly"
     ImportRoyaltiesJob.perform_now(@import.id)
 
-    work = Work.first
-    work.reload
+    # Find a work from the imported CSV (not from fixtures)
+    work = Work.find_by(work_id: "WK9000000")
+    assert_not_nil work, "Work from CSV should exist"
     assert work.writers.any?, "Work should have associated writers"
+
+    # Verify the writer details
+    writer = work.writers.first
+    assert_equal "Garcia", writer.last_name
+    assert_equal "Michael", writer.first_name
+    assert_equal "IP900000", writer.ip_code
   end
 
   test "find_or_create reuses existing entities" do

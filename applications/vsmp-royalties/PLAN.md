@@ -818,6 +818,8 @@ end
 
 ## Phase 6: Controllers & Views
 
+Copy the styling and CSS from the JavaScript vsmp-app.
+
 ### 6.1 Controllers (RESTful, minimal logic)
 
 **ImportsController:**

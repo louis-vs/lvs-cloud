@@ -7,6 +7,10 @@
 #  fiscal_year               :integer
 #  fiscal_quarter            :integer
 #  number_of_royalties_added :integer
+#  status                    :integer          default("pending"), not null
+#  error_message             :text
+#  started_at                :datetime
+#  completed_at              :datetime
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #
@@ -15,11 +19,38 @@ class Import < ApplicationRecord
   has_one_attached :csv_file
   has_many :royalties, dependent: :destroy_async
 
+  enum :status, { pending: 0, processing: 1, completed: 2, failed: 3 }
+
   validates :original_file_name, presence: true
   validates :fiscal_year, presence: true
   validates :fiscal_quarter, presence: true
 
   after_create :start_import_job
+  after_update_commit -> { broadcast_replace_to "imports", partial: "imports/import", locals: { import: self } }
+
+  def display_name
+    "#{original_file_name} (Q#{fiscal_quarter} #{fiscal_year})"
+  end
+
+  def mark_processing!
+    update!(status: :processing, started_at: Time.current)
+  end
+
+  def mark_completed!(royalties_count)
+    update!(
+      status: :completed,
+      completed_at: Time.current,
+      number_of_royalties_added: royalties_count
+    )
+  end
+
+  def mark_failed!(error)
+    update!(
+      status: :failed,
+      completed_at: Time.current,
+      error_message: error.to_s
+    )
+  end
 
   private
 

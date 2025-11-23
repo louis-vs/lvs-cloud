@@ -61,11 +61,15 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_23_004728) do
   end
 
   create_table "imports", force: :cascade do |t|
+    t.datetime "completed_at"
     t.datetime "created_at", null: false
+    t.text "error_message"
     t.integer "fiscal_quarter"
     t.integer "fiscal_year"
     t.integer "number_of_royalties_added"
     t.string "original_file_name"
+    t.datetime "started_at"
+    t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
   end
 

@@ -7,6 +7,10 @@
 #  fiscal_year               :integer
 #  fiscal_quarter            :integer
 #  number_of_royalties_added :integer
+#  status                    :integer          default("pending"), not null
+#  error_message             :text
+#  started_at                :datetime
+#  completed_at              :datetime
 #  created_at                :datetime         not null
 #  updated_at                :datetime         not null
 #
@@ -16,9 +20,11 @@ one:
   fiscal_year: 2024
   fiscal_quarter: 1
   number_of_royalties_added: 10
+  status: 2
 
 two:
   original_file_name: "test_import_2.csv"
   fiscal_year: 2024
   fiscal_quarter: 2
   number_of_royalties_added: 20
+  status: 2

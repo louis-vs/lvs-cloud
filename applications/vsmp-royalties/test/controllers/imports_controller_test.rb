@@ -17,7 +17,13 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
 
   test "should create import" do
     assert_difference("Import.count") do
-      post imports_url, params: { import: { fiscal_quarter: @import.fiscal_quarter, fiscal_year: @import.fiscal_year, number_of_royalties_added: @import.number_of_royalties_added, original_file_name: @import.original_file_name } }
+      post imports_url, params: {
+        import: {
+          fiscal_quarter: 3,
+          fiscal_year: 2024,
+          csv_file: fixture_file_upload("sample_royalties.csv", "text/csv")
+        }
+      }
     end
 
     assert_redirected_to import_url(Import.last)

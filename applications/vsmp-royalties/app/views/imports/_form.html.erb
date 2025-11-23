@@ -12,26 +12,24 @@
   <% end %>
 
   <div>
-    <%= form.label :original_file_name, style: "display: block" %>
-    <%= form.text_field :original_file_name %>
+    <%= form.label :csv_file, "CSV File", style: "display: block" %>
+    <%= form.file_field :csv_file, accept: ".csv", required: true %>
+    <% if import.csv_file.attached? %>
+      <p>Current file: <%= import.csv_file.filename %></p>
+    <% end %>
   </div>
 
   <div>
     <%= form.label :fiscal_year, style: "display: block" %>
-    <%= form.number_field :fiscal_year %>
+    <%= form.number_field :fiscal_year, required: true, placeholder: "2024" %>
   </div>
 
   <div>
-    <%= form.label :fiscal_quarter, style: "display: block" %>
-    <%= form.number_field :fiscal_quarter %>
+    <%= form.label :fiscal_quarter, "Fiscal Quarter (1-4)", style: "display: block" %>
+    <%= form.number_field :fiscal_quarter, required: true, min: 1, max: 4, placeholder: "1" %>
   </div>
 
   <div>
-    <%= form.label :number_of_royalties_added, style: "display: block" %>
-    <%= form.number_field :number_of_royalties_added %>
-  </div>
-
-  <div>
-    <%= form.submit %>
+    <%= form.submit import.persisted? ? "Update Import" : "Upload and Process CSV" %>
   </div>
 <% end %>

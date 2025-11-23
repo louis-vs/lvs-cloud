@@ -3,7 +3,7 @@ class ImportsController < ApplicationController
 
   # GET /imports or /imports.json
   def index
-    @imports = Import.all
+    @imports = Import.order(created_at: :desc)
   end
 
   # GET /imports/1 or /imports/1.json
@@ -23,9 +23,14 @@ class ImportsController < ApplicationController
   def create
     @import = Import.new(import_params)
 
+    # Auto-populate original_file_name from uploaded file
+    if @import.csv_file.attached?
+      @import.original_file_name = @import.csv_file.filename.to_s
+    end
+
     respond_to do |format|
       if @import.save
-        format.html { redirect_to @import, notice: "Import was successfully created." }
+        format.html { redirect_to @import, notice: "Import started! Processing CSV file..." }
         format.json { render :show, status: :created, location: @import }
       else
         format.html { render :new, status: :unprocessable_entity }
@@ -65,6 +70,6 @@ class ImportsController < ApplicationController
 
     # Only allow a list of trusted parameters through.
     def import_params
-      params.expect(import: [ :original_file_name, :fiscal_year, :fiscal_quarter, :number_of_royalties_added, :csv_file ])
+      params.expect(import: [ :fiscal_year, :fiscal_quarter, :csv_file ])
     end
 end

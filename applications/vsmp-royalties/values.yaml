@@ -35,6 +35,35 @@ resources:
     cpu: "1000m"
     memory: "1Gi"
 
+readinessProbe:
+  httpGet:
+    path: /up
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+livenessProbe:
+  httpGet:
+    path: /up
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 30
+
+worker:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  terminationGracePeriodSeconds: 60
+  env:
+    - name: JOB_CONCURRENCY
+      value: "1"
+
 env:
   # Database connection
   - name: DB_HOST

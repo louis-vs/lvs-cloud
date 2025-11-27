@@ -1,4 +1,4 @@
-replicaCount: 2
+replicaCount: 1
 
 image:
   repository: registry.lvs.me.uk/tiny-screen-api
@@ -15,7 +15,6 @@ ingress:
   className: traefik
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd
   hosts:
     - host: tiny-screen-api.lvs.me.uk
       paths:

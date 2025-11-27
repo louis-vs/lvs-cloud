@@ -1,0 +1,23 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: tiny-screen-api
+  namespace: flux-system
+spec:
+  image: registry.lvs.me.uk/tiny-screen-api
+  interval: 1m
+  secretRef:
+    name: registry-credentials
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: tiny-screen-api
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: tiny-screen-api
+  policy:
+    semver:
+      range: ">=1.0.0"

@@ -32,4 +32,4 @@ resources:
     memory: "10Mi"
   limits:
     cpu: "1"
-    memory: "10Mi"
+    memory: "100Mi"

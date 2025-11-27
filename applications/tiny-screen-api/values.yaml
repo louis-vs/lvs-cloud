@@ -3,7 +3,7 @@
 
 image:
   pullPolicy: Always
-replicaCount: 2
+replicaCount: 1
 service:
   type: ClusterIP
   port: 80
@@ -13,7 +13,6 @@ ingress:
   className: traefik
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt
-    traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd
   hosts:
     - host: tiny-screen-api.lvs.me.uk
       paths:

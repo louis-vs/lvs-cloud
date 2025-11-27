@@ -18,9 +18,6 @@ spec:
     image:
       repository: registry.lvs.me.uk/tiny-screen-api # {"$imagepolicy": "flux-system:tiny-screen-api:name"}
       tag: "1.0.0" # {"$imagepolicy": "flux-system:tiny-screen-api:tag"}
-    ingress:
-      annotations:
-        traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd
     resources:
       requests:
         cpu: "10m"

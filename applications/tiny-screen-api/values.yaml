@@ -22,7 +22,7 @@ ingress:
   tls:
     - secretName: tiny-screen-api-tls
       hosts:
-        - app.lvs.me.uk
+        - tiny-screen-api.lvs.me.uk
 env:
   - name: RACK_ENV
     value: production

@@ -1,0 +1,52 @@
+replicaCount: 2
+
+image:
+  repository: registry.lvs.me.uk/tiny-screen-api
+  pullPolicy: IfNotPresent
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 4567
+
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd
+  hosts:
+    - host: app.lvs.me.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: tiny-secret-api-tls
+      hosts:
+        - tiny-screen-api.lvs.me.uk
+
+resources:
+  requests:
+    cpu: "10m"
+    memory: "10Mi"
+  limits:
+    cpu: "1"
+    memory: "100Mi"
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+env: []
+envFrom: []

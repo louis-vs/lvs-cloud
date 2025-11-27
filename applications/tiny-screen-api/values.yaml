@@ -1,0 +1,35 @@
+# Production values for tiny-screen-api
+# Flux image setters will update these values automatically
+
+image:
+  pullPolicy: Always
+replicaCount: 2
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 4567
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd
+  hosts:
+    - host: tiny-screen-api.lvs.me.uk
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: tiny-screen-api-tls
+      hosts:
+        - app.lvs.me.uk
+env:
+  - name: RACK_ENV
+    value: production
+resources:
+  requests:
+    cpu: "10m"
+    memory: "10Mi"
+  limits:
+    cpu: "1"
+    memory: "10Mi"

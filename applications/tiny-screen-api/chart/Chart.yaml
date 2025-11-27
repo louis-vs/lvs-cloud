@@ -1,0 +1,5 @@
+apiVersion: v2
+name: tiny-screen-api
+description: API for tiny screen
+type: application
+version: 1.0.0

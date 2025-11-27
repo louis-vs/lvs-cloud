@@ -22,3 +22,4 @@ resources:
   - image-automation.yaml
   - ruby-demo-app.yaml
   - vsmp-royalties.yaml
+  - tiny-screen-api.yaml

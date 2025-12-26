@@ -76,7 +76,8 @@ body > main {
 /* Pills */
 .pill-container {
   display: flex;
-  gap: 5px;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .pill {
@@ -88,12 +89,12 @@ body > main {
 }
 
 .pill.invoiced {
-  color: black;
-  background-color: lightgreen;
+  background: #9333ea;
+  color: white;
 }
 
 .pill.conflicts {
-  background-color: crimson;
+  background: #ef4444;
   color: white;
 }
 
@@ -130,13 +131,13 @@ body > main {
 
 /* Statement FDA */
 .statement-fda {
-  font-size: 25px;
-  margin-top: 5px;
-  margin-bottom: 10px;
+  font-size: 1.2em;
+  margin: 1rem 0;
 }
 
 .statement-fda-value {
   font-weight: bold;
+  color: #059669;
 }
 
 /* Progress Bar */

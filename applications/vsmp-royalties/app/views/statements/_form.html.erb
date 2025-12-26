@@ -13,25 +13,27 @@
 
   <div>
     <%= form.label :fiscal_year, style: "display: block" %>
-    <%= form.number_field :fiscal_year %>
+    <%= form.number_field :fiscal_year, value: statement.fiscal_year || Date.current.year %>
   </div>
 
   <div>
     <%= form.label :fiscal_quarter, style: "display: block" %>
-    <%= form.number_field :fiscal_quarter %>
+    <%= form.select :fiscal_quarter, [ 1, 2, 3, 4 ], { selected: statement.fiscal_quarter || ((Date.current.month - 1) / 3 + 1) } %>
   </div>
 
   <div>
-    <%= form.label :invoiced, style: "display: block" %>
-    <%= form.checkbox :invoiced %>
+    <%= form.label :writer_ids, "Writers (select one or more)", style: "display: block" %>
+    <div class="writer-select">
+      <%= form.collection_check_boxes :writer_ids, Writer.order(:last_name, :first_name), :id, :csv_name do |b| %>
+        <div>
+          <%= b.check_box %>
+          <%= b.label %>
+        </div>
+      <% end %>
+    </div>
   </div>
 
   <div>
-    <%= form.label :invoiced_at, style: "display: block" %>
-    <%= form.datetime_field :invoiced_at %>
-  </div>
-
-  <div>
-    <%= form.submit %>
+    <%= form.submit statement.new_record? ? "Create Statement" : "Update Statement" %>
   </div>
 <% end %>

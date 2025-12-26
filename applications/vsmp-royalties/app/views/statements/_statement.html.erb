@@ -1,22 +1,30 @@
-<div id="<%= dom_id statement %>">
-  <div>
-    <strong>Fiscal year:</strong>
-    <%= statement.fiscal_year %>
-  </div>
-
-  <div>
-    <strong>Fiscal quarter:</strong>
-    <%= statement.fiscal_quarter %>
-  </div>
-
-  <div>
-    <strong>Invoiced:</strong>
-    <%= statement.invoiced %>
-  </div>
-
-  <div>
-    <strong>Invoiced at:</strong>
-    <%= statement.invoiced_at %>
-  </div>
-
-</div>
+<tr id="<%= dom_id statement %>">
+  <td>Q<%= statement.fiscal_quarter %> <%= statement.fiscal_year %></td>
+  <td><%= statement.writers.map(&:csv_name).join(", ") %></td>
+  <td>
+    <div class="pill-container">
+      <span class="pill <%= statement.status %>"><%= statement.status.titleize %></span>
+      <% if statement.invoiced? %>
+        <span class="pill invoiced">Invoiced</span>
+      <% end %>
+      <% if statement.has_conflicts? %>
+        <span class="pill conflicts">Conflicts</span>
+      <% end %>
+    </div>
+  </td>
+  <td>
+    <% if statement.completed? %>
+      <%= number_to_currency(statement.total_final_distributed_amount, precision: 2) %>
+    <% else %>
+      -
+    <% end %>
+  </td>
+  <td><%= statement.number_of_royalties_assigned || "-" %></td>
+  <td><%= time_ago_in_words(statement.created_at) %> ago</td>
+  <td class="actions">
+    <%= link_to "View", statement %>
+    <% unless statement.invoiced? %>
+      | <%= link_to "Delete", statement, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %>
+    <% end %>
+  </td>
+</tr>

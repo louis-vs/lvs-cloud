@@ -1,0 +1,98 @@
+<% content_for :title, "Dashboard" %>
+
+<h1>VSMP Royalties Dashboard</h1>
+
+<h2>Statistics</h2>
+<table>
+  <tr>
+    <td><strong>Total Royalties:</strong></td>
+    <td><%= number_with_delimiter(@stats[:total_royalties]) %></td>
+  </tr>
+  <tr>
+    <td><strong>Assigned to Statements:</strong></td>
+    <td><%= number_with_delimiter(@stats[:assigned_royalties]) %></td>
+  </tr>
+  <tr>
+    <td><strong>Total Writers:</strong></td>
+    <td><%= number_with_delimiter(@stats[:total_writers]) %></td>
+  </tr>
+  <tr>
+    <td><strong>Total Works:</strong></td>
+    <td><%= number_with_delimiter(@stats[:total_works]) %></td>
+  </tr>
+  <tr>
+    <td><strong>Pending Statements:</strong></td>
+    <td><%= number_with_delimiter(@stats[:pending_statements]) %></td>
+  </tr>
+  <tr>
+    <td><strong>Invoiced Statements:</strong></td>
+    <td><%= number_with_delimiter(@stats[:invoiced_statements]) %></td>
+  </tr>
+</table>
+
+<h2>Recent Imports</h2>
+<% if @recent_imports.any? %>
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Period</th>
+        <th>Status</th>
+        <th>Royalties</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @recent_imports.each do |import| %>
+        <tr>
+          <td><%= link_to import.original_file_name, import %></td>
+          <td>Q<%= import.fiscal_quarter %> <%= import.fiscal_year %></td>
+          <td><span class="pill <%= import.status %>"><%= import.status.titleize %></span></td>
+          <td><%= import.number_of_royalties_added || "-" %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p><em>No imports yet.</em></p>
+<% end %>
+<p><%= link_to "View All Imports", imports_path %></p>
+
+<h2>Recent Statements</h2>
+<% if @recent_statements.any? %>
+  <table>
+    <thead>
+      <tr>
+        <th>Period</th>
+        <th>Writers</th>
+        <th>Status</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @recent_statements.each do |statement| %>
+        <tr>
+          <td><%= link_to "Q#{statement.fiscal_quarter} #{statement.fiscal_year}", statement %></td>
+          <td><%= statement.writers.map(&:csv_name).join(", ") %></td>
+          <td>
+            <div class="pill-container">
+              <span class="pill <%= statement.status %>"><%= statement.status.titleize %></span>
+              <% if statement.invoiced? %>
+                <span class="pill invoiced">Invoiced</span>
+              <% end %>
+            </div>
+          </td>
+          <td>
+            <% if statement.completed? %>
+              <%= number_to_currency(statement.total_final_distributed_amount, precision: 2) %>
+            <% else %>
+              -
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p><em>No statements yet.</em></p>
+<% end %>
+<p><%= link_to "View All Statements", statements_path %></p>

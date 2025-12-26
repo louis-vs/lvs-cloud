@@ -1,16 +1,26 @@
-<p style="color: green"><%= notice %></p>
-
 <% content_for :title, "Statements" %>
 
 <h1>Statements</h1>
 
-<div id="statements">
-  <% @statements.each do |statement| %>
-    <%= render statement %>
-    <p>
-      <%= link_to "Show this statement", statement %>
-    </p>
-  <% end %>
-</div>
+<%= turbo_stream_from "statements" %>
 
-<%= link_to "New statement", new_statement_path %>
+<table>
+  <thead>
+    <tr>
+      <th>Period</th>
+      <th>Writers</th>
+      <th>Status</th>
+      <th>Total Amount</th>
+      <th>Royalties</th>
+      <th>Created</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="statements">
+    <%= render @statements %>
+  </tbody>
+</table>
+
+<p>
+  <%= link_to "New Statement", new_statement_path %>
+</p>

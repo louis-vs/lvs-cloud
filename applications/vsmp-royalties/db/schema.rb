@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2025_11_23_004728) do
+ActiveRecord::Schema[8.1].define(version: 2025_12_26_152926) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -138,12 +138,18 @@ ActiveRecord::Schema[8.1].define(version: 2025_11_23_004728) do
   end
 
   create_table "statements", force: :cascade do |t|
+    t.datetime "completed_at"
     t.datetime "created_at", null: false
+    t.text "error_message"
     t.integer "fiscal_quarter"
     t.integer "fiscal_year"
     t.boolean "invoiced", default: false
     t.datetime "invoiced_at"
+    t.integer "number_of_royalties_assigned"
+    t.datetime "started_at"
+    t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.text "writer_ids"
   end
 
   create_table "territories", force: :cascade do |t|

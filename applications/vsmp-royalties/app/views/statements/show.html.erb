@@ -1,10 +1,157 @@
-<p style="color: green"><%= notice %></p>
+<h1>Statement: Q<%= @statement.fiscal_quarter %> <%= @statement.fiscal_year %></h1>
 
-<%= render @statement %>
+<%= turbo_stream_from "statements" %>
 
-<div>
-  <%= link_to "Edit this statement", edit_statement_path(@statement) %> |
-  <%= link_to "Back to statements", statements_path %>
+<section id="<%= dom_id @statement %>">
+  <p>
+    <strong>Writers:</strong> <%= @statement.writers.map(&:csv_name).join(", ") %>
+  </p>
 
-  <%= button_to "Destroy this statement", @statement, method: :delete %>
-</div>
+  <p>
+    <strong>Status:</strong>
+    <span class="pill <%= @statement.status %>"><%= @statement.status.titleize %></span>
+    <% if @statement.invoiced? %>
+      <span class="pill invoiced">Invoiced</span>
+    <% end %>
+    <% if @statement.has_conflicts? %>
+      <span class="pill conflicts">Has Conflicts</span>
+    <% end %>
+  </p>
+
+  <p>
+    <strong>Created:</strong> <%= @statement.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+  </p>
+
+  <% if @statement.started_at %>
+    <p>
+      <strong>Started:</strong> <%= @statement.started_at.strftime("%B %d, %Y at %I:%M %p") %>
+    </p>
+  <% end %>
+
+  <% if @statement.completed_at %>
+    <p>
+      <strong>Completed:</strong> <%= @statement.completed_at.strftime("%B %d, %Y at %I:%M %p") %>
+      <% if @statement.started_at %>
+        (<%= distance_of_time_in_words(@statement.started_at, @statement.completed_at) %>)
+      <% end %>
+    </p>
+  <% end %>
+
+  <% if @statement.completed? %>
+    <p>
+      <strong>Royalties Assigned:</strong> <%= @statement.number_of_royalties_assigned %>
+    </p>
+
+    <div class="statement-fda">
+      <strong>Total Final Distributed Amount:</strong>
+      <span class="statement-fda-value"><%= number_to_currency(@statement.total_final_distributed_amount, precision: 2) %></span>
+    </div>
+  <% end %>
+
+  <% if @statement.failed? && @statement.error_message.present? %>
+    <details>
+      <summary style="color: red; cursor: pointer;"><strong>Error Message</strong></summary>
+      <pre style="background: #f5f5f5; padding: 1rem; overflow: auto;"><%= @statement.error_message %></pre>
+    </details>
+  <% end %>
+
+  <% if @statement.processing? %>
+    <div class="progress">
+      Populating statement with royalties... This may take a few minutes.
+    </div>
+  <% end %>
+</section>
+
+<% if @statement.completed? %>
+  <h2>Actions</h2>
+  <p>
+    <% if @statement.export_csv.attached? %>
+      <%= button_to "Download CSV Export", download_export_statement_path(@statement), method: :post %>
+    <% else %>
+      <em>Export CSV is being generated...</em>
+    <% end %>
+
+    <% unless @statement.invoiced? %>
+      <% if @statement.has_conflicts? %>
+        <%= button_to "Mark as Invoiced", mark_invoiced_statement_path(@statement), method: :post, disabled: true, title: "Resolve conflicts first" %>
+        <em>(Resolve conflicts before marking as invoiced)</em>
+      <% else %>
+        <%= button_to "Mark as Invoiced", mark_invoiced_statement_path(@statement), method: :post, data: { turbo_confirm: "Are you sure? This will lock the statement from further edits." } %>
+      <% end %>
+    <% end %>
+  </p>
+
+  <% if @statement.statement_conflicts.any? %>
+    <h2>Conflicts (<%= @statement.statement_conflicts.where(resolved: false).count %> unresolved)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Royalty ID</th>
+          <th>Conflicting Statement</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @statement.statement_conflicts.each do |conflict| %>
+          <tr>
+            <td>#<%= conflict.royalty_id %></td>
+            <td>Statement #<%= conflict.conflicting_statement_id %></td>
+            <td>
+              <% if conflict.resolved? %>
+                <span class="pill completed">Resolved</span>
+              <% else %>
+                <span class="pill conflicts">Unresolved</span>
+              <% end %>
+            </td>
+            <td class="actions">
+              <% unless conflict.resolved? %>
+                <%= button_to "Mark Resolved", resolve_conflict_statement_path(@statement, conflict_id: conflict.id), method: :post %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <% if @statement.royalties.any? %>
+    <h2>Assigned Royalties (showing first 20)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Work</th>
+          <th>Territory</th>
+          <th>Right Type</th>
+          <th>Distributed</th>
+          <th>Coefficient</th>
+          <th>Final Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @statement.royalties.includes(:work, :territory, :right_type).limit(20).each do |royalty| %>
+          <tr>
+            <td><%= royalty.work.title %></td>
+            <td><%= royalty.territory.name %></td>
+            <td><%= royalty.right_type.name %> (<%= royalty.right_type.group %>)</td>
+            <td><%= number_to_currency(royalty.distributed_amount || 0, precision: 2) %></td>
+            <td><%= "%.2f" % (royalty.final_distributed_amount / royalty.distributed_amount) if royalty.distributed_amount && royalty.distributed_amount > 0 %></td>
+            <td><%= number_to_currency(royalty.final_distributed_amount || 0, precision: 2) %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+
+    <% if @statement.royalties.count > 20 %>
+      <p><em>Showing 20 of <%= @statement.number_of_royalties_assigned %> royalties</em></p>
+    <% end %>
+  <% end %>
+<% end %>
+
+<p>
+  <%= link_to "← Back to Statements", statements_path %>
+  <% unless @statement.invoiced? %>
+    | <%= link_to "Edit", edit_statement_path(@statement) %>
+    | <%= link_to "Delete", @statement, data: { turbo_method: :delete, turbo_confirm: "Are you sure?" } %>
+  <% end %>
+</p>

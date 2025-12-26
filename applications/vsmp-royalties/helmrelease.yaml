@@ -17,7 +17,7 @@ spec:
   values:
     image:
       repository: registry.lvs.me.uk/vsmp-royalties # {"$imagepolicy": "flux-system:vsmp-royalties:name"}
-      tag: "1.0.44" # {"$imagepolicy": "flux-system:vsmp-royalties:tag"}
+      tag: "1.0.48" # {"$imagepolicy": "flux-system:vsmp-royalties:tag"}
     ingress:
       annotations:
         traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd

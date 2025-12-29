@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vsmp-royalties
+  namespace: applications
+  labels:
+    app.kubernetes.io/name: vsmp-royalties
+    app.kubernetes.io/instance: vsmp-royalties
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: vsmp-royalties
+    app.kubernetes.io/instance: vsmp-royalties

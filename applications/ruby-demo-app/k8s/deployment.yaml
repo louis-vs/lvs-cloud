@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: ruby-demo-app
-        image: registry.lvs.me.uk/ruby-demo-app:1.0.91 # {"$imagepolicy": "flux-system:ruby-demo-app"}
+        image: registry.lvs.me.uk/ruby-demo-app:1.0.92 # {"$imagepolicy": "flux-system:ruby-demo-app"}
         imagePullPolicy: Always
         ports:
         - name: http

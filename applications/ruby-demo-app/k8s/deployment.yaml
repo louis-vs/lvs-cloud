@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: ruby-demo-app
-        image: registry.lvs.me.uk/ruby-demo-app:1.0.47 # {"$imagepolicy": "flux-system:ruby-demo-app"}
+        image: registry.lvs.me.uk/ruby-demo-app:1.0.49 # {"$imagepolicy": "flux-system:ruby-demo-app"}
         imagePullPolicy: Always
         ports:
         - name: http
@@ -34,14 +34,14 @@ spec:
             cpu: "200m"
             memory: "128Mi"
         env:
-          - name: APP_VERSION
-            value: "1.0.47"
-          - name: RACK_ENV
-            value: production
-          - name: DB_HOST
-            value: postgresql.platform.svc.cluster.local
-          - name: POSTGRES_PASSWORD
-            valueFrom:
-              secretKeyRef:
-                name: ruby-app-postgresql
-                key: ruby-password
+        - name: APP_VERSION
+          value: "1.0.47"
+        - name: RACK_ENV
+          value: production
+        - name: DB_HOST
+          value: postgresql.platform.svc.cluster.local
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ruby-app-postgresql
+              key: ruby-password

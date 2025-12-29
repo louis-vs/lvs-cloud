@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: vsmp-royalties
-        image: registry.lvs.me.uk/vsmp-royalties:1.0.50 # {"$imagepolicy": "flux-system:vsmp-royalties"}
+        image: registry.lvs.me.uk/vsmp-royalties:1.0.52 # {"$imagepolicy": "flux-system:vsmp-royalties"}
         imagePullPolicy: Always
         ports:
         - name: http

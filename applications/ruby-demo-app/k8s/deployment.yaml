@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ruby-demo-app
+  namespace: applications
+  labels:
+    app.kubernetes.io/name: ruby-demo-app
+    app.kubernetes.io/instance: ruby-demo-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ruby-demo-app
+      app.kubernetes.io/instance: ruby-demo-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ruby-demo-app
+        app.kubernetes.io/instance: ruby-demo-app
+    spec:
+      containers:
+      - name: ruby-demo-app
+        image: registry.lvs.me.uk/ruby-demo-app:1.0.47 # {"$imagepolicy": "flux-system:ruby-demo-app"}
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 4567
+          protocol: TCP
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "32Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
+        env:
+          - name: APP_VERSION
+            value: "1.0.47"
+          - name: RACK_ENV
+            value: production
+          - name: DB_HOST
+            value: postgresql.platform.svc.cluster.local
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ruby-app-postgresql
+                key: ruby-password

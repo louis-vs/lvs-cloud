@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ruby-demo-app
+  namespace: applications
+  labels:
+    app.kubernetes.io/name: ruby-demo-app
+    app.kubernetes.io/instance: ruby-demo-app
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    traefik.ingress.kubernetes.io/router.middlewares: applications-authelia-forwardauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - app.lvs.me.uk
+      secretName: ruby-demo-app-tls
+  rules:
+    - host: app.lvs.me.uk
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ruby-demo-app
+                port:
+                  number: 80

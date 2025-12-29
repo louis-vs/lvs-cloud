@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ruby-demo-app
+  namespace: applications
+  labels:
+    app.kubernetes.io/name: ruby-demo-app
+    app.kubernetes.io/instance: ruby-demo-app
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: ruby-demo-app
+    app.kubernetes.io/instance: ruby-demo-app

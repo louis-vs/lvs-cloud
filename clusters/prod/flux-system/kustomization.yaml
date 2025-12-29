@@ -4,3 +4,15 @@ resources:
 - gotk-components.yaml
 - gotk-sync.yaml
 - secrets
+- source-controller-storage.yaml
+patches:
+- patch: |
+    - op: replace
+      path: /spec/template/spec/volumes/0
+      value:
+        name: data
+        persistentVolumeClaim:
+          claimName: source-controller-data
+  target:
+    kind: Deployment
+    name: source-controller

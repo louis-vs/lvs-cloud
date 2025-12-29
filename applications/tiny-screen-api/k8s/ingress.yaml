@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tiny-screen-api
+  namespace: applications
+  labels:
+    app.kubernetes.io/name: tiny-screen-api
+    app.kubernetes.io/instance: tiny-screen-api
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - tiny-screen-api.lvs.me.uk
+      secretName: tiny-screen-api-tls
+  rules:
+    - host: tiny-screen-api.lvs.me.uk
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: tiny-screen-api
+                port:
+                  number: 80

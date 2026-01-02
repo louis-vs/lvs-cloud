@@ -43,8 +43,9 @@ kubectl create secret generic ruby-app-postgresql -n applications \
 Deployed via Flux GitOps:
 
 - Image built by GitHub Actions on push to main
-- Flux Image Automation scans registry and updates HelmRelease
+- Flux Image Automation scans registry and updates `k8s/deployment.yaml`
 - Rolling deployment with 2 replicas
+- Manifests managed in `k8s/` directory
 
 ## Access
 

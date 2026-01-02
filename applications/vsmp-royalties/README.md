@@ -92,13 +92,7 @@ The application is deployed to Kubernetes via Flux CD.
 ./scripts/connect-k8s.sh
 
 # Check Flux kustomization
-flux get kustomizations -n flux-system | grep vsmp
-
-# Check HelmRelease status
-flux get helmreleases -n applications | grep vsmp
-
-# View HelmRelease details
-kubectl describe helmrelease vsmp-royalties -n applications
+flux get kustomizations | grep vsmp
 
 # Check pods
 kubectl get pods -n applications | grep vsmp
@@ -120,13 +114,10 @@ kubectl get secret vsmp-royalties-secrets -n applications
 
 ```bash
 # Force reconciliation
-flux reconcile kustomization vsmp-royalties -n flux-system --with-source
+flux reconcile kustomization vsmp-royalties --with-source
 
-# Check Flux logs for kustomization
-flux logs --kind=Kustomization --name=vsmp-royalties -n flux-system --tail=50
-
-# Check Flux logs for helmrelease
-flux logs --kind=HelmRelease --name=vsmp-royalties -n applications --tail=50
+# Check Flux logs
+flux logs --kind=Kustomization --name=vsmp-royalties --tail=50
 
 # Get pod details
 kubectl describe pod -n applications -l app.kubernetes.io/name=vsmp-royalties
@@ -148,7 +139,7 @@ Deployments are triggered automatically via GitHub Actions when code is pushed t
 1. Push changes to `applications/vsmp-royalties/`
 2. GitHub Actions builds and tags Docker image
 3. Flux ImagePolicy detects new image
-4. Flux updates HelmRelease and deploys
+4. Flux updates `k8s/deployment.yaml` and deploys
 5. Pod startup runs `db:prepare` (migrations run automatically)
 
 Manual trigger:
@@ -181,7 +172,7 @@ Access Grafana at <https://grafana.lvs.me.uk> to view logs and metrics.
 
 - **Secrets**: Encrypted with SOPS and deployed via Flux
 - **Rails credentials**: `config/credentials.yml.enc` (key in secrets)
-- **Environment variables**: Configured in `values.yaml`
+- **Environment variables**: Configured in `k8s/deployment.yaml`
 
 ## Health Check
 

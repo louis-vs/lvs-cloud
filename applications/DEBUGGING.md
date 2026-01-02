@@ -21,7 +21,7 @@ kubectl get pods -l app.kubernetes.io/name=my-app -n applications
 kubectl logs -f -l app.kubernetes.io/name=my-app -n applications
 
 # Flux status
-flux get helmreleases -A
+flux get kustomizations -A
 flux get images all
 
 # Database
@@ -43,7 +43,7 @@ kubectl logs -p <pod-name>  # Previous logs if crashed
 ```bash
 flux get sources git monorepo
 flux reconcile source git monorepo
-flux reconcile helmrelease my-app
+flux reconcile kustomization my-app --with-source
 ```
 
 ### Image not updating
@@ -75,39 +75,28 @@ kubectl -n cert-manager logs deploy/cert-manager -f
 ```bash
 # Force Flux to resync everything
 flux reconcile source git monorepo --with-source
-flux reconcile kustomization apps
-flux reconcile helmrelease my-app -n applications
+flux reconcile kustomization my-app --with-source
 
 # Force image scan
 flux reconcile image repository my-app
-
-# Full reconciliation chain (git -> chart -> helmrelease)
-flux reconcile source git monorepo -n flux-system
-flux reconcile source chart applications-my-app -n flux-system
-flux reconcile helmrelease my-app -n applications
 
 # Restart pod
 kubectl rollout restart deployment/my-app -n applications
 ```
 
-## Updating Helm Charts
+## Updating Manifests
 
-When modifying Helm chart templates (not just values), you must bump the chart version to force Flux to repackage:
-
-**Important**: If you only change chart templates (`chart/templates/*`) without bumping the version in `Chart.yaml`, Flux will not repackage the chart and changes won't deploy.
+Changes to Kubernetes manifests in `k8s/` directory are automatically applied by Flux:
 
 ```bash
-# 1. Edit chart files in applications/my-app/chart/templates/
-# 2. Bump version in applications/my-app/chart/Chart.yaml
-#    version: 1.0.0 -> 1.0.1
-# 3. Commit and push
-# 4. Monitor deployment
-flux reconcile source git monorepo -n flux-system
-flux reconcile source chart applications-my-app -n flux-system
-flux reconcile helmrelease my-app -n applications
+# 1. Edit manifest files in applications/my-app/k8s/
+# 2. Commit and push
+# 3. Monitor deployment
+flux reconcile source git monorepo --with-source
+flux reconcile kustomization my-app --with-source
 
-# Verify new chart version deployed
-kubectl get helmrelease my-app -n applications -o jsonpath='{.status.lastAttemptedRevision}'
+# Watch rollout status
+kubectl rollout status deployment/my-app -n applications
 ```
 
 ## Resource Monitoring
